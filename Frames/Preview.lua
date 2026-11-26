@@ -20,11 +20,11 @@ local FAKE_MEMBERS = {
 
 local FAKE_MAX_HEALTH = 8000
 
-function Preview.Offset(position, frames)
-  local column = math.floor((position - 1) / frames.unitsPerColumn)
-  local row = (position - 1) % frames.unitsPerColumn
-  local stepX, stepY = frames.width + frames.spacing, frames.height + frames.spacing
-  if frames.growth == "DOWN" then
+function Preview.Offset(position, layout)
+  local column = math.floor((position - 1) / layout.unitsPerColumn)
+  local row = (position - 1) % layout.unitsPerColumn
+  local stepX, stepY = layout.width + layout.spacing, layout.height + layout.spacing
+  if layout.growth == "DOWN" then
     return column * stepX, -row * stepY
   end
   return row * stepX, -column * stepY
@@ -48,24 +48,24 @@ local function HealthText(mode, fraction)
   return ""
 end
 
-function Preview:Paint(frame, member, frames)
+function Preview:Paint(frame, member, style)
   local visual = frame.healsilus
-  frame:SetSize(frames.width, frames.height)
+  frame:SetSize(style.layout.width, style.layout.height)
   ns.UnitButton:ApplyStyle(frame)
   visual.healthBar:SetMinMaxValues(0, 1)
   visual.healthBar:SetValue(member.health)
   visual.nameText:SetText(member.name)
-  visual.healthText:SetText(member.dead and "" or HealthText(frames.healthText, member.health))
+  visual.healthText:SetText(member.dead and "" or HealthText(style.text.health.mode, member.health))
   visual.statusText:SetText(member.dead and L.STATUS_DEAD or "")
   local texture = visual.healthBar:GetStatusBarTexture()
-  if frames.colorMode == "HEALTH" then
+  if style.bar.colorMode == "HEALTH" then
     texture:SetVertexColor(Preview.HealthColor(member.health))
   else
     texture:SetVertexColor(ns.Media.ClassColor(member.class))
   end
   visual.missingMark:SetShown(member.missing == true)
   visual.aggroFrame:SetShown(member.aggro == true)
-  frame:SetAlpha(member.outOfRange and frames.outOfRangeAlpha or 1)
+  frame:SetAlpha(member.outOfRange and style.bar.outOfRangeAlpha or 1)
 end
 
 function Preview:Show(count)
@@ -76,7 +76,7 @@ function Preview:Show(count)
   self:HideFrames()
   ns.Headers.previewActive = true
   ns.Headers:ApplyProfile(ns.Profiles.active)
-  local frames = ns.Profiles.active.frames
+  local style = ns.Styles.active
   local anchor = ns.Headers.anchors.party
   for position = 1, count do
     local frame = self.frames[position]
@@ -85,10 +85,10 @@ function Preview:Show(count)
       ns.UnitButton:BuildVisuals(frame)
       self.frames[position] = frame
     end
-    local x, y = Preview.Offset(position, frames)
+    local x, y = Preview.Offset(position, style.layout)
     frame:ClearAllPoints()
     frame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", x, y - 2)
-    self:Paint(frame, FAKE_MEMBERS[(position - 1) % #FAKE_MEMBERS + 1], frames)
+    self:Paint(frame, FAKE_MEMBERS[(position - 1) % #FAKE_MEMBERS + 1], style)
     frame:Show()
   end
   self.count = count
@@ -117,7 +117,13 @@ ns.Events:Register("COMBAT_STARTED", function()
 end)
 
 ns.Events:Register("SETTINGS_CHANGED", function(section)
-  if section == "frames" and Preview.count > 0 then
+  if (section == "frames" or section == "style") and Preview.count > 0 then
+    Preview:Show(Preview.count)
+  end
+end)
+
+ns.Events:Register("STYLE_CHANGED", function()
+  if Preview.count > 0 then
     Preview:Show(Preview.count)
   end
 end)

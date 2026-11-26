@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue, assertFalse = Harness.assertEquals, Harness.assertTrue, Harness.assertFalse
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Data/Spells.lua", "Data/Druid.lua", "Core/Profiles.lua",
 }
 
@@ -31,7 +31,7 @@ describe("Profiles.Resolve", function()
     local ns, _, db = LoadProfiles("PRIEST")
     local profile = ns.Profiles.Resolve(db, "Sacer-Bah", "PRIEST", 1)
     assertEquals(profile.bindings, {})
-    assertEquals(profile.frames.width, 110)
+    assertEquals(profile.frames.showTanks, true)
   end)
 
   it("uses the character profile only when the class profile is switched off", function()
@@ -101,54 +101,54 @@ describe("Profiles state", function()
   it("copies the class profile when switching to a character profile", function()
     local ns, _, db = LoadProfiles()
     ns.Profiles:Initialize()
-    ns.Profiles.active.frames.width = 77
+    ns.Profiles.active.auras.hotsMax = 7
     ns.Profiles:SetUseClassProfile(false)
     local character = db.characters["Arsilus-Bah"]
     assertEquals(ns.Profiles.source, "character")
-    assertEquals(character.own.frames.width, 77)
+    assertEquals(character.own.auras.hotsMax, 7)
     assertFalse(character.own == db.classProfiles.DRUID)
   end)
 
   it("copies the active profile into the current spec when spec profiles are enabled", function()
     local ns, _, db = LoadProfiles()
     ns.Profiles:Initialize()
-    ns.Profiles.active.frames.height = 50
+    ns.Profiles.active.auras.debuffsMax = 5
     ns.Profiles:SetUseSpecProfiles(true)
     local character = db.characters["Arsilus-Bah"]
     assertEquals(ns.Profiles.source, "spec")
-    assertEquals(character.specs[1].frames.height, 50)
+    assertEquals(character.specs[1].auras.debuffsMax, 5)
     assertFalse(character.specs[1] == db.classProfiles.DRUID)
   end)
 
   it("replaces the profile stored in the active slot", function()
     local ns, _, db = LoadProfiles()
     ns.Profiles:Initialize()
-    local replacement = ns.Database.NormalizeProfile({ frames = { width = 60 } }, {})
+    local replacement = ns.Database.NormalizeProfile({ auras = { hotsMax = 6 } }, {})
     ns.Profiles:ReplaceActive(replacement)
     assertTrue(db.classProfiles.DRUID == replacement)
     ns.Profiles:SetUseClassProfile(false)
-    local own = ns.Database.NormalizeProfile({ frames = { width = 61 } }, {})
+    local own = ns.Database.NormalizeProfile({ auras = { hotsMax = 5 } }, {})
     ns.Profiles:ReplaceActive(own)
     assertTrue(db.characters["Arsilus-Bah"].own == own)
-    assertEquals(db.classProfiles.DRUID.frames.width, 60)
+    assertEquals(db.classProfiles.DRUID.auras.hotsMax, 6)
   end)
 
   it("resets the active profile to the class defaults", function()
     local ns, _, db = LoadProfiles()
     ns.Profiles:Initialize()
-    ns.Profiles.active.frames.width = 200
+    ns.Profiles.active.frames.showTanks = false
     ns.Profiles.active.bindings = {}
     ns.Profiles:ResetActive()
-    assertEquals(db.classProfiles.DRUID.frames.width, 110)
+    assertEquals(db.classProfiles.DRUID.frames.showTanks, true)
     assertEquals(db.classProfiles.DRUID.bindings["1"], { kind = "spell", spellID = 5185 })
   end)
 
   it("deep-copies another profile into the active slot", function()
     local ns, _, db = LoadProfiles()
     ns.Profiles:Initialize()
-    local source = ns.Database.NormalizeProfile({ frames = { width = 99 } }, {})
+    local source = ns.Database.NormalizeProfile({ auras = { hotsMax = 1 } }, {})
     ns.Profiles:CopyFrom(source)
-    assertEquals(db.classProfiles.DRUID.frames.width, 99)
+    assertEquals(db.classProfiles.DRUID.auras.hotsMax, 1)
     assertFalse(db.classProfiles.DRUID == source)
   end)
 

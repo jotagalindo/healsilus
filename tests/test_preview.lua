@@ -7,7 +7,7 @@ local assertEquals = Harness.assertEquals
 local function LoadPreview()
   local environment = Stubs.NewEnvironment()
   local ns = Loader.Load(environment, {
-    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/Database.lua", "Frames/Preview.lua",
+    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/Database.lua", "Core/StyleData.lua", "Frames/Preview.lua",
   })
   return ns, environment
 end
@@ -15,7 +15,7 @@ end
 describe("Preview", function()
   it("places fake members in columns when growing down", function()
     local ns = LoadPreview()
-    local frames = ns.Database.DefaultProfile().frames
+    local frames = ns.StyleData.DefaultStyle().layout
     assertEquals({ ns.Preview.Offset(1, frames) }, { 0, 0 })
     assertEquals({ ns.Preview.Offset(2, frames) }, { 0, -36 })
     assertEquals({ ns.Preview.Offset(6, frames) }, { 112, 0 })
@@ -23,7 +23,7 @@ describe("Preview", function()
 
   it("places fake members in rows when growing right", function()
     local ns = LoadPreview()
-    local frames = ns.Database.DefaultProfile().frames
+    local frames = ns.StyleData.DefaultStyle().layout
     frames.growth = "RIGHT"
     assertEquals({ ns.Preview.Offset(2, frames) }, { 112, 0 })
     assertEquals({ ns.Preview.Offset(6, frames) }, { 0, -36 })

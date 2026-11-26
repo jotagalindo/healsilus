@@ -19,6 +19,27 @@ local function Frames()
   return ns.Profiles.active.frames
 end
 
+-- Todo lo visual (textura, fondo, textos, colores, opacidad) sale del estilo activo.
+local function Style()
+  return ns.Styles.active
+end
+
+local JUSTIFY = {
+  TOPLEFT = "LEFT", LEFT = "LEFT", BOTTOMLEFT = "LEFT",
+  TOP = "CENTER", CENTER = "CENTER", BOTTOM = "CENTER",
+  TOPRIGHT = "RIGHT", RIGHT = "RIGHT", BOTTOMRIGHT = "RIGHT",
+}
+
+local function PlaceText(fontString, anchor, fontPath, element)
+  local flags = element.outline == "NONE" and "" or element.outline
+  fontString:ClearAllPoints()
+  fontString:SetPoint(element.point, anchor, element.point, element.x, element.y)
+  if not fontString:SetFont(fontPath, element.size, flags) then
+    fontString:SetFont(ns.Media.DEFAULT_FONT, element.size, flags)
+  end
+  fontString:SetJustifyH(JUSTIFY[element.point])
+end
+
 local function CreateEdge(parent)
   local texture = parent:CreateTexture(nil, "OVERLAY")
   texture:SetColorTexture(AGGRO_COLOR[1], AGGRO_COLOR[2], AGGRO_COLOR[3], 1)
@@ -56,7 +77,6 @@ function UnitButton:BuildVisuals(frame)
 
   local background = frame:CreateTexture(nil, "BACKGROUND")
   background:SetAllPoints(frame)
-  background:SetColorTexture(0.06, 0.06, 0.06, 0.9)
   visual.background = background
 
   local healthBar = CreateFrame("StatusBar", nil, frame)
@@ -72,20 +92,15 @@ function UnitButton:BuildVisuals(frame)
   textFrame:SetFrameLevel(frame:GetFrameLevel() + 5)
   visual.textFrame = textFrame
 
+  -- Posición, fuente y tamaño de los textos los pone ApplyStyle según el estilo activo.
   local nameText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  nameText:SetPoint("TOPLEFT", healthBar, "TOPLEFT", 4, -3)
-  nameText:SetPoint("TOPRIGHT", healthBar, "TOPRIGHT", -4, -3)
-  nameText:SetJustifyH("LEFT")
   nameText:SetWordWrap(false)
   visual.nameText = nameText
 
   local healthText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  healthText:SetPoint("BOTTOMLEFT", healthBar, "BOTTOMLEFT", 4, 3)
-  healthText:SetJustifyH("LEFT")
   visual.healthText = healthText
 
   local statusText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  statusText:SetPoint("BOTTOMRIGHT", healthBar, "BOTTOMRIGHT", -4, 3)
   visual.statusText = statusText
 
   local missingMark = textFrame:CreateTexture(nil, "OVERLAY")
@@ -101,7 +116,16 @@ function UnitButton:BuildVisuals(frame)
 end
 
 function UnitButton:ApplyStyle(frame)
-  frame.healsilus.healthBar:SetStatusBarTexture(ns.Media.Texture(Frames().texture))
+  local style = Style()
+  local visual = frame.healsilus
+  visual.healthBar:SetStatusBarTexture(ns.Media.Texture(style.bar.texture))
+  local background = style.bar.background
+  visual.background:SetColorTexture(background.r, background.g, background.b, background.a)
+  local fontPath = ns.Media.Font(style.text.font)
+  PlaceText(visual.nameText, visual.healthBar, fontPath, style.text.name)
+  visual.nameText:SetWidth(math.max(10, style.layout.width - 12))
+  PlaceText(visual.healthText, visual.healthBar, fontPath, style.text.health)
+  PlaceText(visual.statusText, visual.healthBar, fontPath, style.text.status)
 end
 
 -- SecureActionButtonTemplate (SecureTemplates.lua:810-811 en Forever) solo actúa en el flanco que dice
@@ -190,7 +214,7 @@ end
 
 function UnitButton:UpdateHealthText(button)
   local text = button.healsilus.healthText
-  local mode = button.healsilusTextMode or Frames().healthText
+  local mode = button.healsilusTextMode or Style().text.health.mode
   if mode == "DEFICIT" and not UnitHealthMissing then
     mode = "PERCENT"
   end
@@ -250,8 +274,8 @@ function UnitButton:UpdateColor(button)
     texture:SetVertexColor(color.r, color.g, color.b)
     return
   end
-  if Frames().colorMode == "HEALTH" and ns.Curves.IsSupported() then
-    local color = UnitHealthPercent(button.unit, true, ns.Curves:HealthColor())
+  if Style().bar.colorMode == "HEALTH" and ns.Curves.IsSupported() then
+    local color = UnitHealthPercent(button.unit, true, ns.Curves:HealthColor(Style().bar))
     texture:SetVertexColor(color:GetRGB())
     return
   end
@@ -266,7 +290,7 @@ end
 
 function UnitButton:UpdateRange(button)
   local unit = button.unit
-  local fadedAlpha = Frames().outOfRangeAlpha
+  local fadedAlpha = Style().bar.outOfRangeAlpha
   local isPlayer = UnitIsUnit(unit, "player")
   if not ns.IsSecret(isPlayer) and isPlayer then
     button:SetAlpha(1)
@@ -420,8 +444,12 @@ ns.Events:Register("PROFILE_CHANGED", function()
   UnitButton:ApplyVisualSettings()
 end)
 
+ns.Events:Register("STYLE_CHANGED", function()
+  UnitButton:ApplyVisualSettings()
+end)
+
 ns.Events:Register("SETTINGS_CHANGED", function(section)
-  if section == "frames" then
+  if section == "frames" or section == "style" then
     UnitButton:ApplyVisualSettings()
   end
 end)

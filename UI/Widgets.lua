@@ -45,6 +45,30 @@ function Widgets.SectionSetter(section, key, afterChange)
   end
 end
 
+-- Controles que editan el estilo activo: StyleGetter("text", "name", "size") lee style.text.name.size.
+local function StyleTable(path, depth)
+  local current = ns.Styles.active
+  for position = 1, depth do
+    current = current[path[position]]
+  end
+  return current
+end
+
+function Widgets.StyleGetter(...)
+  local path = { ... }
+  return function()
+    return StyleTable(path, #path - 1)[path[#path]]
+  end
+end
+
+function Widgets.StyleSetter(...)
+  local path = { ... }
+  return function(value)
+    StyleTable(path, #path - 1)[path[#path]] = value
+    ns.Config:Changed("style")
+  end
+end
+
 function Widgets.Label(parent, text, template)
   local label = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
   label:SetText(text)
@@ -253,6 +277,28 @@ function Widgets.RowPool(parent, createRow)
     end
   end
   return pool
+end
+
+-- Agrupa cambios rápidos (selector de color, deslizadores) en uno solo, para no reconstruir marcos
+-- y auras en cada movimiento. La última acción de cada clave gana.
+local DEBOUNCE_DELAY = 0.3
+local pendingActions = {}
+local debounceScheduled = false
+
+function Widgets.Debounce(key, action)
+  pendingActions[key] = action
+  if debounceScheduled then
+    return
+  end
+  debounceScheduled = true
+  C_Timer.After(DEBOUNCE_DELAY, function()
+    debounceScheduled = false
+    local actions = pendingActions
+    pendingActions = {}
+    for _, run in pairs(actions) do
+      run()
+    end
+  end)
 end
 
 -- Abre el selector de color del juego; Cancelar devuelve el color que había.

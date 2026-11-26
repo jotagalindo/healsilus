@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue, assertFalse, assertNil = Harness.assertEquals, Harness.assertTrue, Harness.assertFalse, Harness.assertNil
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Frames/Media.lua", "Frames/Curves.lua", "Frames/UnitButton.lua",
 }
 
@@ -38,6 +38,7 @@ local function LoadUnitButton()
   end
   local ns = Loader.Load(environment, FILES)
   ns.Profiles = { active = ns.Database.DefaultProfile() }
+  ns.Styles = { active = ns.StyleData.DefaultStyle() }
   return ns, environment, world
 end
 
@@ -204,7 +205,7 @@ describe("UnitButton health text", function()
     world.missing = 2500
     ns.UnitButton:UpdateHealthText(party)
     assertEquals(party.healsilus.healthText.text, "-2500")
-    ns.Profiles.active.frames.healthText = "NONE"
+    ns.Styles.active.text.health.mode = "NONE"
     ns.UnitButton:UpdateHealthText(party)
     assertEquals(party.healsilus.healthText.text, "")
   end)
@@ -222,7 +223,7 @@ describe("UnitButton health text", function()
 
   it("hides percent text when curves are unavailable", function()
     local ns = LoadUnitButton()
-    ns.Profiles.active.frames.healthText = "PERCENT"
+    ns.Styles.active.text.health.mode = "PERCENT"
     local party = FakeButton("party1")
     ns.UnitButton:UpdateHealthText(party)
     assertEquals(party.healsilus.healthText.text, "")

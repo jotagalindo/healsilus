@@ -6,7 +6,7 @@ local assertEquals, assertTrue, assertFalse = Harness.assertEquals, Harness.asse
 
 local function LoadDatabase()
   local environment = Stubs.NewEnvironment()
-  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua" })
+  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Core/StyleData.lua" })
   return ns, environment
 end
 
@@ -20,20 +20,19 @@ describe("Database.NormalizeProfile", function()
   it("replaces values of the wrong type and records the field", function()
     local ns = LoadDatabase()
     local fixes = {}
-    local profile = ns.Database.NormalizeProfile({ frames = { width = "wide" } }, fixes)
-    assertEquals(profile.frames.width, 110)
-    assertEquals(fixes, { "frames.width" })
+    local profile = ns.Database.NormalizeProfile({ frames = { showTanks = "yes" } }, fixes)
+    assertEquals(profile.frames.showTanks, true)
+    assertEquals(fixes, { "frames.showTanks" })
   end)
 
-  it("replaces unknown enum values and clamps numbers to their range", function()
+  it("clamps numbers to their range", function()
     local ns = LoadDatabase()
     local fixes = {}
-    local profile = ns.Database.NormalizeProfile({ frames = { sortBy = "HEALTH", width = 5000, outOfRangeAlpha = 0 } }, fixes)
-    assertEquals(profile.frames.sortBy, "GROUP")
-    assertEquals(profile.frames.width, 300)
-    assertEquals(profile.frames.outOfRangeAlpha, 0.1)
+    local profile = ns.Database.NormalizeProfile({ auras = { hotsMax = 50, debuffsMax = -2 } }, fixes)
+    assertEquals(profile.auras.hotsMax, 8)
+    assertEquals(profile.auras.debuffsMax, 0)
     table.sort(fixes)
-    assertEquals(fixes, { "frames.outOfRangeAlpha", "frames.sortBy", "frames.width" })
+    assertEquals(fixes, { "auras.debuffsMax", "auras.hotsMax" })
   end)
 
   it("never merges defaults into user-owned collections", function()
@@ -76,7 +75,7 @@ describe("Database.NormalizeProfile", function()
 
   it("gives every dispel type a default color", function()
     local ns = LoadDatabase()
-    assertEquals(ns.Database.DefaultProfile().auras.dispelColors, {
+    assertEquals(ns.Database.DefaultDispelColors(), {
       Magic = { r = 0.2, g = 0.6, b = 1 },
       Curse = { r = 0.6, g = 0, b = 1 },
       Poison = { r = 0, g = 0.6, b = 0 },
@@ -87,14 +86,17 @@ describe("Database.NormalizeProfile", function()
   it("repairs dispel colors: clamps channels, restores broken types and drops unknown ones", function()
     local ns = LoadDatabase()
     local fixes = {}
-    local profile = ns.Database.NormalizeProfile({
+    local style = ns.StyleData.NormalizeStyle({
       auras = { dispelColors = { Curse = { r = 2, g = 0, b = 1, a = 1 }, Magic = "red", Bleed = { r = 1, g = 0, b = 0 } } },
     }, fixes)
-    assertEquals(profile.auras.dispelColors.Curse, { r = 1, g = 0, b = 1 })
-    assertEquals(profile.auras.dispelColors.Magic, { r = 0.2, g = 0.6, b = 1 })
-    assertEquals(profile.auras.dispelColors.Bleed, nil)
+    assertEquals(style.auras.dispelColors.Curse, { r = 1, g = 0, b = 1 })
+    assertEquals(style.auras.dispelColors.Magic, { r = 0.2, g = 0.6, b = 1 })
+    assertEquals(style.auras.dispelColors.Bleed, nil)
     table.sort(fixes)
-    assertEquals(fixes, { "auras.dispelColors.Bleed", "auras.dispelColors.Curse.a", "auras.dispelColors.Curse.r", "auras.dispelColors.Magic" })
+    assertEquals(fixes, {
+      "style.auras.dispelColors.Bleed", "style.auras.dispelColors.Curse.a", "style.auras.dispelColors.Curse.r",
+      "style.auras.dispelColors.Magic",
+    })
   end)
 end)
 
@@ -102,22 +104,21 @@ describe("Database.ValidateProfile", function()
   it("rejects unknown dispel types and malformed colors", function()
     local ns = LoadDatabase()
     local cases = {
-      { { auras = { dispelColors = { Bleed = { r = 1, g = 1, b = 1 } } } }, "auras.dispelColors.Bleed" },
-      { { auras = { dispelColors = { Curse = { r = 1, g = 1 } } } }, "auras.dispelColors.Curse" },
-      { { auras = { dispelColors = { Curse = { r = 1, g = 1, b = 3 } } } }, "auras.dispelColors.Curse" },
+      { { auras = { dispelColors = { Bleed = { r = 1, g = 1, b = 1 } } } }, "style.auras.dispelColors.Bleed" },
+      { { auras = { dispelColors = { Curse = { r = 1, g = 1, b = 3 } } } }, "style.auras.dispelColors.Curse.b" },
     }
     for _, case in ipairs(cases) do
-      local valid, field = ns.Database.ValidateProfile(case[1])
+      local valid, field = ns.StyleData.ValidateStyle(case[1])
       assertFalse(valid, case[2])
       assertEquals(field, case[2])
     end
-    assertTrue(ns.Database.ValidateProfile({ auras = { dispelColors = { Poison = { r = 0, g = 1, b = 0 } } } }))
+    assertTrue(ns.StyleData.ValidateStyle({ auras = { dispelColors = { Poison = { r = 0, g = 1, b = 0 } } } }))
   end)
 
   it("accepts the default profile and partial profiles", function()
     local ns = LoadDatabase()
     assertTrue(ns.Database.ValidateProfile(ns.Database.DefaultProfile()))
-    assertTrue(ns.Database.ValidateProfile({ frames = { width = 90 } }))
+    assertTrue(ns.Database.ValidateProfile({ frames = { showTanks = false } }))
   end)
 
   it("rejects unknown fields and names them", function()
@@ -133,8 +134,8 @@ describe("Database.ValidateProfile", function()
   it("rejects wrong types, bad enums, bad bindings and bad buffs", function()
     local ns = LoadDatabase()
     local cases = {
-      { { frames = { width = "x" } }, "frames.width" },
-      { { frames = { growth = "UP" } }, "frames.growth" },
+      { { frames = { showTanks = "x" } }, "frames.showTanks" },
+      { { frames = { width = 90 } }, "frames.width" },
       { { bindings = { ["1"] = { kind = "spell" } } }, "bindings.1" },
       { { bindings = { ["meta-1"] = { kind = "target" } } }, "bindings.meta-1" },
       { { auras = { hotSpellIDs = { [774] = "yes" } } }, "auras.hotSpellIDs" },
@@ -154,7 +155,7 @@ describe("Database:Initialize", function()
     local ns, environment = LoadDatabase()
     local db = ns.Database:Initialize()
     assertTrue(environment.HealsilusDB == db)
-    assertEquals(db.version, 1)
+    assertEquals(db.version, 2)
     assertEquals(db.classProfiles, {})
     assertEquals(db.characters, {})
     assertEquals(db.framePositions, {})
@@ -175,22 +176,22 @@ describe("Database:Initialize", function()
   it("normalizes stored class and character profiles", function()
     local ns, environment = LoadDatabase()
     environment.HealsilusDB = {
-      version = 1,
-      classProfiles = { DRUID = { frames = { width = 90 } }, BROKEN = "nope" },
+      version = 2,
+      classProfiles = { DRUID = { frames = { showTanks = false } }, BROKEN = "nope" },
       characters = {
         ["Arsilus-Bah"] = { class = "DRUID", own = { bindings = {} }, specs = { [2] = {}, x = {} } },
         ["Bad-Realm"] = 7,
       },
     }
     local db = ns.Database:Initialize()
-    assertEquals(db.classProfiles.DRUID.frames.width, 90)
-    assertEquals(db.classProfiles.DRUID.frames.height, 34)
+    assertEquals(db.classProfiles.DRUID.frames.showTanks, false)
+    assertEquals(db.classProfiles.DRUID.frames.showFocus, true)
     assertEquals(db.classProfiles.BROKEN, nil)
     local character = db.characters["Arsilus-Bah"]
     assertTrue(character.useClassProfile)
     assertFalse(character.useSpecProfiles)
-    assertEquals(character.own.frames.width, 110)
-    assertEquals(character.specs[2].frames.width, 110)
+    assertEquals(character.own.frames.showTanks, true)
+    assertEquals(character.specs[2].styleRules.solo, "Healsilus")
     assertEquals(character.specs.x, nil)
     assertEquals(db.characters["Bad-Realm"], nil)
   end)

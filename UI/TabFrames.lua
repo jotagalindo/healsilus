@@ -1,5 +1,5 @@
--- Pestaña Marcos: tamaño, orden, colores, bloques visibles, bloqueo y vista previa.
--- Los controles se describen en tablas para poder comprobar en las pruebas que encajan con el esquema.
+-- Pestaña Marcos: tamaño, orden, textura y color (del estilo activo); bloques visibles, bloqueo y
+-- vista previa (del perfil). Los controles se describen en tablas para comprobarlos en las pruebas.
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
@@ -7,36 +7,36 @@ local Widgets = ns.Widgets
 local TabFrames = { stacks = {} }
 ns.TabFrames = TabFrames
 
+-- section: parte del estilo que edita cada control.
 TabFrames.SLIDERS = {
-  { key = "width", label = L.FRAMES_WIDTH, step = 1 },
-  { key = "height", label = L.FRAMES_HEIGHT, step = 1 },
-  { key = "spacing", label = L.FRAMES_SPACING, step = 1 },
-  { key = "columns", label = L.FRAMES_COLUMNS, step = 1 },
-  { key = "unitsPerColumn", label = L.FRAMES_UNITS_PER_COLUMN, step = 1 },
-  { key = "outOfRangeAlpha", label = L.FRAMES_RANGE_ALPHA, step = 0.05, format = "%.2f" },
+  { section = "layout", key = "width", label = L.FRAMES_WIDTH, step = 1 },
+  { section = "layout", key = "height", label = L.FRAMES_HEIGHT, step = 1 },
+  { section = "layout", key = "spacing", label = L.FRAMES_SPACING, step = 1 },
+  { section = "layout", key = "columns", label = L.FRAMES_COLUMNS, step = 1 },
+  { section = "layout", key = "unitsPerColumn", label = L.FRAMES_UNITS_PER_COLUMN, step = 1 },
+  { section = "bar", key = "outOfRangeAlpha", label = L.FRAMES_RANGE_ALPHA, step = 0.05, format = "%.2f" },
 }
-
-local TEXTURE_LABELS = { BLIZZARD = L.TEXTURE_BLIZZARD, RAID = L.TEXTURE_RAID, FLAT = L.TEXTURE_FLAT }
-local textureOptions = {}
-for _, key in ipairs(ns.Media.TEXTURE_ORDER) do
-  textureOptions[#textureOptions + 1] = { value = key, label = TEXTURE_LABELS[key] }
-end
 
 TabFrames.DROPDOWNS = {
-  { key = "sortBy", label = L.FRAMES_SORT, options = {
+  { section = "layout", key = "sortBy", label = L.FRAMES_SORT, options = {
     { value = "GROUP", label = L.SORT_GROUP }, { value = "CLASS", label = L.SORT_CLASS }, { value = "ROLE", label = L.SORT_ROLE },
   } },
-  { key = "growth", label = L.FRAMES_GROWTH, options = {
+  { section = "layout", key = "growth", label = L.FRAMES_GROWTH, options = {
     { value = "DOWN", label = L.GROWTH_DOWN }, { value = "RIGHT", label = L.GROWTH_RIGHT },
   } },
-  { key = "colorMode", label = L.FRAMES_COLOR, options = {
+  { section = "bar", key = "colorMode", label = L.FRAMES_COLOR, options = {
     { value = "CLASS", label = L.COLOR_CLASS }, { value = "HEALTH", label = L.COLOR_HEALTH },
   } },
-  { key = "healthText", label = L.FRAMES_HEALTH_TEXT, options = {
-    { value = "NONE", label = L.TEXT_NONE }, { value = "DEFICIT", label = L.TEXT_DEFICIT }, { value = "PERCENT", label = L.TEXT_PERCENT },
-  } },
-  { key = "texture", label = L.FRAMES_TEXTURE, options = textureOptions },
+  { section = "bar", key = "texture", label = L.FRAMES_TEXTURE, options = ns.Media.TextureOptions },
 }
+
+local function OptionsOf(spec)
+  if type(spec.options) == "function" then
+    return spec.options()
+  end
+  return spec.options
+end
+TabFrames.OptionsOf = OptionsOf
 
 local function WarnBlizzardRestore(hidden)
   if not hidden then
@@ -64,13 +64,13 @@ function TabFrames.Build(panel)
   for _, spec in ipairs(TabFrames.SLIDERS) do
     local range = ns.Database.RANGES[spec.key]
     sliders:Add(Widgets.Slider(panel, spec.label, range[1], range[2], spec.step,
-      Widgets.SectionGetter("frames", spec.key), Widgets.SectionSetter("frames", spec.key), spec.format), 48)
+      Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key), spec.format), 48)
   end
   local dropdowns = Widgets.Stack(panel, 250, 0)
   for _, spec in ipairs(TabFrames.DROPDOWNS) do
     dropdowns:Add(Widgets.Dropdown(panel, spec.label, 200, function()
-      return spec.options
-    end, Widgets.SectionGetter("frames", spec.key), Widgets.SectionSetter("frames", spec.key)), 50)
+      return OptionsOf(spec)
+    end, Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key)), 50)
   end
   local checkboxes = Widgets.Stack(panel, 470, 0)
   for _, spec in ipairs(TabFrames.CHECKBOXES) do

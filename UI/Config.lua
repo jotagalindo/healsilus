@@ -7,9 +7,9 @@ local Widgets = ns.Widgets
 local Config = { tabs = {}, tabOrder = {}, built = false, selected = nil }
 ns.Config = Config
 
-local WIDTH, HEIGHT = 760, 560
--- Seis pestañas caben en el ancho de la ventana: 20 + 6 × (110 + 4) = 704.
-local TAB_WIDTH = 110
+local WIDTH, HEIGHT = 820, 560
+-- Ocho pestañas caben en el ancho de la ventana: 20 + 8 × (94 + 4) = 804.
+local TAB_WIDTH = 94
 
 local function ClassName(classToken)
   return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classToken]) or tostring(classToken)
@@ -119,7 +119,11 @@ function Config:Refresh()
   if not self.built or not self.frame:IsShown() or not ns.Profiles.active then
     return
   end
-  self.sourceText:SetText(string.format(L.PROFILES_ACTIVE, Config.DescribeSource()))
+  local header = string.format(L.PROFILES_ACTIVE, Config.DescribeSource())
+  if ns.Styles and ns.Styles.activeName then
+    header = header .. " · " .. string.format(L.CONFIG_STYLE, ns.Styles.activeName)
+  end
+  self.sourceText:SetText(header)
   self:UpdatePending()
   local tab = self.tabs[self.selected]
   if tab and tab.refresh then

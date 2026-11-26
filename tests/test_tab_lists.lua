@@ -15,7 +15,7 @@ local function LoadTabs()
   })
   environment.StaticPopupDialogs = {}
   local ns = Loader.Load(environment, {
-    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
     "Data/Spells.lua", "Data/Druid.lua", "UI/Widgets.lua", "UI/Config.lua", "UI/TabAuras.lua", "UI/TabBuffs.lua",
   })
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }

@@ -2,18 +2,29 @@
 -- Sin APIs de WoW: todo se prueba fuera del juego.
 local _, ns = ...
 
-local Database = { CURRENT_VERSION = 1, MIGRATIONS = {}, fixes = {} }
+local Database = { CURRENT_VERSION = 2, MIGRATIONS = {}, fixes = {} }
 ns.Database = Database
 
 -- Colecciones cuyo contenido decide el usuario: nunca se mezclan con los valores por defecto.
 Database.OPAQUE_KEYS = { bindings = true, hotSpellIDs = true, watched = true }
 
+local ANCHOR_POINTS = {
+  TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
+  RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true,
+}
+local CORNERS = { TOPLEFT = true, TOPRIGHT = true, BOTTOMLEFT = true, BOTTOMRIGHT = true }
+
+-- Valores permitidos por nombre de campo (perfil y estilos, ver Core/StyleData.lua).
 Database.ENUMS = {
   sortBy = { GROUP = true, CLASS = true, ROLE = true },
   growth = { DOWN = true, RIGHT = true },
-  texture = { BLIZZARD = true, RAID = true, FLAT = true },
   colorMode = { CLASS = true, HEALTH = true },
-  healthText = { NONE = true, DEFICIT = true, PERCENT = true },
+  mode = { NONE = true, DEFICIT = true, PERCENT = true },
+  outline = { NONE = true, OUTLINE = true, THICKOUTLINE = true },
+  point = ANCHOR_POINTS,
+  hotsPoint = CORNERS,
+  debuffsPoint = CORNERS,
+  dispelMode = { RING = true, BAR = true, BOTH = true },
 }
 
 Database.WATCH_TARGETS = { ALL = true, TANKS = true }
@@ -28,18 +39,22 @@ Database.RANGES = {
   hotsMax = { 0, 8 },
   debuffsMax = { 0, 6 },
   iconSize = { 8, 32 },
-  -- Canales de los colores de dispel (auras.dispelColors.<tipo>.r/g/b).
+  -- Canales de color (dispel, fondo y curva de vida de los estilos).
   r = { 0, 1 },
   g = { 0, 1 },
   b = { 0, 1 },
+  a = { 0, 1 },
+  -- Textos de los estilos.
+  size = { 6, 24 },
+  x = { -60, 60 },
+  y = { -60, 60 },
+  -- Umbrales de la curva de vida (fracción de vida).
+  injuredAt = { 0.02, 1 },
+  criticalAt = { 0, 0.98 },
 }
 
 -- Tipos de debuff que se pueden quitar, en el orden en que se muestran en la pestaña Debuffs.
 Database.DISPEL_TYPES = { "Magic", "Curse", "Poison", "Disease" }
-local DISPEL_TYPE_SET = {}
-for _, dispelType in ipairs(Database.DISPEL_TYPES) do
-  DISPEL_TYPE_SET[dispelType] = true
-end
 
 local COLOR_FIELDS = { r = true, g = true, b = true }
 
@@ -65,26 +80,37 @@ local MAX_MACRO_LENGTH = 1023
 
 Database.DEFAULT_MINIMAP_ANGLE = 225
 
+-- Qué estilo usa el perfil en cada situación (los nombres son los de los estilos de serie).
+function Database.DefaultStyleRules()
+  local L = ns.L
+  return {
+    solo = L.STYLE_DEFAULT_NAME,
+    party = L.STYLE_DEFAULT_NAME,
+    raid10 = L.STYLE_DEFAULT_NAME,
+    raid20 = L.STYLE_DEFAULT_NAME,
+    raid40 = L.STYLE_COMPACT_NAME,
+  }
+end
+
 function Database.DefaultProfile()
   return {
     bindings = {},
     -- targetOnClick: además de lanzar, selecciona la unidad. avoidBlueCursor: cancela el cursor azul
     -- si el hechizo no se puede lanzar sobre ella. Ambas convierten el hechizo en una macro [@mouseover].
     clicks = { targetOnClick = false, avoidBlueCursor = false },
+    -- Lo visual (tamaño, textura, textos, iconos, colores) vive en los estilos (Core/StyleData.lua);
+    -- el perfil decide cuándo se ven los marcos y qué estilo usar en cada situación.
     frames = {
-      width = 110, height = 34, spacing = 2, columns = 8, unitsPerColumn = 5,
-      sortBy = "GROUP", growth = "DOWN",
       showSolo = true, showInParty = true, showInRaid = true,
       showTanks = true, showPets = false, showTarget = true, showFocus = true,
       hideBlizzard = true, locked = true, castOnDown = false,
-      texture = "BLIZZARD", colorMode = "CLASS", healthText = "DEFICIT", outOfRangeAlpha = 0.4,
     },
     auras = {
       hotsEnabled = true, hotsMax = 4, hotSpellIDs = {},
-      debuffsEnabled = true, debuffsMax = 2, debuffsDispellableOnly = true, iconSize = 14,
-      dispelColors = Database.DefaultDispelColors(),
+      debuffsEnabled = true, debuffsMax = 2, debuffsDispellableOnly = true,
     },
     buffs = { enabled = true, watched = {} },
+    styleRules = Database.DefaultStyleRules(),
   }
 end
 
@@ -140,7 +166,7 @@ function Database.IsValidWatched(entry)
 end
 
 -- Completa 'target' con 'defaults' sin tocar lo que el usuario ya tiene bien.
--- Cada campo corregido se añade a 'fixes' con su ruta (p. ej. "frames.width").
+-- Cada campo corregido se añade a 'fixes' con su ruta (p. ej. "frames.showTanks").
 function Database.FillDefaults(target, defaults, path, fixes)
   for key, defaultValue in pairs(defaults) do
     local current = target[key]
@@ -192,19 +218,10 @@ function Database.NormalizeProfile(profile, fixes)
     end
   end
   profile.buffs.watched = watched
-  -- FillDefaults ya completó y acotó los tipos conocidos; aquí se quitan tipos y campos que sobran.
-  for dispelType, color in pairs(profile.auras.dispelColors) do
-    local typePath = "auras.dispelColors." .. tostring(dispelType)
-    if not DISPEL_TYPE_SET[dispelType] then
-      profile.auras.dispelColors[dispelType] = nil
-      fixes[#fixes + 1] = typePath
-    else
-      for field in pairs(color) do
-        if not COLOR_FIELDS[field] then
-          color[field] = nil
-          fixes[#fixes + 1] = typePath .. "." .. tostring(field)
-        end
-      end
+  for context in pairs(profile.styleRules) do
+    if Database.DefaultStyleRules()[context] == nil then
+      profile.styleRules[context] = nil
+      fixes[#fixes + 1] = "styleRules." .. tostring(context)
     end
   end
   return profile
@@ -245,7 +262,7 @@ function Database.ValidateProfile(profile)
       end
     end
   end
-  for _, section in ipairs({ "clicks", "frames", "auras", "buffs" }) do
+  for _, section in ipairs({ "clicks", "frames", "auras", "buffs", "styleRules" }) do
     local values = profile[section]
     if values ~= nil then
       if type(values) ~= "table" then
@@ -267,13 +284,6 @@ function Database.ValidateProfile(profile)
     for spellID, enabled in pairs(profile.auras.hotSpellIDs) do
       if not IsPositiveInteger(spellID) or enabled ~= true then
         return false, "auras.hotSpellIDs"
-      end
-    end
-  end
-  if profile.auras and profile.auras.dispelColors then
-    for dispelType, color in pairs(profile.auras.dispelColors) do
-      if not DISPEL_TYPE_SET[dispelType] or not Database.IsValidColor(color) then
-        return false, "auras.dispelColors." .. tostring(dispelType)
       end
     end
   end
@@ -316,6 +326,70 @@ function Database.NormalizeCharacter(character, fixes)
       fixes[#fixes + 1] = "characters.specs." .. tostring(specIndex)
     end
   end
+end
+
+-- Versión 1 → 2: la parte visual de cada perfil pasa a un estilo con nombre ("My style", "My style 2"...).
+-- Perfiles con el mismo aspecto comparten estilo; el perfil se queda con una regla que lo usa siempre.
+local function SameValue(left, right)
+  if type(left) ~= type(right) then
+    return false
+  end
+  if type(left) ~= "table" then
+    return left == right
+  end
+  for key, value in pairs(left) do
+    if not SameValue(value, right[key]) then
+      return false
+    end
+  end
+  for key in pairs(right) do
+    if left[key] == nil then
+      return false
+    end
+  end
+  return true
+end
+
+local function EachStoredProfile(db, visit)
+  for _, profile in pairs(type(db.classProfiles) == "table" and db.classProfiles or {}) do
+    visit(profile)
+  end
+  for _, character in pairs(type(db.characters) == "table" and db.characters or {}) do
+    if type(character) == "table" then
+      visit(character.own)
+      for _, profile in pairs(type(character.specs) == "table" and character.specs or {}) do
+        visit(profile)
+      end
+    end
+  end
+end
+Database.EachStoredProfile = EachStoredProfile
+
+Database.MIGRATIONS[1] = function(db)
+  db.styles = type(db.styles) == "table" and db.styles or {}
+  local migrated = {}
+  EachStoredProfile(db, function(profile)
+    if type(profile) ~= "table" then
+      return
+    end
+    local style = ns.StyleData.ExtractVersion1Style(profile)
+    local name
+    for _, entry in ipairs(migrated) do
+      if SameValue(entry.style, style) then
+        name = entry.name
+      end
+    end
+    if not name then
+      name = #migrated == 0 and ns.L.STYLE_MIGRATED_NAME or (ns.L.STYLE_MIGRATED_NAME .. " " .. (#migrated + 1))
+      migrated[#migrated + 1] = { name = name, style = style }
+      db.styles[name] = style
+    end
+    local rules = {}
+    for context in pairs(Database.DefaultStyleRules()) do
+      rules[context] = name
+    end
+    profile.styleRules = rules
+  end)
 end
 
 -- Cada migración convierte los datos de la versión N a la N+1. Una versión sin migración es un error.
@@ -364,6 +438,22 @@ function Database:Initialize()
   end
   if type(db.minimap.hide) ~= "boolean" then
     db.minimap.hide = false
+  end
+  -- Estilos: comunes a toda la cuenta. Los de serie se instalan una sola vez (si luego borras uno, no vuelve).
+  if type(db.styles) ~= "table" then
+    db.styles = {}
+  end
+  if not db.presetsInstalled then
+    ns.StyleData.InstallPresets(db.styles)
+    db.presetsInstalled = true
+  end
+  for name, style in pairs(db.styles) do
+    if type(style) == "table" and ns.StyleData.IsValidName(name) then
+      ns.StyleData.NormalizeStyle(style, self.fixes)
+    else
+      db.styles[name] = nil
+      self.fixes[#self.fixes + 1] = "styles." .. tostring(name)
+    end
   end
   for classToken, profile in pairs(db.classProfiles) do
     if type(profile) == "table" then

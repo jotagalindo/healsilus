@@ -17,10 +17,12 @@ Locales\esES.lua
 Core\Events.lua
 Core\CombatQueue.lua
 Core\Database.lua
+Core\StyleData.lua
 Data\Spells.lua
 Data\Druid.lua
 Data\Dispels.lua
 Core\Profiles.lua
+Core\Styles.lua
 Core\Serializer.lua
 Frames\Media.lua
 Frames\Curves.lua
@@ -35,9 +37,11 @@ UI\Widgets.lua
 UI\Config.lua
 UI\TabClicks.lua
 UI\TabFrames.lua
+UI\TabAppearance.lua
 UI\TabAuras.lua
 UI\TabDebuffs.lua
 UI\TabBuffs.lua
+UI\TabStyles.lua
 UI\TabProfiles.lua
 UI\MinimapButton.lua
 Core\Diagnostics.lua

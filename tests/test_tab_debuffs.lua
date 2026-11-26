@@ -14,11 +14,12 @@ local function LoadTabDebuffs()
   })
   environment.StaticPopupDialogs = {}
   local ns = Loader.Load(environment, {
-    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
     "Data/Spells.lua", "Data/Druid.lua", "Data/Dispels.lua", "Frames/ClickCast.lua", "UI/Widgets.lua",
     "UI/Config.lua", "UI/TabClicks.lua", "UI/TabDebuffs.lua",
   })
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
+  ns.Styles = { active = ns.StyleData.DefaultStyle() }
   return ns
 end
 
@@ -62,9 +63,9 @@ describe("TabDebuffs", function()
       sections[#sections + 1] = section
     end)
     ns.TabDebuffs.SetColor("Curse", 1, 0.5, 0)
-    assertEquals(ns.Profiles.active.auras.dispelColors.Curse, { r = 1, g = 0.5, b = 0 })
+    assertEquals(ns.Styles.active.auras.dispelColors.Curse, { r = 1, g = 0.5, b = 0 })
     ns.TabDebuffs.ResetColors()
-    assertEquals(ns.Profiles.active.auras.dispelColors.Curse, { r = 0.6, g = 0, b = 1 })
-    assertEquals(sections, { "auras", "auras" })
+    assertEquals(ns.Styles.active.auras.dispelColors.Curse, { r = 0.6, g = 0, b = 1 })
+    assertEquals(sections, { "style", "style" })
   end)
 end)

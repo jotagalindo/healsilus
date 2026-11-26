@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue, assertFalse, assertNil = Harness.assertEquals, Harness.assertTrue, Harness.assertFalse, Harness.assertNil
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Data/Spells.lua", "Frames/ClickCast.lua", "UI/Widgets.lua", "UI/Config.lua", "UI/TabClicks.lua",
 }
 

@@ -25,9 +25,16 @@ local TYPE_LABELS = {
   Disease = L.DISPEL_DISEASE,
 }
 
-local function Auras()
-  return ns.Profiles.active.auras
+-- Colores, forma del aviso y esquina de los iconos: del estilo activo.
+local function Look()
+  return ns.Styles.active.auras
 end
+
+TabDebuffs.MODE_OPTIONS = {
+  { value = "RING", label = L.DISPEL_MODE_RING },
+  { value = "BAR", label = L.DISPEL_MODE_BAR },
+  { value = "BOTH", label = L.DISPEL_MODE_BOTH },
+}
 
 local function DescribeClicks(keys, bindings)
   if #keys == 0 then
@@ -50,7 +57,7 @@ function TabDebuffs.Rows()
     rows[#rows + 1] = {
       dispelType = dispelType,
       label = TYPE_LABELS[dispelType],
-      color = Auras().dispelColors[dispelType],
+      color = Look().dispelColors[dispelType],
       clicks = DescribeClicks(clicks[dispelType], bindings),
     }
   end
@@ -58,13 +65,13 @@ function TabDebuffs.Rows()
 end
 
 function TabDebuffs.SetColor(dispelType, red, green, blue)
-  Auras().dispelColors[dispelType] = { r = red, g = green, b = blue }
-  ns.Config:Changed("auras")
+  Look().dispelColors[dispelType] = { r = red, g = green, b = blue }
+  ns.Config:Changed("style")
 end
 
 function TabDebuffs.ResetColors()
-  Auras().dispelColors = ns.Database.DefaultDispelColors()
-  ns.Config:Changed("auras")
+  Look().dispelColors = ns.Database.DefaultDispelColors()
+  ns.Config:Changed("style")
 end
 
 -- El selector avisa en cada movimiento: se espera a que pare para no reconstruir las auras sin parar.
@@ -89,7 +96,7 @@ end
 local function CreateTypeRow(panel, dispelType, position)
   local top = ROWS_TOP - (position - 1) * ROW_HEIGHT
   local swatch = Widgets.ColorSwatch(panel, function()
-    return Auras().dispelColors[dispelType]
+    return Look().dispelColors[dispelType]
   end, function(red, green, blue)
     ScheduleColor(dispelType, red, green, blue)
   end)
@@ -115,6 +122,14 @@ function TabDebuffs.Build(panel)
       Widgets.SectionGetter("auras", spec.key), Widgets.SectionSetter("auras", spec.key)), 48)
   end
   TabDebuffs.stack = stack
+  local appearance = Widgets.Stack(panel, 300, 0)
+  appearance:Add(Widgets.Dropdown(panel, L.DISPEL_MODE, 200, function()
+    return TabDebuffs.MODE_OPTIONS
+  end, Widgets.StyleGetter("auras", "dispelMode"), Widgets.StyleSetter("auras", "dispelMode")), 50)
+  appearance:Add(Widgets.Dropdown(panel, L.AURAS_DEBUFFS_CORNER, 200, function()
+    return ns.TabAuras.CORNER_OPTIONS
+  end, Widgets.StyleGetter("auras", "debuffsPoint"), Widgets.StyleSetter("auras", "debuffsPoint")), 50)
+  TabDebuffs.appearance = appearance
 
   local title = Widgets.Label(panel, L.DEBUFFS_COLORS_TITLE, "GameFontNormal")
   title:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, ROWS_TOP + 26)
@@ -132,6 +147,7 @@ end
 
 function TabDebuffs.Refresh()
   TabDebuffs.stack:Refresh()
+  TabDebuffs.appearance:Refresh()
   for _, row in ipairs(TabDebuffs.Rows()) do
     local widgets = TabDebuffs.rows[row.dispelType]
     widgets.swatch:Refresh()

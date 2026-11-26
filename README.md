@@ -19,6 +19,7 @@ Marcos de curación con click-casting (estilo HealBot) para **World of Warcraft:
 - Curación entrante y escudos, rango, aggro, muerto y desconectado.
 - Tus HoTs con cuenta atrás, debuffs con el color del tipo de dispel y buffs tuyos que faltan.
 - Perfiles por clase, por personaje y por especialización. Exportar e importar.
+- **Estilos (skins)** compartidos por toda la cuenta: tamaño y disposición, textura (también de LibSharedMedia), fondo, colores de la curva de vida, fuente y posición de cada texto, esquinas de los iconos y forma del aviso de dispel. Cuatro de serie, y cambio automático según estés solo, en grupo o en banda de 10/20/40. Se exportan e importan aparte.
 - Perfil de serie para druida.
 
 ## Normas de Blizzard

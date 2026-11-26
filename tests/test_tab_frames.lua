@@ -8,29 +8,30 @@ local function LoadTabFrames()
   local environment = Stubs.NewEnvironment()
   environment.StaticPopupDialogs = {}
   return Loader.Load(environment, {
-    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+    "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
     "Frames/Media.lua", "UI/Widgets.lua", "UI/Config.lua", "UI/TabFrames.lua",
   })
 end
 
 describe("TabFrames controls", function()
-  it("give every slider a stored range and a numeric default", function()
+  it("give every slider a stored range and a numeric default in the style", function()
     local ns = LoadTabFrames()
-    local defaults = ns.Database.DefaultProfile().frames
+    local style = ns.StyleData.DefaultStyle()
     for _, spec in ipairs(ns.TabFrames.SLIDERS) do
       assertTrue(ns.Database.RANGES[spec.key] ~= nil, spec.key)
-      assertEquals(type(defaults[spec.key]), "number", spec.key)
+      assertEquals(type(style[spec.section][spec.key]), "number", spec.key)
     end
   end)
 
-  it("offer exactly the allowed values in every dropdown", function()
+  it("offer exactly the allowed values in every dropdown, and every texture", function()
     local ns = LoadTabFrames()
     for _, spec in ipairs(ns.TabFrames.DROPDOWNS) do
       local offered = {}
-      for _, option in ipairs(spec.options) do
+      for _, option in ipairs(ns.TabFrames.OptionsOf(spec)) do
         offered[option.value] = true
       end
-      assertEquals(offered, ns.Database.ENUMS[spec.key], spec.key)
+      local expected = ns.Database.ENUMS[spec.key] or { BLIZZARD = true, RAID = true, FLAT = true }
+      assertEquals(offered, expected, spec.key)
     end
   end)
 

@@ -13,9 +13,31 @@ TabAuras.CHECKBOXES = {
   { key = "hotsEnabled", label = L.AURAS_HOTS },
 }
 
+-- style = true: el valor vive en el estilo activo (auras.*); si no, en el perfil.
 TabAuras.SLIDERS = {
   { key = "hotsMax", label = L.AURAS_HOTS_MAX },
-  { key = "iconSize", label = L.AURAS_ICON_SIZE },
+  { key = "iconSize", label = L.AURAS_ICON_SIZE, style = true },
+}
+
+local function Getter(spec)
+  if spec.style then
+    return Widgets.StyleGetter("auras", spec.key)
+  end
+  return Widgets.SectionGetter("auras", spec.key)
+end
+
+local function Setter(spec)
+  if spec.style then
+    return Widgets.StyleSetter("auras", spec.key)
+  end
+  return Widgets.SectionSetter("auras", spec.key)
+end
+
+TabAuras.CORNER_OPTIONS = {
+  { value = "TOPLEFT", label = L.CORNER_TOPLEFT },
+  { value = "TOPRIGHT", label = L.CORNER_TOPRIGHT },
+  { value = "BOTTOMLEFT", label = L.CORNER_BOTTOMLEFT },
+  { value = "BOTTOMRIGHT", label = L.CORNER_BOTTOMRIGHT },
 }
 
 local function HotSpellIDs()
@@ -49,9 +71,11 @@ function TabAuras.Build(panel)
   end
   for _, spec in ipairs(TabAuras.SLIDERS) do
     local range = ns.Database.RANGES[spec.key]
-    stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1,
-      Widgets.SectionGetter("auras", spec.key), Widgets.SectionSetter("auras", spec.key)), 48)
+    stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1, Getter(spec), Setter(spec)), 48)
   end
+  stack:Add(Widgets.Dropdown(panel, L.AURAS_HOTS_CORNER, 200, function()
+    return TabAuras.CORNER_OPTIONS
+  end, Widgets.StyleGetter("auras", "hotsPoint"), Widgets.StyleSetter("auras", "hotsPoint")), 50)
   TabAuras.stack = stack
 
   local title = Widgets.Label(panel, L.AURAS_HOT_LIST, "GameFontNormal")

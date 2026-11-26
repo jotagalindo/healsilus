@@ -87,6 +87,9 @@ function Diagnostics:Run()
     ns.Print(string.format(L.DIAG_HEADER_BUTTONS, header.healsilusKind, ns.Headers:CountButtons(header)))
   end
   ns.Print(string.format(L.DIAG_PROFILE, tostring(ns.Profiles.source), ns.CombatQueue:Count()))
+  if ns.Styles then
+    ns.Print(string.format(L.DIAG_STYLE, tostring(ns.Styles.activeName), tostring(ns.Styles.context)))
+  end
   if #ns.Database.fixes > 0 then
     ns.Print(string.format(L.DIAG_FIXES, table.concat(ns.Database.fixes, ", ")))
   end

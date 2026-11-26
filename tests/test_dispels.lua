@@ -15,7 +15,7 @@ local function LoadDispels()
     },
   })
   local ns = Loader.Load(environment, {
-    "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Data/Spells.lua", "Data/Druid.lua", "Data/Dispels.lua",
+    "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Core/StyleData.lua", "Data/Spells.lua", "Data/Druid.lua", "Data/Dispels.lua",
   })
   return ns
 end

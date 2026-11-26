@@ -108,8 +108,8 @@ end
 function Headers:CreateSingle(kind, visibility)
   local button = CreateFrame("Button", "HealsilusUnit_" .. kind, UIParent, "SecureActionButtonTemplate")
   button:SetAttribute("unit", kind)
-  local frames = ns.Profiles.active.frames
-  button:SetSize(frames.width, frames.height)
+  local layout = ns.Styles.active.layout
+  button:SetSize(layout.width, layout.height)
   button:SetPoint("TOPLEFT", self.anchors[kind], "BOTTOMLEFT", 0, -2)
   button.healsilusVisibility = visibility
   self.singles[kind] = button
@@ -117,18 +117,19 @@ function Headers:CreateSingle(kind, visibility)
   return button
 end
 
-function Headers:ApplyHeaderLayout(header, frames)
+-- layout: tamaño y disposición del estilo activo; frames: cuándo se ve y cómo se lanza (perfil).
+function Headers:ApplyHeaderLayout(header, layout, frames)
   local kind = header.healsilusKind
-  local down = frames.growth == "DOWN"
+  local down = layout.growth == "DOWN"
   SetAttributes(header, {
-    ["hs-width"] = frames.width,
-    ["hs-height"] = frames.height,
+    ["hs-width"] = layout.width,
+    ["hs-height"] = layout.height,
     ["hs-use-on-key-down"] = frames.castOnDown == true,
     point = down and "TOP" or "LEFT",
-    xOffset = down and 0 or frames.spacing,
-    yOffset = down and -frames.spacing or 0,
+    xOffset = down and 0 or layout.spacing,
+    yOffset = down and -layout.spacing or 0,
     columnAnchorPoint = down and "LEFT" or "TOP",
-    columnSpacing = frames.spacing,
+    columnSpacing = layout.spacing,
     showRaid = frames.showInRaid,
     showParty = frames.showInParty,
     showPlayer = true,
@@ -136,11 +137,11 @@ function Headers:ApplyHeaderLayout(header, frames)
   if kind == "tanks" then
     SetAttributes(header, { roleFilter = "MAINTANK,TANK", showSolo = false, unitsPerColumn = MAX_BUTTONS.tanks, maxColumns = 1 })
   elseif kind == "pets" then
-    SetAttributes(header, { showSolo = frames.showSolo, unitsPerColumn = frames.unitsPerColumn, maxColumns = frames.columns })
+    SetAttributes(header, { showSolo = frames.showSolo, unitsPerColumn = layout.unitsPerColumn, maxColumns = layout.columns })
   else
-    local sort = SORT_ATTRIBUTES[frames.sortBy]
+    local sort = SORT_ATTRIBUTES[layout.sortBy]
     SetAttributes(header, {
-      showSolo = frames.showSolo, unitsPerColumn = frames.unitsPerColumn, maxColumns = frames.columns,
+      showSolo = frames.showSolo, unitsPerColumn = layout.unitsPerColumn, maxColumns = layout.columns,
       groupBy = sort.groupBy, groupingOrder = sort.groupingOrder, groupFilter = "1,2,3,4,5,6,7,8",
     })
   end
@@ -148,7 +149,7 @@ function Headers:ApplyHeaderLayout(header, frames)
   local position = 1
   local child = header:GetAttribute("child1")
   while child do
-    child:SetSize(frames.width, frames.height)
+    child:SetSize(layout.width, layout.height)
     position = position + 1
     child = header:GetAttribute("child" .. position)
   end
@@ -166,10 +167,10 @@ end
 -- fuera de combate, para que nunca haga falta crear botones ni contenedores de auras en combate.
 -- La plantilla nace oculta y se actualiza al mostrarse (OnShow), así que los atributos que lee
 -- la initialConfigFunction (tamaño) tienen que estar puestos antes del Show.
-function Headers:Precreate(header, frames)
+function Headers:Precreate(header, layout)
   local maximum = MAX_BUTTONS[header.healsilusKind]
-  header:SetAttribute("hs-width", frames.width)
-  header:SetAttribute("hs-height", frames.height)
+  header:SetAttribute("hs-width", layout.width)
+  header:SetAttribute("hs-height", layout.height)
   header:SetAttribute("unitsPerColumn", maximum)
   header:SetAttribute("maxColumns", 1)
   header:SetAttribute("startingIndex", 1 - maximum)
@@ -214,6 +215,7 @@ function Headers:Create()
     return
   end
   local frames = ns.Profiles.active.frames
+  local layout = ns.Styles.active.layout
   for _, kind in ipairs({ "party", "tanks", "pets", "target", "focus" }) do
     CreateAnchor(kind)
   end
@@ -225,8 +227,8 @@ function Headers:Create()
   -- Los clics se guardan en las cabeceras antes de que existan sus botones.
   ns.ClickCast:Apply(ns.Profiles.active)
   for _, header in ipairs(self.list) do
-    self:Precreate(header, frames)
-    self:ApplyHeaderLayout(header, frames)
+    self:Precreate(header, layout)
+    self:ApplyHeaderLayout(header, layout, frames)
   end
   self.initialized = true
   self:ApplyProfile(ns.Profiles.active)
@@ -244,14 +246,15 @@ function Headers:ApplyProfile(profile)
   end
   ns.CombatQueue:Run("headers:apply", function()
     local frames = profile.frames
+    local layout = ns.Styles.active.layout
     for _, header in ipairs(Headers.list) do
-      Headers:ApplyHeaderLayout(header, frames)
+      Headers:ApplyHeaderLayout(header, layout, frames)
     end
     Headers:SetHeaderShown("party", not Headers.previewActive)
     Headers:SetHeaderShown("tanks", frames.showTanks and not Headers.previewActive)
     Headers:SetHeaderShown("pets", frames.showPets and not Headers.previewActive)
     for kind, button in pairs(Headers.singles) do
-      button:SetSize(frames.width, frames.height)
+      button:SetSize(layout.width, layout.height)
       local enabled = (kind == "target" and frames.showTarget) or (kind == "focus" and frames.showFocus)
       RegisterStateDriver(button, "visibility", enabled and button.healsilusVisibility or "hide")
     end
@@ -265,8 +268,12 @@ ns.Events:Register("PROFILE_CHANGED", function(profile)
   Headers:ApplyProfile(profile)
 end)
 
+ns.Events:Register("STYLE_CHANGED", function()
+  Headers:ApplyProfile(ns.Profiles.active)
+end)
+
 ns.Events:Register("SETTINGS_CHANGED", function(section)
-  if section == "frames" then
+  if section == "frames" or section == "style" then
     Headers:ApplyProfile(ns.Profiles.active)
   end
 end)

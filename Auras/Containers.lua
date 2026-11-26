@@ -17,7 +17,7 @@ local function Layout(size)
 end
 
 local function DispelOptions()
-  local options = { customDispelColorMap = ns.Media.DispelColorMap(ns.Profiles.active.auras.dispelColors) }
+  local options = { customDispelColorMap = ns.Media.DispelColorMap(ns.Styles.active.auras.dispelColors) }
   if Enum.CustomAuraButtonDispelTypeTextureStyle then
     options.style = Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset
   end
@@ -110,6 +110,38 @@ local function MakeHighlightInitializer(unitButton)
   end
 end
 
+-- Variante "barra": la textura cubre la parte llena de la barra de vida y la tiñe del color del debuff,
+-- como hace HealBot en Forever (HealBot_ForeverFrames.lua:113).
+local BAR_TINT_ALPHA = 0.75
+
+local function MakeBarTintInitializer(unitButton)
+  return function(auraButton)
+    if auraButton.healsilusReady then
+      return
+    end
+    local ok, failure = pcall(function()
+      auraButton:SetSize(1, 1)
+      DisableMouse(auraButton)
+      local tint = auraButton:CreateTexture(nil, "ARTWORK")
+      tint:SetAllPoints(unitButton.healsilus.healthBar:GetStatusBarTexture())
+      tint:SetColorTexture(1, 1, 1, 1)
+      tint:SetAlpha(BAR_TINT_ALPHA)
+      AddDispelTexture(auraButton, tint)
+      auraButton.healsilusReady = true
+    end)
+    if not ok then
+      ns.RecordError("Containers:InitializeBarTint", failure)
+    end
+  end
+end
+
+-- Desplazamiento de 1 px hacia dentro de la barra según la esquina elegida en el estilo.
+local function CornerOffset(point)
+  local x = string.find(point, "RIGHT") and -1 or 1
+  local y = string.find(point, "TOP") and -1 or 1
+  return x, y
+end
+
 local function BuildContainer(unitButton, spec)
   local container = CreateFrame("AuraContainer", nil, unitButton, "CustomAuraContainerTemplate")
   container:Hide()
@@ -185,31 +217,44 @@ function Containers:Attach(button)
     return
   end
   self:Detach(button)
+  -- Qué se vigila sale del perfil; tamaño, esquinas, colores y forma del aviso, del estilo activo.
   local auras = ns.Profiles.active.auras
+  local look = ns.Styles.active.auras
   local sortMethod = AuraContainerSortMethod and AuraContainerSortMethod.UnitFrameDebuff
   local built = {}
   local ok, failure = pcall(function()
     if auras.hotsEnabled and auras.hotsMax > 0 then
       local spellIDs = ns.Spells:ExpandRanks(auras.hotSpellIDs)
       if next(spellIDs) then
+        local x, y = CornerOffset(look.hotsPoint)
         built.hots = BuildContainer(button, {
-          key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = auras.iconSize,
-          initializer = MakeIconInitializer(auras.iconSize, false), point = "BOTTOMRIGHT", x = -1, y = 1,
+          key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = look.iconSize,
+          initializer = MakeIconInitializer(look.iconSize, false), point = look.hotsPoint, x = x, y = y,
           levelOffset = 8, candidateFilters = { includeSpellIDs = spellIDs },
         })
       end
     end
     if auras.debuffsEnabled and auras.debuffsMax > 0 then
+      local x, y = CornerOffset(look.debuffsPoint)
       built.debuffs = BuildContainer(button, {
         key = "healsilusDebuffs", filter = auras.debuffsDispellableOnly and "HARMFUL|RAID" or "HARMFUL",
-        maxCount = auras.debuffsMax, size = auras.iconSize, initializer = MakeIconInitializer(auras.iconSize, true),
-        point = "TOPRIGHT", x = -1, y = -1, levelOffset = 8, sortMethod = sortMethod,
+        maxCount = auras.debuffsMax, size = look.iconSize, initializer = MakeIconInitializer(look.iconSize, true),
+        point = look.debuffsPoint, x = x, y = y, levelOffset = 8, sortMethod = sortMethod,
       })
-      built.highlight = BuildContainer(button, {
-        key = "healsilusDispel", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
-        initializer = MakeHighlightInitializer(button), point = "TOPLEFT", x = 0, y = 0,
-        levelOffset = 1, sortMethod = sortMethod,
-      })
+      if look.dispelMode ~= "BAR" then
+        built.highlight = BuildContainer(button, {
+          key = "healsilusDispel", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
+          initializer = MakeHighlightInitializer(button), point = "TOPLEFT", x = 0, y = 0,
+          levelOffset = 1, sortMethod = sortMethod,
+        })
+      end
+      if look.dispelMode ~= "RING" then
+        built.tint = BuildContainer(button, {
+          key = "healsilusDispelTint", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
+          initializer = MakeBarTintInitializer(button), point = "TOPLEFT", x = 0, y = 0,
+          levelOffset = 3, sortMethod = sortMethod,
+        })
+      end
     end
   end)
   if not ok then
@@ -282,9 +327,10 @@ local function Rebuild()
   Containers:RebuildAll()
 end
 ns.Events:Register("PROFILE_CHANGED", Rebuild)
+ns.Events:Register("STYLE_CHANGED", Rebuild)
 ns.Events:Register("SPELLBOOK_UPDATED", Rebuild)
 ns.Events:Register("SETTINGS_CHANGED", function(section)
-  if section == "auras" then
+  if section == "auras" or section == "style" then
     Rebuild()
   end
 end)

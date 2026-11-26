@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue, assertNil = Harness.assertEquals, Harness.assertTrue, Harness.assertNil
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Data/Spells.lua", "Frames/Media.lua", "Auras/Containers.lua",
 }
 
@@ -42,6 +42,7 @@ local function LoadContainers(options)
   local profile = ns.Database.DefaultProfile()
   profile.auras.hotSpellIDs = { [774] = true }
   ns.Profiles = { active = profile }
+  ns.Styles = { active = ns.StyleData.DefaultStyle() }
   ns.UnitButton = { buttons = {} }
   return ns, environment, containers
 end
@@ -101,6 +102,38 @@ describe("Containers", function()
       local shownAt = MethodPosition(container, "Show")
       assertTrue(unitAt < groupAt and groupAt < enabledAt and enabledAt < shownAt)
     end
+  end)
+
+  it("marks dispellable debuffs with a ring, a tinted bar or both, as the style says", function()
+    local ns = LoadContainers()
+    local button = FakeButton("party1")
+    ns.Containers:Attach(button)
+    assertTrue(button.healsilusAuras.highlight ~= nil)
+    assertNil(button.healsilusAuras.tint)
+    ns.Styles.active.auras.dispelMode = "BAR"
+    ns.Containers:Attach(button)
+    assertNil(button.healsilusAuras.highlight)
+    assertEquals(GroupCall(button.healsilusAuras.tint)[3], "HARMFUL|RAID")
+    ns.Styles.active.auras.dispelMode = "BOTH"
+    ns.Containers:Attach(button)
+    assertTrue(button.healsilusAuras.highlight ~= nil and button.healsilusAuras.tint ~= nil)
+  end)
+
+  it("places HoT and debuff icons in the corners chosen by the style", function()
+    local ns = LoadContainers()
+    ns.Styles.active.auras.hotsPoint = "TOPLEFT"
+    ns.Styles.active.auras.debuffsPoint = "BOTTOMRIGHT"
+    local button = FakeButton("party1")
+    ns.Containers:Attach(button)
+    local function PointCall(container)
+      for _, call in ipairs(container.calls) do
+        if call[1] == "SetPoint" then
+          return { call[2], call[4], call[5], call[6] }
+        end
+      end
+    end
+    assertEquals(PointCall(button.healsilusAuras.hots), { "TOPLEFT", "TOPLEFT", 1, -1 })
+    assertEquals(PointCall(button.healsilusAuras.debuffs), { "BOTTOMRIGHT", "BOTTOMRIGHT", -1, 1 })
   end)
 
   it("uses the plain harmful filter when every debuff should be shown", function()
