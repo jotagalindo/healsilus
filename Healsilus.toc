@@ -25,3 +25,4 @@ Frames\Prediction.lua
 Auras\Containers.lua
 Auras\MissingBuffs.lua
 Frames\UnitButton.lua
+Frames\Headers.lua

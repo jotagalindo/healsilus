@@ -8,3 +8,10 @@ L.ERROR_RECORDED = "error in %s: %s (see /hs diag)"
 L.STATUS_OFFLINE = "Offline"
 L.STATUS_DEAD = "Dead"
 L.TOOLTIP_MISSING_BUFFS = "Missing: %s"
+
+-- Anclas
+L.ANCHOR_PARTY = "Healsilus: party/raid"
+L.ANCHOR_TANKS = "Healsilus: tanks"
+L.ANCHOR_PETS = "Healsilus: pets"
+L.ANCHOR_TARGET = "Healsilus: target"
+L.ANCHOR_FOCUS = "Healsilus: focus"
