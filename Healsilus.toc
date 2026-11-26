@@ -14,3 +14,4 @@ Locales\esES.lua
 Core\Events.lua
 Core\CombatQueue.lua
 Core\Database.lua
+Data\Spells.lua

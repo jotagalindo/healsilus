@@ -7,6 +7,7 @@ local TEST_FILES = {
   "tests/test_events.lua",
   "tests/test_combat_queue.lua",
   "tests/test_database.lua",
+  "tests/test_spells.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do
