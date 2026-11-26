@@ -30,6 +30,7 @@ Frames\ClickCast.lua
 Frames\Prediction.lua
 Auras\Containers.lua
 Auras\MissingBuffs.lua
+Auras\DispelOverride.lua
 Frames\UnitButton.lua
 Frames\Snapping.lua
 Frames\Headers.lua

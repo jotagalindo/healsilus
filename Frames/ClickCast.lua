@@ -106,6 +106,7 @@ function ClickCast:Apply(profile)
   local attributes = ClickCast.BuildAttributes(profile.bindings, ClickCast.ResolveSpell, profile.clicks)
   for button in pairs(ns.UnitButton.buttons) do
     ClickCast.ApplyToButton(button, attributes)
+    button.healsilusOverride = nil
   end
   for _, header in ipairs(ns.Headers.list) do
     ClickCast.StoreOnHeader(header, attributes)
@@ -126,8 +127,47 @@ function ClickCast:SetBuffMacro(button, macro)
   if InCombatLockdown() then
     return false
   end
+  -- Mientras el override de dispel manda en esta barra, sus clics no se tocan.
+  if button.healsilusOverride then
+    return true
+  end
   for _, name in ipairs(self.buffAttributes or {}) do
     button:SetAttribute(name, macro)
+  end
+  return true
+end
+
+-- Override de dispel (Auras/DispelOverride.lua): con castString, todos los clics de la barra lanzan ese
+-- hechizo; con nil, la barra recupera sus clics normales. Solo fuera de combate.
+function ClickCast:SetDispelOverride(button, castString)
+  if InCombatLockdown() then
+    return false
+  end
+  if castString then
+    local options = ns.Profiles.active and ns.Profiles.active.clicks or {}
+    local useMacro = options.targetOnClick or options.avoidBlueCursor
+    local attributes = {}
+    for _, prefix in ipairs(ns.BINDING_PREFIXES) do
+      for _, mouseButton in ipairs(ns.MOUSE_BUTTONS) do
+        if useMacro then
+          attributes[#attributes + 1] = { name = prefix .. "type" .. mouseButton, value = "macro" }
+          attributes[#attributes + 1] = { name = prefix .. "macrotext" .. mouseButton, value = ClickCast.SpellMacro(castString, options) }
+        else
+          attributes[#attributes + 1] = { name = prefix .. "type" .. mouseButton, value = "spell" }
+          attributes[#attributes + 1] = { name = prefix .. "spell" .. mouseButton, value = castString }
+        end
+      end
+    end
+    ClickCast.ApplyToButton(button, attributes)
+    button.healsilusOverride = castString
+    return true
+  end
+  if button.healsilusOverride then
+    ClickCast.ApplyToButton(button, self.current)
+    button.healsilusOverride = nil
+    if ns.MissingBuffs and button.healsilus then
+      ns.MissingBuffs:Render(button)
+    end
   end
   return true
 end

@@ -274,3 +274,6 @@ L.BINDING_BUFF = "Cast the missing buff"
 L.FRAMES_SHOW_MAIN = "Main block (party/raid)"
 L.FRAMES_MOVE_TOGETHER = "Move all blocks together"
 L.FRAMES_SNAP_DISTANCE = "Magnet between blocks (px, 0 = off)"
+
+-- Override de dispel (como el SmartCast de HealBot)
+L.CLICKS_DISPEL_OVERRIDE = "Out of combat, any click removes a debuff you can remove"

@@ -42,6 +42,7 @@ end
 TabClicks.OPTIONS = {
   { key = "targetOnClick", label = L.CLICKS_TARGET_ON_CLICK },
   { key = "avoidBlueCursor", label = L.CLICKS_AVOID_BLUE_CURSOR },
+  { key = "dispelOverride", label = L.CLICKS_DISPEL_OVERRIDE },
 }
 
 local function Bindings()

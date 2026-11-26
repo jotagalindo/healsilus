@@ -193,6 +193,8 @@ function TabDebuffs.Build(panel)
   for _, spec in ipairs(TabDebuffs.CHECKBOXES) do
     stack:Add(Widgets.Checkbox(panel, spec.label, Widgets.SectionGetter("auras", spec.key), Widgets.SectionSetter("auras", spec.key)), 30)
   end
+  stack:Add(Widgets.Checkbox(panel, L.CLICKS_DISPEL_OVERRIDE, Widgets.SectionGetter("clicks", "dispelOverride"),
+    Widgets.SectionSetter("clicks", "dispelOverride")), 30)
   for _, spec in ipairs(TabDebuffs.SLIDERS) do
     local range = ns.Database.RANGES[spec.key]
     stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1,

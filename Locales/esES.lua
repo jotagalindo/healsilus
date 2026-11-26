@@ -280,3 +280,6 @@ L.BINDING_BUFF = "Poner el buff que falta"
 L.FRAMES_SHOW_MAIN = "Bloque principal (grupo/banda)"
 L.FRAMES_MOVE_TOGETHER = "Mover todos los bloques juntos"
 L.FRAMES_SNAP_DISTANCE = "Imán entre bloques (px, 0 = sin imán)"
+
+-- Override de dispel (como el SmartCast de HealBot)
+L.CLICKS_DISPEL_OVERRIDE = "Fuera de combate, cualquier clic quita el debuff que puedas quitar"

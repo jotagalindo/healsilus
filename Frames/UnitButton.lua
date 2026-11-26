@@ -180,6 +180,7 @@ function UnitButton:SetUnit(button, unit)
     end
   end
   ns.Containers:SetUnit(button, unit)
+  ns.DispelOverride:MarkDirty(button)
   self:UpdateAll(button)
 end
 
@@ -397,6 +398,7 @@ local HANDLERS = {
   end,
   UNIT_AURA = function(button)
     ns.MissingBuffs:MarkDirty(button)
+    ns.DispelOverride:MarkDirty(button)
   end,
 }
 
