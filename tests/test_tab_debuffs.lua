@@ -20,7 +20,9 @@ local function LoadTabDebuffs()
   })
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
   ns.Styles = { active = ns.StyleData.DefaultStyle() }
-  return ns
+  ns.UnitButton = { buttons = {} }
+  ns.Headers = { list = {} }
+  return ns, environment
 end
 
 describe("TabClicks.KeyLabel", function()
@@ -67,5 +69,26 @@ describe("TabDebuffs", function()
     ns.TabDebuffs.ResetColors()
     assertEquals(ns.Styles.active.auras.dispelColors.Curse, { r = 0.6, g = 0, b = 1 })
     assertEquals(sections, { "style", "style" })
+  end)
+
+  it("proposes the current click of each type, or a free one", function()
+    local ns = LoadTabDebuffs()
+    local rows = ns.TabDebuffs.Rows()
+    assertEquals(rows[2].suggestedKey, "shift-2")
+    assertEquals(rows[1].suggestedKey, "alt-2")
+    assertEquals(rows[1].spells, {})
+  end)
+
+  it("assigns the chosen cure spell to the chosen click", function()
+    local ns, environment = LoadTabDebuffs()
+    local sections = {}
+    ns.Events:Register("SETTINGS_CHANGED", function(section)
+      sections[#sections + 1] = section
+    end)
+    assertEquals(ns.TabDebuffs.Assign(nil, "alt-2"), false)
+    assertEquals(ns.TabDebuffs.Assign(2782, "alt-2"), true)
+    assertEquals(ns.Profiles.active.bindings["alt-2"], { kind = "spell", spellID = 2782 })
+    assertEquals(sections, { "bindings" })
+    assertTrue(string.find(environment.__state.printed[2], "Quitar maldición", 1, true) ~= nil)
   end)
 end)

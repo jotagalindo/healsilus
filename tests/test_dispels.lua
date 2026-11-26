@@ -44,3 +44,54 @@ describe("Dispels", function()
     assertEquals(clicks.Poison, { "4" })
   end)
 end)
+
+describe("Dispels for the Debuffs tab", function()
+  local function LoadKnown()
+    local environment = Stubs.NewEnvironment({
+      spells = {
+        [2782] = { name = "Quitar maldición" },
+        [2893] = { name = "Suprimir veneno" },
+        [8946] = { name = "Curar envenenamiento" },
+      },
+      spellbook = {
+        { spellID = 2782, name = "Quitar maldición", subName = "" },
+        { spellID = 8946, name = "Curar envenenamiento", subName = "" },
+        { spellID = 2893, name = "Suprimir veneno", subName = "" },
+      },
+    })
+    local ns = Loader.Load(environment, {
+      "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Core/StyleData.lua", "Data/Spells.lua", "Data/Druid.lua", "Data/Dispels.lua",
+    })
+    ns.Spells:Scan()
+    return ns
+  end
+
+  local function Names(spells)
+    local names = {}
+    for _, spell in ipairs(spells) do
+      names[#names + 1] = spell.name
+    end
+    return names
+  end
+
+  it("lists the learned spells that remove each type", function()
+    local ns = LoadKnown()
+    assertEquals(Names(ns.Dispels.KnownSpellsFor("Poison")), { "Curar envenenamiento", "Suprimir veneno" })
+    assertEquals(Names(ns.Dispels.KnownSpellsFor("Curse")), { "Quitar maldición" })
+    assertEquals(ns.Dispels.KnownSpellsFor("Magic"), {})
+  end)
+
+  it("suggests the first free click, preferring modified right and left clicks", function()
+    local ns = LoadKnown()
+    assertEquals(ns.Dispels.SuggestKey({}), "shift-2")
+    assertEquals(ns.Dispels.SuggestKey(ns.ClassDefaults.DRUID().bindings), "alt-2")
+  end)
+
+  it("assigns a cure spell to a click", function()
+    local ns = LoadKnown()
+    local bindings = ns.ClassDefaults.DRUID().bindings
+    ns.Dispels.Assign(bindings, "alt-2", 2782)
+    assertEquals(bindings["alt-2"], { kind = "spell", spellID = 2782 })
+    assertEquals(ns.Dispels.ClicksFor(bindings).Curse, { "alt-2", "shift-2" })
+  end)
+end)

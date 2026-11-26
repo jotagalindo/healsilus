@@ -35,6 +35,43 @@ local function TypesByName()
   return byName
 end
 
+-- Hechizos aprendidos que quitan un tipo (como los "Cure spells" de HealBot), ordenados por nombre.
+-- Los rangos comparten nombre: se devuelve uno por nombre.
+function Dispels.KnownSpellsFor(dispelType)
+  local spells, seen = {}, {}
+  for spellID, dispelTypes in pairs(Dispels.SPELLS) do
+    for _, removed in ipairs(dispelTypes) do
+      local name = removed == dispelType and ns.Spells:GetName(spellID)
+      if name and not seen[name] and ns.Spells:IsKnown(spellID) then
+        seen[name] = true
+        spells[#spells + 1] = { spellID = spellID, name = name }
+      end
+    end
+  end
+  table.sort(spells, function(left, right)
+    return left.name < right.name
+  end)
+  return spells
+end
+
+-- Orden en que se proponen clics libres para quitar debuffs: primero derecho e izquierdo con modificador.
+local SUGGESTED_KEYS = {
+  "shift-2", "ctrl-2", "alt-2", "shift-1", "ctrl-1", "alt-1", "shift-3", "ctrl-3", "alt-3", "4", "5",
+}
+
+function Dispels.SuggestKey(bindings)
+  for _, key in ipairs(SUGGESTED_KEYS) do
+    if not bindings[key] then
+      return key
+    end
+  end
+  return nil
+end
+
+function Dispels.Assign(bindings, key, spellID)
+  bindings[key] = { kind = "spell", spellID = spellID }
+end
+
 -- Devuelve { Magic = { clave, ... }, Curse = {...}, ... } con las claves de clic en orden canónico.
 function Dispels.ClicksFor(bindings)
   local byName = TypesByName()

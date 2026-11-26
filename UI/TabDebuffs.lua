@@ -7,7 +7,10 @@ local Widgets = ns.Widgets
 local TabDebuffs = { stack = nil, rows = {} }
 ns.TabDebuffs = TabDebuffs
 
-local ROWS_TOP, ROW_HEIGHT, COLOR_APPLY_DELAY = -150, 30, 0.4
+local ROWS_TOP, ROW_HEIGHT, COLOR_APPLY_DELAY = -150, 56, 0.4
+
+-- Hechizo y clic elegidos en cada fila antes de pulsar "Asignar".
+TabDebuffs.choices = {}
 
 TabDebuffs.CHECKBOXES = {
   { key = "debuffsEnabled", label = L.AURAS_DEBUFFS },
@@ -59,9 +62,23 @@ function TabDebuffs.Rows()
       label = TYPE_LABELS[dispelType],
       color = Look().dispelColors[dispelType],
       clicks = DescribeClicks(clicks[dispelType], bindings),
+      spells = ns.Dispels.KnownSpellsFor(dispelType),
+      suggestedKey = clicks[dispelType][1] or ns.Dispels.SuggestKey(bindings),
     }
   end
   return rows
+end
+
+-- Pone el hechizo elegido en el clic elegido (como los "Cure spells" de HealBot). Devuelve true si lo hizo.
+function TabDebuffs.Assign(spellID, key)
+  if not spellID or not key then
+    ns.Print(L.DEBUFFS_PICK_FIRST)
+    return false
+  end
+  ns.Dispels.Assign(ns.Profiles.active.bindings, key, spellID)
+  ns.Config:Changed("bindings")
+  ns.Print(string.format(L.DEBUFFS_ASSIGNED, ns.Spells:GetName(spellID) or "?", ns.TabClicks.KeyLabel(key)))
+  return true
 end
 
 function TabDebuffs.SetColor(dispelType, red, green, blue)
@@ -93,6 +110,52 @@ local function ScheduleColor(dispelType, red, green, blue)
   end)
 end
 
+local function Choice(dispelType)
+  local choice = TabDebuffs.choices[dispelType]
+  if not choice then
+    choice = {}
+    TabDebuffs.choices[dispelType] = choice
+  end
+  return choice
+end
+
+local function OpenSpellChoices(owner, dispelType, spells)
+  Widgets.OpenMenu(owner, function(root)
+    if #spells == 0 then
+      root:CreateTitle(L.DEBUFFS_NO_SPELL)
+      return
+    end
+    for _, spell in ipairs(spells) do
+      root:CreateButton(spell.name, function()
+        Choice(dispelType).spellID = spell.spellID
+        ns.Config:Refresh()
+      end)
+    end
+  end)
+end
+
+local function OpenKeyChoices(owner, dispelType)
+  local bindings = ns.Profiles.active.bindings
+  Widgets.OpenMenu(owner, function(root)
+    if root.SetScrollMode then
+      root:SetScrollMode(400)
+    end
+    for _, prefix in ipairs(ns.BINDING_PREFIXES) do
+      for _, button in ipairs(ns.MOUSE_BUTTONS) do
+        local key = prefix .. button
+        local label = ns.TabClicks.KeyLabel(key)
+        if bindings[key] then
+          label = label .. " · " .. (ns.TabClicks.Describe(bindings[key], key))
+        end
+        root:CreateButton(label, function()
+          Choice(dispelType).key = key
+          ns.Config:Refresh()
+        end)
+      end
+    end
+  end)
+end
+
 local function CreateTypeRow(panel, dispelType, position)
   local top = ROWS_TOP - (position - 1) * ROW_HEIGHT
   local swatch = Widgets.ColorSwatch(panel, function()
@@ -103,12 +166,26 @@ local function CreateTypeRow(panel, dispelType, position)
   swatch:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, top)
   local name = Widgets.Label(panel, "", "GameFontNormal")
   name:SetPoint("LEFT", swatch, "RIGHT", 10, 0)
-  name:SetWidth(110)
-  local clicks = Widgets.Label(panel, "", "GameFontHighlight")
-  clicks:SetPoint("LEFT", name, "RIGHT", 10, 0)
-  clicks:SetPoint("RIGHT", panel, "RIGHT", 0, 0)
-  clicks:SetWordWrap(false)
-  return { swatch = swatch, name = name, clicks = clicks }
+  name:SetWidth(95)
+  local row = { swatch = swatch, name = name, spells = {} }
+  row.spellButton = Widgets.Button(panel, "", 180, function(self)
+    OpenSpellChoices(self, dispelType, row.spells)
+  end)
+  row.spellButton:SetPoint("TOPLEFT", panel, "TOPLEFT", 130, top + 1)
+  row.keyButton = Widgets.Button(panel, "", 180, function(self)
+    OpenKeyChoices(self, dispelType)
+  end)
+  row.keyButton:SetPoint("LEFT", row.spellButton, "RIGHT", 6, 0)
+  row.assign = Widgets.Button(panel, L.DEBUFFS_ASSIGN, 100, function()
+    local choice = Choice(dispelType)
+    TabDebuffs.Assign(choice.spellID, choice.key)
+  end)
+  row.assign:SetPoint("LEFT", row.keyButton, "RIGHT", 6, 0)
+  row.clicks = Widgets.Label(panel, "", "GameFontHighlightSmall")
+  row.clicks:SetPoint("TOPLEFT", panel, "TOPLEFT", 130, top - 26)
+  row.clicks:SetPoint("RIGHT", panel, "RIGHT", 0, 0)
+  row.clicks:SetWordWrap(false)
+  return row
 end
 
 function TabDebuffs.Build(panel)
@@ -150,8 +227,21 @@ function TabDebuffs.Refresh()
   TabDebuffs.appearance:Refresh()
   for _, row in ipairs(TabDebuffs.Rows()) do
     local widgets = TabDebuffs.rows[row.dispelType]
+    local choice = Choice(row.dispelType)
+    -- Por defecto: el primer hechizo que conoces para ese tipo y su clic actual (o uno libre).
+    local knows = false
+    for _, spell in ipairs(row.spells) do
+      knows = knows or spell.spellID == choice.spellID
+    end
+    if not knows then
+      choice.spellID = row.spells[1] and row.spells[1].spellID or nil
+    end
+    choice.key = choice.key or row.suggestedKey
+    widgets.spells = row.spells
     widgets.swatch:Refresh()
     widgets.name:SetText(row.label)
+    widgets.spellButton:SetText(choice.spellID and ns.Spells:GetName(choice.spellID) or L.DEBUFFS_NO_SPELL)
+    widgets.keyButton:SetText(choice.key and ns.TabClicks.KeyLabel(choice.key) or "-")
     widgets.clicks:SetText(row.clicks)
   end
 end
