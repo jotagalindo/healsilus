@@ -44,7 +44,13 @@ local function WarnBlizzardRestore(hidden)
   end
 end
 
+-- Ajustes del perfil (no del estilo) que se editan con deslizador.
+TabFrames.PROFILE_SLIDERS = {
+  { key = "snapDistance", label = L.FRAMES_SNAP_DISTANCE, step = 1 },
+}
+
 TabFrames.CHECKBOXES = {
+  { key = "showMain", label = L.FRAMES_SHOW_MAIN },
   { key = "showSolo", label = L.FRAMES_SHOW_SOLO },
   { key = "showInParty", label = L.FRAMES_SHOW_IN_PARTY },
   { key = "showInRaid", label = L.FRAMES_SHOW_IN_RAID },
@@ -54,6 +60,7 @@ TabFrames.CHECKBOXES = {
   { key = "showFocus", label = L.FRAMES_SHOW_FOCUS },
   { key = "hideBlizzard", label = L.FRAMES_HIDE_BLIZZARD, afterChange = WarnBlizzardRestore },
   { key = "locked", label = L.FRAMES_LOCKED },
+  { key = "moveTogether", label = L.FRAMES_MOVE_TOGETHER },
   { key = "castOnDown", label = L.FRAMES_CAST_ON_DOWN },
 }
 
@@ -66,6 +73,11 @@ function TabFrames.Build(panel)
     sliders:Add(Widgets.Slider(panel, spec.label, range[1], range[2], spec.step,
       Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key), spec.format), 48)
   end
+  for _, spec in ipairs(TabFrames.PROFILE_SLIDERS) do
+    local range = ns.Database.RANGES[spec.key]
+    sliders:Add(Widgets.Slider(panel, spec.label, range[1], range[2], spec.step,
+      Widgets.SectionGetter("frames", spec.key), Widgets.SectionSetter("frames", spec.key)), 48)
+  end
   local dropdowns = Widgets.Stack(panel, 250, 0)
   for _, spec in ipairs(TabFrames.DROPDOWNS) do
     dropdowns:Add(Widgets.Dropdown(panel, spec.label, 200, function()
@@ -75,14 +87,14 @@ function TabFrames.Build(panel)
   local checkboxes = Widgets.Stack(panel, 470, 0)
   for _, spec in ipairs(TabFrames.CHECKBOXES) do
     checkboxes:Add(Widgets.Checkbox(panel, spec.label, Widgets.SectionGetter("frames", spec.key),
-      Widgets.SectionSetter("frames", spec.key, spec.afterChange)), 28)
+      Widgets.SectionSetter("frames", spec.key, spec.afterChange)), 26)
   end
   -- El botón del minimapa es de toda la cuenta, no del perfil.
   checkboxes:Add(Widgets.Checkbox(panel, L.MINIMAP_SHOW, function()
     return not HealsilusDB.minimap.hide
   end, function(shown)
     ns.MinimapButton:SetHidden(not shown)
-  end), 28)
+  end), 26)
   TabFrames.stacks = { sliders, dropdowns, checkboxes }
 
   local previewLabel = Widgets.Label(panel, L.PREVIEW_LABEL, "GameFontNormal")

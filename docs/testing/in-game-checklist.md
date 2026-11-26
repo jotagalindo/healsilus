@@ -40,3 +40,24 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Activa "Perfil distinto por especialización", cambia de especialización y comprueba que el perfil cambia al salir de combate.
 - [ ] Exporta el perfil en un PJ e impórtalo en otro.
 - [ ] Copiar desde y Restablecer piden confirmación y funcionan.
+
+## 7. Estilos
+- [ ] Al entrar, tu configuración anterior aparece como estilo "Mi estilo" y se ve igual que antes.
+- [ ] Pestaña Estilos: crea uno desde "Clásico", renómbralo, duplícalo y bórralo. Al borrar el que está en uso, se pasa a Healsilus.
+- [ ] Reglas: pon "Compacto banda" para "Banda de 21 a 40"; al entrar en una banda grande cambia solo (si estás en combate, al salir).
+- [ ] Pestaña Aspecto: cambia fuente, tamaño y posición del nombre, color del fondo y colores de vida (con "Color de la barra: según la vida").
+- [ ] Exporta un estilo e impórtalo: aparece como "Estilo importado".
+
+## 8. Debuffs
+- [ ] En cada tipo salen tus hechizos que lo quitan; elige uno y un clic y pulsa Asignar. La pestaña Clics muestra la asignación.
+- [ ] "Teñir la barra entera" y "Ambos" colorean la barra con el color del tipo cuando alguien tiene un debuff que puedes quitar.
+
+## 9. Buffs
+- [ ] Fuera de combate, la barra de quien no tiene Marca se pinta del color elegido; al entrar en combate vuelve a su color.
+- [ ] Asigna "Poner el buff que falta" a un clic: sobre esa barra lanza el buff que le falta.
+- [ ] Con "Avisar si quedan menos de 5 minutos", un buff a punto de acabar cuenta como que falta.
+
+## 10. Bloques
+- [ ] Desbloquea, arrastra un bloque cerca de otro: se pega a su borde o se alinea.
+- [ ] Con "Mover todos los bloques juntos", arrastrar uno mueve todos.
+- [ ] Desmarca "Bloque principal": desaparece el bloque de grupo/banda.

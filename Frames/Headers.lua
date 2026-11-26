@@ -55,9 +55,85 @@ local function SetAttributes(header, attributes)
   end
 end
 
+-- Las anclas se guardan por su esquina inferior izquierda respecto a UIParent (vale para el imán).
+local SNAP_GAP = 2
+local BLOCK_KINDS = { "party", "tanks", "pets", "target", "focus" }
+
+local function PlaceAnchor(anchor, left, bottom)
+  anchor:ClearAllPoints()
+  anchor:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left, bottom)
+end
+
 local function SavePosition(kind, anchor)
-  local point, _, _, x, y = anchor:GetPoint(1)
-  ns.Database.db.framePositions[kind] = { point, x, y }
+  ns.Database.db.framePositions[kind] = { "BOTTOMLEFT", anchor:GetLeft(), anchor:GetBottom() }
+end
+
+-- Rectángulo del bloque en pantalla (cabecera o botón suelto), o nil si no se ve o no tiene tamaño.
+function Headers:BlockRect(kind)
+  local frame = self.byKind[kind] or self.singles[kind]
+  if not frame or not frame:IsVisible() then
+    return nil
+  end
+  local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
+  if not left or not right or not top or not bottom then
+    return nil
+  end
+  return { left = left, right = right, top = top, bottom = bottom }
+end
+
+function Headers:BeginDrag(kind)
+  if InCombatLockdown() then
+    return
+  end
+  local anchor = self.anchors[kind]
+  local frames = ns.Profiles.active.frames
+  local drag = { kind = kind, left = anchor:GetLeft(), bottom = anchor:GetBottom(), others = {} }
+  if frames.moveTogether then
+    for _, other in ipairs(BLOCK_KINDS) do
+      if other ~= kind then
+        local otherAnchor = self.anchors[other]
+        drag.others[other] = { left = otherAnchor:GetLeft(), bottom = otherAnchor:GetBottom() }
+      end
+    end
+    -- Mientras se arrastra, los demás bloques siguen al que se mueve.
+    anchor:SetScript("OnUpdate", function(self)
+      local deltaX, deltaY = self:GetLeft() - drag.left, self:GetBottom() - drag.bottom
+      for other, start in pairs(drag.others) do
+        PlaceAnchor(Headers.anchors[other], start.left + deltaX, start.bottom + deltaY)
+      end
+    end)
+  end
+  self.drag = drag
+  anchor:StartMoving()
+end
+
+function Headers:EndDrag(kind)
+  local anchor = self.anchors[kind]
+  anchor:StopMovingOrSizing()
+  anchor:SetScript("OnUpdate", nil)
+  local drag = self.drag
+  self.drag = nil
+  local frames = ns.Profiles.active.frames
+  PlaceAnchor(anchor, anchor:GetLeft(), anchor:GetBottom())
+  -- Imán: al soltar un bloque suelto cerca de otro visible, se pega o se alinea con él.
+  local moving = self:BlockRect(kind)
+  if moving and not frames.moveTogether and frames.snapDistance > 0 then
+    local others = {}
+    for _, other in ipairs(BLOCK_KINDS) do
+      local rect = other ~= kind and self:BlockRect(other)
+      if rect then
+        others[#others + 1] = rect
+      end
+    end
+    local deltaX, deltaY = ns.Snapping.Snap(moving, others, frames.snapDistance, SNAP_GAP)
+    PlaceAnchor(anchor, anchor:GetLeft() + deltaX, anchor:GetBottom() + deltaY)
+  end
+  SavePosition(kind, anchor)
+  if drag then
+    for other in pairs(drag.others) do
+      SavePosition(other, self.anchors[other])
+    end
+  end
 end
 
 local function CreateAnchor(kind)
@@ -75,14 +151,11 @@ local function CreateAnchor(kind)
   label:SetText(ANCHOR_LABELS[kind])
   anchor.handle, anchor.label = handle, label
   anchor:RegisterForDrag("LeftButton")
-  anchor:SetScript("OnDragStart", function(self)
-    if not InCombatLockdown() then
-      self:StartMoving()
-    end
+  anchor:SetScript("OnDragStart", function()
+    Headers:BeginDrag(kind)
   end)
-  anchor:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    SavePosition(kind, self)
+  anchor:SetScript("OnDragStop", function()
+    Headers:EndDrag(kind)
   end)
   Headers.anchors[kind] = anchor
   return anchor
@@ -216,7 +289,7 @@ function Headers:Create()
   end
   local frames = ns.Profiles.active.frames
   local layout = ns.Styles.active.layout
-  for _, kind in ipairs({ "party", "tanks", "pets", "target", "focus" }) do
+  for _, kind in ipairs(BLOCK_KINDS) do
     CreateAnchor(kind)
   end
   CreateHeader("party", "SecureGroupHeaderTemplate")
@@ -250,7 +323,7 @@ function Headers:ApplyProfile(profile)
     for _, header in ipairs(Headers.list) do
       Headers:ApplyHeaderLayout(header, layout, frames)
     end
-    Headers:SetHeaderShown("party", not Headers.previewActive)
+    Headers:SetHeaderShown("party", frames.showMain and not Headers.previewActive)
     Headers:SetHeaderShown("tanks", frames.showTanks and not Headers.previewActive)
     Headers:SetHeaderShown("pets", frames.showPets and not Headers.previewActive)
     for kind, button in pairs(Headers.singles) do

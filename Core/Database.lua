@@ -41,6 +41,8 @@ Database.RANGES = {
   iconSize = { 8, 32 },
   -- Minutos restantes por debajo de los cuales un buff vigilado cuenta como que falta (0 = no avisar).
   refreshBelow = { 0, 60 },
+  -- Distancia (px) a la que un bloque soltado se pega a otro (0 = sin imán).
+  snapDistance = { 0, 40 },
   -- Canales de color (dispel, fondo y curva de vida de los estilos).
   r = { 0, 1 },
   g = { 0, 1 },
@@ -105,7 +107,8 @@ function Database.DefaultProfile()
     -- Lo visual (tamaño, textura, textos, iconos, colores) vive en los estilos (Core/StyleData.lua);
     -- el perfil decide cuándo se ven los marcos y qué estilo usar en cada situación.
     frames = {
-      showSolo = true, showInParty = true, showInRaid = true,
+      showMain = true, showSolo = true, showInParty = true, showInRaid = true,
+      moveTogether = false, snapDistance = 12,
       showTanks = true, showPets = false, showTarget = true, showFocus = true,
       hideBlizzard = true, locked = true, castOnDown = false,
     },

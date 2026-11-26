@@ -35,6 +35,15 @@ describe("TabFrames controls", function()
     end
   end)
 
+  it("give every profile slider a stored range and a numeric default", function()
+    local ns = LoadTabFrames()
+    local defaults = ns.Database.DefaultProfile().frames
+    for _, spec in ipairs(ns.TabFrames.PROFILE_SLIDERS) do
+      assertTrue(ns.Database.RANGES[spec.key] ~= nil, spec.key)
+      assertEquals(type(defaults[spec.key]), "number", spec.key)
+    end
+  end)
+
   it("bind every checkbox to a boolean frame setting", function()
     local ns = LoadTabFrames()
     local defaults = ns.Database.DefaultProfile().frames

@@ -32,6 +32,7 @@ local TEST_FILES = {
   "tests/test_style_data.lua",
   "tests/test_styles.lua",
   "tests/test_style_tabs.lua",
+  "tests/test_snapping.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do

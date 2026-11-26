@@ -269,3 +269,8 @@ L.BUFFS_BAR_COLOR = "Bar color when a buff is missing"
 L.BUFFS_REFRESH_BELOW = "Also warn when less than this many minutes remain (0 = off)"
 L.BUFFS_HELP = "Out of combat, the bar of whoever misses one of your buffs gets the color you pick and a mark in its corner. To recast it with one click, assign \"Cast the missing buff\" to a click in the Clicks tab: it casts on that bar the first buff it is missing."
 L.BINDING_BUFF = "Cast the missing buff"
+
+-- Bloques: imán, mover juntos, bloque principal
+L.FRAMES_SHOW_MAIN = "Main block (party/raid)"
+L.FRAMES_MOVE_TOGETHER = "Move all blocks together"
+L.FRAMES_SNAP_DISTANCE = "Magnet between blocks (px, 0 = off)"

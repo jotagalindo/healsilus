@@ -275,3 +275,8 @@ L.BUFFS_BAR_COLOR = "Color de la barra si falta un buff"
 L.BUFFS_REFRESH_BELOW = "Avisar también si quedan menos de estos minutos (0 = no)"
 L.BUFFS_HELP = "Fuera de combate, la barra de quien no tenga uno de tus buffs toma el color que elijas y una marca en la esquina. Para ponérselo con un clic, asigna \"Poner el buff que falta\" a un clic en la pestaña Clics: lanza sobre esa barra el primer buff que le falta."
 L.BINDING_BUFF = "Poner el buff que falta"
+
+-- Bloques: imán, mover juntos, bloque principal
+L.FRAMES_SHOW_MAIN = "Bloque principal (grupo/banda)"
+L.FRAMES_MOVE_TOGETHER = "Mover todos los bloques juntos"
+L.FRAMES_SNAP_DISTANCE = "Imán entre bloques (px, 0 = sin imán)"
