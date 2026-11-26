@@ -75,13 +75,17 @@ UI/TabFrames.lua
 UI/TabAuras.lua
 UI/TabBuffs.lua
 UI/TabProfiles.lua
+Frames/Preview.lua       vista previa con miembros falsos (marcos no seguros)
+Core/Diagnostics.lua     /hs diag: APIs presentes, autopruebas, IDs sin resolver, errores
 Core/Commands.lua        /hs, /hs diag, /hs debug, /hs lock, /hs preview
+Core/Bootstrap.lua       arranque: ADDON_LOADED, PLAYER_LOGIN, cambios de libro y especialización
 Locales/enUS.lua
 Locales/esES.lua
 tests/                   pruebas offline (Lua 5.1/LuaJIT + stubs de la API)
+tools/check.lua          comprobaciones estáticas (TOC, sintaxis, globales, patrones prohibidos, traducciones)
 ```
 
-Orden de carga en el TOC: Init → Locales → Events → CombatQueue → Database → Serializer → Profiles → Data → Frames → Auras → UI → Commands.
+Orden de carga en el TOC: Init → Locales → Events → CombatQueue → Database → Data/Spells → Data/Druid → Profiles → Serializer → Media/Curves → ClickCast → Prediction → Auras → UnitButton → Headers → Preview → UI → Diagnostics → Commands → Bootstrap.
 
 ### 3.2 TOC
 
@@ -127,12 +131,12 @@ HealsilusDB = {
 Profile = {
   bindings = { ["shift-1"] = Binding, ... },    -- clave: "<modificadores>-<botón>"
   frames = {
-    width = 110, height = 34, spacing = 2, columns = 5, unitsPerColumn = 5,
+    width = 110, height = 34, spacing = 2, columns = 8, unitsPerColumn = 5,
     sortBy = "GROUP",                           -- GROUP | CLASS | ROLE
     growth = "DOWN",                            -- DOWN | RIGHT
-    showTanks = true, showPets = false, showTarget = true, showFocus = true,
-    hideBlizzard = true, locked = true,
-    texture = "Interface\\TargetingFrame\\UI-StatusBar",
+    showSolo = true, showTanks = true, showPets = false, showTarget = true, showFocus = true,
+    hideBlizzard = true, locked = true, castOnDown = false,
+    texture = "BLIZZARD",                       -- BLIZZARD | RAID | FLAT (clave de Frames/Media.lua)
     colorMode = "CLASS",                        -- CLASS | HEALTH
     healthText = "DEFICIT",                     -- NONE | DEFICIT | PERCENT
     outOfRangeAlpha = 0.4,
@@ -149,7 +153,8 @@ Profile = {
   },
 }
 
-Binding = { kind = "spell", spellID = 774, rank = nil }      -- rango nil = el más alto aprendido
+Binding = { kind = "spell", spellID = 774, rank = nil,       -- rango nil = el más alto aprendido
+            fallbackSpellID = nil }                          -- opcional: se usa si spellID no se conoce
         | { kind = "macro", text = "/cast [@mouseover] Innervate" }
         | { kind = "target" } | { kind = "menu" }
 ```
@@ -158,12 +163,12 @@ Modificadores válidos, en este orden canónico: `alt`, `ctrl`, `shift` (combina
 
 ### 4.2 Resolución del perfil activo
 
-`ns.Profiles:Resolve(characterKey, classToken, specIndex)` devuelve `profile, source`, donde `source` ∈ `"spec" | "character" | "class" | "default"`:
+`ns.Profiles.Resolve(db, characterKey, classToken, specIndex)` devuelve `profile, source`, donde `source` ∈ `"spec" | "character" | "class"` (el perfil de serie, una vez creado, se guarda como perfil de clase):
 
 1. Si `useSpecProfiles` y `specs[specIndex]` existe → `spec`.
 2. Si `useClassProfile == false` y `own` existe → `character`.
 3. Si `classProfiles[classToken]` existe → `class`.
-4. Si no, se crea `classProfiles[classToken]` desde el perfil de serie de la clase (druida) o desde un perfil vacío con marcos por defecto → `default`.
+4. Si no, se crea `classProfiles[classToken]` desde el perfil de serie de la clase (druida) o desde un perfil vacío con marcos por defecto → `class`.
 
 Los perfiles guardados son **completos**, sin herencia campo a campo. "Copiar" hace una copia profunda. Al cargar, `Database` rellena los campos que falten con los valores por defecto. Así una versión nueva del addon puede añadir opciones sin romper perfiles antiguos.
 
@@ -197,6 +202,8 @@ Si `hideBlizzard`, fuera de combate se reparentan `CompactPartyFrame` y `Compact
 
 ### 5.3 Barra de unidad (`UnitButton`)
 
+![Boceto de los marcos](../../images/frames-mockup.svg)
+
 Capas, de abajo arriba: fondo → barra de vida → curación entrante → escudo → borde de debuff → textos → iconos de auras → borde de aggro → indicador de buff que falta.
 
 | Elemento | Implementación | Eventos |
@@ -206,7 +213,7 @@ Capas, de abajo arriba: fondo → barra de vida → curación entrante → escud
 | Color por vida | `UnitHealthPercent(u, true, curve)` → `color:GetRGB()` → `bar:SetStatusBarColor` | `UNIT_HEALTH` |
 | Texto déficit | `AbbreviateLargeNumbers(UnitHealthMissing(u))` en `SetText`; si `/hs diag` detecta que no acepta secretos, se usa `PERCENT` | `UNIT_HEALTH` |
 | Texto porcentaje | `string.format("%d%%", UnitHealthPercent(u, true, ns.Curves.Percent100))` con una curva lineal 0→0, 1→100 | `UNIT_HEALTH` |
-| Rango | `button:SetAlphaFromBoolean(UnitInRange(u), 1, outOfRangeAlpha)`; `player` siempre 1 | `UNIT_IN_RANGE_UPDATE`, y un sondeo de 0,5 s solo para objetivo/foco |
+| Rango | `UnitInRange(u)`: si es legible, alfa 1 u `outOfRangeAlpha`; si es secreto, `button:SetAlphaFromBoolean(inRange, 1, outOfRangeAlpha)` cuando la autoprueba de arranque confirma que funciona (si no, alfa 1). `player` y unidades fuera del grupo (objetivo/foco que no están en tu grupo) siempre alfa 1 | `UNIT_IN_RANGE_UPDATE` |
 | Aggro | `local status = UnitThreatSituation(u)`. Si `ns.IsSecret(status)` es falso: borde visible cuando `status >= 2`. Si es secreto: el borde se oculta hasta que vuelva a ser legible (no se compara nunca un secreto) | `UNIT_THREAT_SITUATION_UPDATE` |
 | Muerto/fantasma/desconectado | `UnitIsDeadOrGhost(u)`, `UnitIsConnected(u)`. Si llegan secretos se usa `SetAlphaFromBoolean` en el texto de estado en vez de ramificar | `UNIT_HEALTH`, `UNIT_CONNECTION`, `UNIT_FLAGS` |
 | Nombre | `UnitName(u)` en `SetText`, recortado por ancho de la `FontString` | `UNIT_NAME_UPDATE` |

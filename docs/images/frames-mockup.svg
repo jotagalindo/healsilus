@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" width="640" height="330" font-family="Segoe UI, Arial, sans-serif">
+  <title>Boceto de marcos de Healsilus</title>
+  <desc>Bloque de tanques y grupo 1 con barras de vida, curación entrante, escudo, HoTs, debuff, buff que falta, fuera de rango y muerto, más una leyenda.</desc>
+  <rect width="640" height="330" rx="12" fill="#1b1b1a"/>
+
+  <text x="20" y="28" font-size="12" fill="#b4b2a9">Tanques</text>
+  <!-- Tanque con aggro, curación entrante y dos HoTs -->
+  <rect x="18" y="36" width="304" height="38" rx="3" fill="none" stroke="#e24b4a" stroke-width="2"/>
+  <rect x="20" y="38" width="300" height="34" rx="2" fill="#2c2c2a"/>
+  <rect x="22" y="40" width="183" height="30" fill="#ba7517"/>
+  <rect x="205" y="40" width="42" height="30" fill="#97c459" opacity="0.55"/>
+  <text x="28" y="53" font-size="12" fill="#ffffff">Gromash</text>
+  <text x="28" y="67" font-size="11" fill="#f1efe8">-3.4k</text>
+  <rect x="280" y="52" width="15" height="15" rx="2" fill="#3b6d11"/><text x="287.5" y="63" font-size="10" fill="#fff" text-anchor="middle">12</text>
+  <rect x="298" y="52" width="15" height="15" rx="2" fill="#0f6e56"/><text x="305.5" y="63" font-size="10" fill="#fff" text-anchor="middle">7</text>
+
+  <text x="20" y="98" font-size="12" fill="#b4b2a9">Grupo 1</text>
+  <!-- Vida llena con un HoT -->
+  <rect x="20" y="106" width="300" height="34" rx="2" fill="#2c2c2a"/>
+  <rect x="22" y="108" width="296" height="30" fill="#ba7517"/>
+  <text x="28" y="121" font-size="12" fill="#ffffff">Arsilus</text>
+  <rect x="298" y="120" width="15" height="15" rx="2" fill="#3b6d11"/><text x="305.5" y="131" font-size="10" fill="#fff" text-anchor="middle">9</text>
+  <!-- Debuff mágico: anillo del color del tipo y escudo -->
+  <rect x="20" y="144" width="300" height="34" rx="2" fill="#534ab7"/>
+  <rect x="22" y="146" width="296" height="30" fill="#2c2c2a"/>
+  <rect x="22" y="146" width="142" height="30" fill="#7f77dd"/>
+  <rect x="164" y="146" width="30" height="30" fill="#85b7eb" opacity="0.6"/>
+  <text x="28" y="159" font-size="12" fill="#ffffff">Velenna</text>
+  <text x="28" y="173" font-size="11" fill="#f1efe8">-2.1k</text>
+  <rect x="300" y="149" width="15" height="15" rx="2" fill="#378add"/>
+  <!-- Le falta un buff -->
+  <rect x="20" y="182" width="300" height="34" rx="2" fill="#2c2c2a"/>
+  <rect x="22" y="184" width="252" height="30" fill="#d4537e"/>
+  <polygon points="22,184 31,184 22,193" fill="#ef9f27"/>
+  <text x="28" y="197" font-size="12" fill="#ffffff">Thrall</text>
+  <text x="28" y="211" font-size="11" fill="#f1efe8">-0.4k</text>
+  <!-- Fuera de rango -->
+  <g opacity="0.4">
+    <rect x="20" y="220" width="300" height="34" rx="2" fill="#2c2c2a"/>
+    <rect x="22" y="222" width="207" height="30" fill="#888780"/>
+    <text x="28" y="235" font-size="12" fill="#ffffff">Lejana</text>
+  </g>
+  <!-- Muerto -->
+  <rect x="20" y="258" width="300" height="34" rx="2" fill="#2c2c2a"/>
+  <text x="28" y="271" font-size="12" fill="#b4b2a9">Korgan</text>
+  <text x="312" y="287" font-size="11" fill="#888780" text-anchor="end">Muerto</text>
+
+  <text x="350" y="28" font-size="12" fill="#b4b2a9">Leyenda</text>
+  <g font-size="12" fill="#f1efe8">
+    <rect x="350" y="42" width="10" height="10" fill="#e24b4a"/><text x="368" y="51">Borde exterior rojo: tiene aggro</text>
+    <rect x="350" y="66" width="10" height="10" fill="#534ab7"/><text x="368" y="75">Anillo e icono: debuff que puedes quitar</text>
+    <rect x="350" y="90" width="10" height="10" fill="#97c459"/><text x="368" y="99">Verde claro: curación entrante</text>
+    <rect x="350" y="114" width="10" height="10" fill="#85b7eb"/><text x="368" y="123">Azul claro: escudo o absorción</text>
+    <rect x="350" y="138" width="10" height="10" fill="#3b6d11"/><text x="368" y="147">Abajo a la derecha: tus HoTs (segundos)</text>
+    <rect x="350" y="162" width="10" height="10" fill="#ef9f27"/><text x="368" y="171">Esquina naranja: le falta un buff tuyo</text>
+    <rect x="350" y="186" width="10" height="10" fill="#888780" opacity="0.4"/><text x="368" y="195">Atenuada: fuera de rango</text>
+  </g>
+  <text x="350" y="236" font-size="11" fill="#888780">Clic sobre una barra = el hechizo asignado</text>
+  <text x="350" y="252" font-size="11" fill="#888780">a ese botón y modificador (pestaña Clics).</text>
+</svg>
