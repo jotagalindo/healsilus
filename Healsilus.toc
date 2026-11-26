@@ -20,3 +20,4 @@ Core\Profiles.lua
 Core\Serializer.lua
 Frames\Media.lua
 Frames\Curves.lua
+Frames\ClickCast.lua
