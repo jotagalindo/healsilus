@@ -26,3 +26,4 @@ Auras\Containers.lua
 Auras\MissingBuffs.lua
 Frames\UnitButton.lua
 Frames\Headers.lua
+Frames\Preview.lua

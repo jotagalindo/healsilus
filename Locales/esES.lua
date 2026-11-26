@@ -21,3 +21,6 @@ L.ANCHOR_TANKS = "Healsilus: tanques"
 L.ANCHOR_PETS = "Healsilus: mascotas"
 L.ANCHOR_TARGET = "Healsilus: objetivo"
 L.ANCHOR_FOCUS = "Healsilus: foco"
+
+-- Vista previa
+L.PREVIEW_COMBAT = "La vista previa no está disponible en combate."
