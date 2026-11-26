@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: Healsilus
+## Notes: Click-casting healing frames built for WoW Forever's addon restrictions.
+## Notes-esES: Marcos de curación con click-casting hechos para las restricciones de addons de WoW Forever.
+## Notes-esMX: Marcos de curación con click-casting hechos para las restricciones de addons de WoW Forever.
+## Author: jotagalindo
+## Version: 0.1.0
+## SavedVariables: HealsilusDB
+## IconTexture: Interface\Icons\Spell_Nature_HealingTouch
+
+Core\Init.lua
+Locales\enUS.lua
+Locales\esES.lua

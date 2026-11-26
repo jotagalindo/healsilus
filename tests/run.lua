@@ -1,0 +1,21 @@
+-- Ejecuta todas las pruebas offline: luajit tests/run.lua (desde la raíz del repositorio).
+package.path = "./tests/lib/?.lua;" .. package.path
+local Harness = require("harness")
+
+local TEST_FILES = {
+  "tests/test_init.lua",
+}
+
+for _, path in ipairs(TEST_FILES) do
+  local chunk, loadError = loadfile(path)
+  if not chunk then
+    Harness.failed = Harness.failed + 1
+    Harness.failures[#Harness.failures + 1] = path .. "\n" .. tostring(loadError)
+  else
+    Harness.describe(path, chunk)
+  end
+end
+
+if not Harness.Report() then
+  os.exit(1)
+end
