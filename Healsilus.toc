@@ -36,3 +36,4 @@ UI\TabBuffs.lua
 UI\TabProfiles.lua
 Core\Diagnostics.lua
 Core\Commands.lua
+Core\Bootstrap.lua
