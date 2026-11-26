@@ -33,3 +33,4 @@ UI\TabClicks.lua
 UI\TabFrames.lua
 UI\TabAuras.lua
 UI\TabBuffs.lua
+UI\TabProfiles.lua
