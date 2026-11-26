@@ -17,3 +17,4 @@ Core\Database.lua
 Data\Spells.lua
 Data\Druid.lua
 Core\Profiles.lua
+Core\Serializer.lua
