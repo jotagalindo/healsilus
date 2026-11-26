@@ -122,6 +122,18 @@ L.TARGETS_TANKS = "Solo tanques"
 L.BUFFS_GROUP_VARIANT = "grupo: %s"
 L.BUFFS_SET_GROUP = "Versión de grupo"
 
+-- Pestaña Debuffs
+L.TAB_DEBUFFS = "Debuffs"
+L.DEBUFFS_COLORS_TITLE = "Color de cada tipo y el clic que lo quita"
+L.DEBUFFS_RESET_COLORS = "Restablecer colores"
+L.DEBUFFS_NO_CLICK = "Ningún clic lo quita (asígnalo en la pestaña Clics)"
+L.DEBUFFS_HELP = "Un debuff que puedes quitar pinta un anillo alrededor de la barra con el color de su tipo. Haz en la barra el clic indicado para quitarlo."
+L.DISPEL_MAGIC = "Magia"
+L.DISPEL_CURSE = "Maldición"
+L.DISPEL_POISON = "Veneno"
+L.DISPEL_DISEASE = "Enfermedad"
+L.COLOR_PICKER_UNAVAILABLE = "El selector de color no está disponible en este cliente."
+
 -- Pestaña Perfiles
 L.TAB_PROFILES = "Perfiles"
 L.PROFILES_USE_CLASS = "Usar el perfil compartido de la clase"

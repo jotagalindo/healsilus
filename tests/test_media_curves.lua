@@ -9,7 +9,7 @@ local function LoadMedia()
   environment.CreateColor = function(red, green, blue, alpha)
     return { r = red, g = green, b = blue, a = alpha }
   end
-  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Frames/Media.lua", "Frames/Curves.lua" })
+  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Frames/Media.lua", "Frames/Curves.lua" })
   return ns, environment
 end
 
@@ -55,12 +55,12 @@ describe("Media", function()
     assertEquals({ ns.Media.ClassColor(nil) }, { 0.3, 0.7, 0.3 })
   end)
 
-  it("builds the dispel color map, preferring the client's debuff colors", function()
-    local ns, environment = LoadMedia()
-    environment.DebuffTypeColor = { Magic = { r = 0.1, g = 0.2, b = 0.3 } }
-    local map = ns.Media.DispelColorMap()
+  it("builds the dispel color map from the profile colors, with defaults for missing types", function()
+    local ns = LoadMedia()
+    local map = ns.Media.DispelColorMap({ Magic = { r = 0.1, g = 0.2, b = 0.3 } })
     assertEquals(map.Magic, { r = 0.1, g = 0.2, b = 0.3, a = 1 })
     assertEquals(map.Poison, { r = 0, g = 0.6, b = 0, a = 1 })
+    assertEquals(map.Curse, { r = 0.6, g = 0, b = 1, a = 1 })
   end)
 end)
 

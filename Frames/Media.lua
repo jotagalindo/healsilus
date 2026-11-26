@@ -14,12 +14,6 @@ Media.TEXTURE_ORDER = { "BLIZZARD", "RAID", "FLAT" }
 Media.PET_COLOR = { r = 0.2, g = 0.8, b = 0.2 }
 Media.OFFLINE_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 Media.FALLBACK_COLOR = { r = 0.3, g = 0.7, b = 0.3 }
-Media.DISPEL_COLORS = {
-  Magic = { 0.2, 0.6, 1 },
-  Curse = { 0.6, 0, 1 },
-  Disease = { 0.6, 0.4, 0 },
-  Poison = { 0, 0.6, 0 },
-}
 
 function Media.Texture(key)
   return Media.TEXTURES[key] or Media.TEXTURES.BLIZZARD
@@ -43,15 +37,13 @@ function Media.ClassColor(classToken)
 end
 
 -- Mapa { Magic = color, ... } para AddDispelTypeTexture de los contenedores de auras.
-function Media.DispelColorMap()
+-- Usa los colores del perfil (pestaña Debuffs); un tipo que falte toma su color de serie.
+function Media.DispelColorMap(colors)
+  local defaults = ns.Database.DefaultDispelColors()
   local map = {}
-  for name, rgb in pairs(Media.DISPEL_COLORS) do
-    local red, green, blue = rgb[1], rgb[2], rgb[3]
-    local clientColor = DebuffTypeColor and DebuffTypeColor[name]
-    if clientColor then
-      red, green, blue = clientColor.r, clientColor.g, clientColor.b
-    end
-    map[name] = CreateColor(red, green, blue, 1)
+  for _, dispelType in ipairs(ns.Database.DISPEL_TYPES) do
+    local color = (colors and colors[dispelType]) or defaults[dispelType]
+    map[dispelType] = CreateColor(color.r, color.g, color.b, 1)
   end
   return map
 end

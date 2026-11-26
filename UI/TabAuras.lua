@@ -1,4 +1,5 @@
--- Pestaña Auras: HoTs propios (lista de hechizos vigilados) y debuffs.
+-- Pestaña Auras: HoTs propios (lista de hechizos vigilados) y tamaño de los iconos.
+-- Los debuffs tienen su propia pestaña (UI/TabDebuffs.lua).
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
@@ -10,13 +11,10 @@ local LIST_X, LIST_TOP, ROW_HEIGHT = 300, -56, 26
 
 TabAuras.CHECKBOXES = {
   { key = "hotsEnabled", label = L.AURAS_HOTS },
-  { key = "debuffsEnabled", label = L.AURAS_DEBUFFS },
-  { key = "debuffsDispellableOnly", label = L.AURAS_DISPELLABLE },
 }
 
 TabAuras.SLIDERS = {
   { key = "hotsMax", label = L.AURAS_HOTS_MAX },
-  { key = "debuffsMax", label = L.AURAS_DEBUFFS_MAX },
   { key = "iconSize", label = L.AURAS_ICON_SIZE },
 }
 

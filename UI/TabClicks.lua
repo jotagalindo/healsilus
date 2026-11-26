@@ -30,6 +30,15 @@ local BUTTON_LABELS = {
   ["5"] = L.BUTTON_5,
 }
 
+-- Nombre legible de una clave de clic: "1" → "Izquierdo", "shift-2" → "Shift + Derecho".
+function TabClicks.KeyLabel(key)
+  local prefix, button = string.match(key, "^(.-)(%d)$")
+  if prefix == "" then
+    return BUTTON_LABELS[button]
+  end
+  return MODIFIER_LABELS[prefix] .. " + " .. BUTTON_LABELS[button]
+end
+
 local function Bindings()
   return ns.Profiles.active.bindings
 end

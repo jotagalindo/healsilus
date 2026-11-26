@@ -255,6 +255,47 @@ function Widgets.RowPool(parent, createRow)
   return pool
 end
 
+-- Abre el selector de color del juego; Cancelar devuelve el color que había.
+function Widgets.OpenColorPicker(color, setColor)
+  if not ColorPickerFrame or not ColorPickerFrame.SetupColorPickerAndShow then
+    ns.Print(L.COLOR_PICKER_UNAVAILABLE)
+    return
+  end
+  local previous = { r = color.r, g = color.g, b = color.b }
+  ColorPickerFrame:SetupColorPickerAndShow({
+    r = color.r, g = color.g, b = color.b, hasOpacity = false,
+    swatchFunc = function()
+      local red, green, blue = ColorPickerFrame:GetColorRGB()
+      setColor(red, green, blue)
+    end,
+    cancelFunc = function()
+      setColor(previous.r, previous.g, previous.b)
+    end,
+  })
+end
+
+-- Cuadrado de color: muestra el color actual y al pulsarlo abre el selector.
+function Widgets.ColorSwatch(parent, getColor, setColor)
+  local swatch = CreateFrame("Button", nil, parent, "BackdropTemplate")
+  swatch:SetSize(22, 22)
+  swatch:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+  swatch:SetBackdropBorderColor(0.8, 0.8, 0.8, 1)
+  swatch.fill = swatch:CreateTexture(nil, "ARTWORK")
+  swatch.fill:SetPoint("TOPLEFT", swatch, "TOPLEFT", 2, -2)
+  swatch.fill:SetPoint("BOTTOMRIGHT", swatch, "BOTTOMRIGHT", -2, 2)
+  swatch.Refresh = function(self)
+    local color = getColor()
+    self.fill:SetColorTexture(color.r, color.g, color.b, 1)
+  end
+  swatch:SetScript("OnClick", function(self)
+    Widgets.OpenColorPicker(getColor(), function(red, green, blue)
+      self.fill:SetColorTexture(red, green, blue, 1)
+      setColor(red, green, blue)
+    end)
+  end)
+  return swatch
+end
+
 local function BuildTextDialog()
   local dialog = CreateFrame("Frame", "HealsilusTextDialog", UIParent, "BackdropTemplate")
   dialog:SetSize(480, 320)

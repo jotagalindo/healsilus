@@ -17,7 +17,7 @@ local function Layout(size)
 end
 
 local function DispelOptions()
-  local options = { customDispelColorMap = ns.Media.DispelColorMap() }
+  local options = { customDispelColorMap = ns.Media.DispelColorMap(ns.Profiles.active.auras.dispelColors) }
   if Enum.CustomAuraButtonDispelTypeTextureStyle then
     options.style = Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset
   end

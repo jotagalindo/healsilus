@@ -19,6 +19,7 @@ Core\CombatQueue.lua
 Core\Database.lua
 Data\Spells.lua
 Data\Druid.lua
+Data\Dispels.lua
 Core\Profiles.lua
 Core\Serializer.lua
 Frames\Media.lua
@@ -35,6 +36,7 @@ UI\Config.lua
 UI\TabClicks.lua
 UI\TabFrames.lua
 UI\TabAuras.lua
+UI\TabDebuffs.lua
 UI\TabBuffs.lua
 UI\TabProfiles.lua
 UI\MinimapButton.lua

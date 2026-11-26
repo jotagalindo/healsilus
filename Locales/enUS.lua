@@ -116,6 +116,18 @@ L.TARGETS_TANKS = "Tanks only"
 L.BUFFS_GROUP_VARIANT = "group: %s"
 L.BUFFS_SET_GROUP = "Group version"
 
+-- Pestaña Debuffs
+L.TAB_DEBUFFS = "Debuffs"
+L.DEBUFFS_COLORS_TITLE = "Color of each type and the click that removes it"
+L.DEBUFFS_RESET_COLORS = "Reset colors"
+L.DEBUFFS_NO_CLICK = "No click removes it (assign one in the Clicks tab)"
+L.DEBUFFS_HELP = "A debuff you can remove paints a ring around the bar in its type's color. Click the bar with the click shown to remove it."
+L.DISPEL_MAGIC = "Magic"
+L.DISPEL_CURSE = "Curse"
+L.DISPEL_POISON = "Poison"
+L.DISPEL_DISEASE = "Disease"
+L.COLOR_PICKER_UNAVAILABLE = "The color picker is not available in this client."
+
 -- Pestaña Perfiles
 L.TAB_PROFILES = "Profiles"
 L.PROFILES_USE_CLASS = "Use the shared class profile"

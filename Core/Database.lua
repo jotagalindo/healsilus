@@ -28,7 +28,29 @@ Database.RANGES = {
   hotsMax = { 0, 8 },
   debuffsMax = { 0, 6 },
   iconSize = { 8, 32 },
+  -- Canales de los colores de dispel (auras.dispelColors.<tipo>.r/g/b).
+  r = { 0, 1 },
+  g = { 0, 1 },
+  b = { 0, 1 },
 }
+
+-- Tipos de debuff que se pueden quitar, en el orden en que se muestran en la pestaña Debuffs.
+Database.DISPEL_TYPES = { "Magic", "Curse", "Poison", "Disease" }
+local DISPEL_TYPE_SET = {}
+for _, dispelType in ipairs(Database.DISPEL_TYPES) do
+  DISPEL_TYPE_SET[dispelType] = true
+end
+
+local COLOR_FIELDS = { r = true, g = true, b = true }
+
+function Database.DefaultDispelColors()
+  return {
+    Magic = { r = 0.2, g = 0.6, b = 1 },
+    Curse = { r = 0.6, g = 0, b = 1 },
+    Poison = { r = 0, g = 0.6, b = 0 },
+    Disease = { r = 0.6, g = 0.4, b = 0 },
+  }
+end
 
 local BINDING_FIELDS = {
   spell = { kind = true, spellID = true, rank = true, fallbackSpellID = true },
@@ -57,6 +79,7 @@ function Database.DefaultProfile()
     auras = {
       hotsEnabled = true, hotsMax = 4, hotSpellIDs = {},
       debuffsEnabled = true, debuffsMax = 2, debuffsDispellableOnly = true, iconSize = 14,
+      dispelColors = Database.DefaultDispelColors(),
     },
     buffs = { enabled = true, watched = {} },
   }
@@ -166,7 +189,35 @@ function Database.NormalizeProfile(profile, fixes)
     end
   end
   profile.buffs.watched = watched
+  -- FillDefaults ya completó y acotó los tipos conocidos; aquí se quitan tipos y campos que sobran.
+  for dispelType, color in pairs(profile.auras.dispelColors) do
+    local typePath = "auras.dispelColors." .. tostring(dispelType)
+    if not DISPEL_TYPE_SET[dispelType] then
+      profile.auras.dispelColors[dispelType] = nil
+      fixes[#fixes + 1] = typePath
+    else
+      for field in pairs(color) do
+        if not COLOR_FIELDS[field] then
+          color[field] = nil
+          fixes[#fixes + 1] = typePath .. "." .. tostring(field)
+        end
+      end
+    end
+  end
   return profile
+end
+
+function Database.IsValidColor(color)
+  if type(color) ~= "table" or not HasOnlyFields(color, COLOR_FIELDS) then
+    return false
+  end
+  for field in pairs(COLOR_FIELDS) do
+    local channel = color[field]
+    if type(channel) ~= "number" or channel < 0 or channel > 1 then
+      return false
+    end
+  end
+  return true
 end
 
 -- Validación estricta para perfiles importados: cualquier campo desconocido o mal tipado rechaza todo.
@@ -213,6 +264,13 @@ function Database.ValidateProfile(profile)
     for spellID, enabled in pairs(profile.auras.hotSpellIDs) do
       if not IsPositiveInteger(spellID) or enabled ~= true then
         return false, "auras.hotSpellIDs"
+      end
+    end
+  end
+  if profile.auras and profile.auras.dispelColors then
+    for dispelType, color in pairs(profile.auras.dispelColors) do
+      if not DISPEL_TYPE_SET[dispelType] or not Database.IsValidColor(color) then
+        return false, "auras.dispelColors." .. tostring(dispelType)
       end
     end
   end

@@ -8,6 +8,8 @@ local Config = { tabs = {}, tabOrder = {}, built = false, selected = nil }
 ns.Config = Config
 
 local WIDTH, HEIGHT = 760, 560
+-- Seis pestañas caben en el ancho de la ventana: 20 + 6 × (110 + 4) = 704.
+local TAB_WIDTH = 110
 
 local function ClassName(classToken)
   return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classToken]) or tostring(classToken)
@@ -69,10 +71,10 @@ function Config:Build()
   content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 20)
   for position, key in ipairs(self.tabOrder) do
     local tab = self.tabs[key]
-    tab.button = Widgets.Button(frame, tab.label, 120, function()
+    tab.button = Widgets.Button(frame, tab.label, TAB_WIDTH, function()
       Config:SelectTab(key)
     end)
-    tab.button:SetPoint("TOPLEFT", frame, "TOPLEFT", 20 + (position - 1) * 124, -62)
+    tab.button:SetPoint("TOPLEFT", frame, "TOPLEFT", 20 + (position - 1) * (TAB_WIDTH + 4), -62)
     tab.panel = CreateFrame("Frame", nil, content)
     tab.panel:SetAllPoints(content)
     tab.panel:Hide()

@@ -65,9 +65,47 @@ describe("Database.NormalizeProfile", function()
     assertEquals(profile.buffs.watched, { { spellID = 1126, targets = "ALL" } })
     assertEquals(#fixes, 5)
   end)
+
+  it("gives every dispel type a default color", function()
+    local ns = LoadDatabase()
+    assertEquals(ns.Database.DefaultProfile().auras.dispelColors, {
+      Magic = { r = 0.2, g = 0.6, b = 1 },
+      Curse = { r = 0.6, g = 0, b = 1 },
+      Poison = { r = 0, g = 0.6, b = 0 },
+      Disease = { r = 0.6, g = 0.4, b = 0 },
+    })
+  end)
+
+  it("repairs dispel colors: clamps channels, restores broken types and drops unknown ones", function()
+    local ns = LoadDatabase()
+    local fixes = {}
+    local profile = ns.Database.NormalizeProfile({
+      auras = { dispelColors = { Curse = { r = 2, g = 0, b = 1, a = 1 }, Magic = "red", Bleed = { r = 1, g = 0, b = 0 } } },
+    }, fixes)
+    assertEquals(profile.auras.dispelColors.Curse, { r = 1, g = 0, b = 1 })
+    assertEquals(profile.auras.dispelColors.Magic, { r = 0.2, g = 0.6, b = 1 })
+    assertEquals(profile.auras.dispelColors.Bleed, nil)
+    table.sort(fixes)
+    assertEquals(fixes, { "auras.dispelColors.Bleed", "auras.dispelColors.Curse.a", "auras.dispelColors.Curse.r", "auras.dispelColors.Magic" })
+  end)
 end)
 
 describe("Database.ValidateProfile", function()
+  it("rejects unknown dispel types and malformed colors", function()
+    local ns = LoadDatabase()
+    local cases = {
+      { { auras = { dispelColors = { Bleed = { r = 1, g = 1, b = 1 } } } }, "auras.dispelColors.Bleed" },
+      { { auras = { dispelColors = { Curse = { r = 1, g = 1 } } } }, "auras.dispelColors.Curse" },
+      { { auras = { dispelColors = { Curse = { r = 1, g = 1, b = 3 } } } }, "auras.dispelColors.Curse" },
+    }
+    for _, case in ipairs(cases) do
+      local valid, field = ns.Database.ValidateProfile(case[1])
+      assertFalse(valid, case[2])
+      assertEquals(field, case[2])
+    end
+    assertTrue(ns.Database.ValidateProfile({ auras = { dispelColors = { Poison = { r = 0, g = 1, b = 0 } } } }))
+  end)
+
   it("accepts the default profile and partial profiles", function()
     local ns = LoadDatabase()
     assertTrue(ns.Database.ValidateProfile(ns.Database.DefaultProfile()))
