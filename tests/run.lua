@@ -22,6 +22,7 @@ local TEST_FILES = {
   "tests/test_config.lua",
   "tests/test_tab_clicks.lua",
   "tests/test_tab_frames.lua",
+  "tests/test_tab_lists.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do

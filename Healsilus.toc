@@ -31,3 +31,5 @@ UI\Widgets.lua
 UI\Config.lua
 UI\TabClicks.lua
 UI\TabFrames.lua
+UI\TabAuras.lua
+UI\TabBuffs.lua
