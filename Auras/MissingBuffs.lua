@@ -1,5 +1,5 @@
--- Buffs que faltan: las auras solo se leen cuando el cliente lo permite (fuera de combate y sin restricciones).
--- En combate o en zonas restringidas el último resultado se queda congelado.
+-- Buffs que faltan: las auras solo se leen cuando el cliente lo permite (fuera de combate y sin auras
+-- secretas, ver ns.CanReadAuras). En combate o en zonas restringidas el último resultado se queda congelado.
 local _, ns = ...
 
 local MissingBuffs = { dirty = {}, flushScheduled = false, resolved = {} }
@@ -56,23 +56,40 @@ function MissingBuffs:Resolve()
 end
 
 function MissingBuffs.CanRead()
-  if InCombatLockdown() then
-    return false
+  return ns.CanReadAuras() and C_UnitAuras.GetAuraDataBySpellName ~= nil
+end
+
+-- Un valor secreto no se puede comparar: cuenta como "no".
+local function IsSet(value)
+  return not ns.IsSecret(value) and value ~= nil and value ~= false
+end
+
+local function Role(unit)
+  if not UnitGroupRolesAssigned then
+    return nil
   end
-  if C_Secrets and C_Secrets.HasSecretRestrictions and C_Secrets.HasSecretRestrictions() then
-    return false
+  local role = UnitGroupRolesAssigned(unit)
+  if ns.IsSecret(role) then
+    return nil
   end
-  return C_UnitAuras ~= nil and C_UnitAuras.GetAuraDataBySpellName ~= nil
+  return role
 end
 
 local function IsTank(unit)
-  if UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) == "TANK" then
+  if Role(unit) == "TANK" then
     return true
   end
-  if GetPartyAssignment and GetPartyAssignment("MAINTANK", unit) then
+  if GetPartyAssignment and IsSet(GetPartyAssignment("MAINTANK", unit)) then
     return true
   end
   return false
+end
+
+-- Tras cambiar lo que le falta a una barra, el override de clics decide si cualquier clic pone el buff.
+local function UpdateOverride(button)
+  if ns.DispelOverride then
+    ns.DispelOverride:Evaluate(button)
+  end
 end
 
 -- Macro del clic "Poner el buff que falta": el primer buff que le falta, sobre la barra pulsada.
@@ -97,6 +114,7 @@ end
 function MissingBuffs:Clear(button)
   button.healsilusMissing = nil
   self:Render(button)
+  UpdateOverride(button)
 end
 
 function MissingBuffs:Evaluate(button)
@@ -120,25 +138,37 @@ function MissingBuffs:Evaluate(button)
     self:Clear(button)
     return
   end
-  -- Fuera de combate los datos de auras son legibles: se puede mirar cuánto le queda al buff.
+  -- Fuera de combate los datos de auras suelen ser legibles: se puede mirar cuánto le queda al buff.
+  -- Si el cliente aun así devuelve un secreto, el resultado anterior se queda como estaba.
   local refreshSeconds = ns.Profiles.active.buffs.refreshBelow * 60
+  local unreadable = false
   local function AuraPresent(name)
     local aura = C_UnitAuras.GetAuraDataBySpellName(unit, name, "HELPFUL")
+    if ns.IsSecret(aura) then
+      unreadable = true
+      return true
+    end
     if not aura then
       return false
     end
-    if refreshSeconds <= 0 or not aura.expirationTime or aura.expirationTime == 0 then
+    local expirationTime = aura.expirationTime
+    if refreshSeconds <= 0 or ns.IsSecret(expirationTime) or not expirationTime or expirationTime == 0 then
       return true
     end
-    return aura.expirationTime - GetTime() > refreshSeconds
+    return expirationTime - GetTime() > refreshSeconds
   end
   local who = {
     tank = IsTank(unit),
-    healer = UnitGroupRolesAssigned ~= nil and UnitGroupRolesAssigned(unit) == "HEALER",
-    self = UnitIsUnit ~= nil and UnitIsUnit(unit, "player") == true,
+    healer = Role(unit) == "HEALER",
+    self = UnitIsUnit ~= nil and IsSet(UnitIsUnit(unit, "player")),
   }
-  button.healsilusMissing = MissingBuffs.Compute(self.resolved, AuraPresent, who)
+  local missing = MissingBuffs.Compute(self.resolved, AuraPresent, who)
+  if unreadable then
+    return
+  end
+  button.healsilusMissing = missing
   self:Render(button)
+  UpdateOverride(button)
 end
 
 function MissingBuffs:Flush()
@@ -186,10 +216,13 @@ ns.Events:Register("SETTINGS_CHANGED", function(section)
     RefreshAll()
   end
 end)
-ns.Events:RegisterGameEvent("GROUP_ROSTER_UPDATE", function()
+-- Cambios de grupo y de zona (al entrar o salir de una instancia cambia qué se puede leer).
+local function RefreshSoon()
   C_Timer.After(FLUSH_DELAY, function()
     if ns.Profiles.active then
       MissingBuffs:RefreshAll()
     end
   end)
-end)
+end
+ns.Events:RegisterGameEvent("GROUP_ROSTER_UPDATE", RefreshSoon)
+ns.Events:RegisterGameEvent("PLAYER_ENTERING_WORLD", RefreshSoon)

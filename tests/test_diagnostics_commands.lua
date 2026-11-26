@@ -44,6 +44,21 @@ describe("Diagnostics", function()
     assertEquals(ns.Diagnostics.UnresolvedSpells(ns.Profiles.active), { "467" })
   end)
 
+  it("says whether auras can be read now and how many bars miss a buff", function()
+    local ns = LoadTools()
+    local readable = true
+    ns.MissingBuffs = {
+      resolved = { { label = "Marca de lo Salvaje" } },
+      CanRead = function()
+        return readable
+      end,
+    }
+    ns.UnitButton = { buttons = { [{ healsilusMissing = { "Marca de lo Salvaje" } }] = true, [{ healsilusMissing = {} }] = true } }
+    assertEquals(ns.Diagnostics.AurasLine(), "Auras readable now: yes · watched buffs: 1 · bars missing a buff: 1")
+    readable = false
+    assertEquals(ns.Diagnostics.AurasLine(), "Auras readable now: no · watched buffs: 1 · bars missing a buff: 1")
+  end)
+
   it("prints the client header first and the error summary last", function()
     local ns, environment = LoadTools()
     environment.GetBuildInfo = function()

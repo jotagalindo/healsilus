@@ -8,6 +8,7 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Todas las APIs salen `OK`. Anota las que salgan `FALTA`.
 - [ ] `Contenedores nativos de auras: OK`.
 - [ ] `SetAlphaFromBoolean: OK`. Si sale `FALTA`, el rango con secretos usa alfa fija (diseño §11).
+- [ ] Fuera de combate, `Auras legibles ahora: sí · buffs vigilados: 2 · barras sin algún buff: N`. Si sale `no`, el cliente devuelve las auras como secretos y no se puede avisar de buffs.
 - [ ] `Todos los IDs de hechizo del perfil existen.` Si no, corrige los IDs en `Data/Druid.lua`.
 - [ ] `Cabecera party: 40 botones`, `tanks: 8`, `pets: 20`. Si sale menos, la precreación no funciona (diseño §11) y los botones nuevos recibirán auras al salir de combate.
 
@@ -55,6 +56,9 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 ## 9. Buffs
 - [ ] Fuera de combate, la barra de quien no tiene Marca se pinta del color elegido; al entrar en combate vuelve a su color.
 - [ ] Asigna "Poner el buff que falta" a un clic: sobre esa barra lanza el buff que le falta.
+- [ ] Marca "Fuera de combate, cualquier clic pone el buff que le falta a la barra" (pestaña Buffs o Clics): cualquier clic sobre una barra sin Marca lanza Marca de lo Salvaje; cuando ya la tiene, cada clic vuelve a hacer lo suyo.
+- [ ] En combate esa barra vuelve a su color de vida y los clics hacen lo normal (no pone buffs).
+- [ ] Con los dos overrides marcados, una barra con maldición y sin Marca: el clic quita primero la maldición.
 - [ ] Con "Avisar si quedan menos de 5 minutos", un buff a punto de acabar cuenta como que falta.
 
 ## 10. Bloques

@@ -4,7 +4,7 @@ local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
 
-local TabBuffs = { options = nil, pool = nil }
+local TabBuffs = { options = nil, pool = nil, overrideCheckbox = nil }
 ns.TabBuffs = TabBuffs
 
 local LIST_TOP, ROW_HEIGHT = -170, 26
@@ -106,6 +106,11 @@ function TabBuffs.Build(panel)
   local help = Widgets.Label(panel, L.BUFFS_HELP, "GameFontHighlightSmall")
   help:SetPoint("TOPLEFT", panel, "TOPLEFT", 330, -4)
   help:SetPoint("RIGHT", panel, "RIGHT", 0, 0)
+  -- Misma opción que en la pestaña Clics: fuera de combate, cualquier clic pone el buff que falta.
+  local override = Widgets.Checkbox(panel, L.CLICKS_BUFF_OVERRIDE, Widgets.SectionGetter("clicks", "buffOverride"),
+    Widgets.SectionSetter("clicks", "buffOverride"))
+  override:SetPoint("TOPLEFT", help, "BOTTOMLEFT", 0, -8)
+  TabBuffs.overrideCheckbox = override
   local title = Widgets.Label(panel, L.BUFFS_LIST, "GameFontNormal")
   title:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -122)
   local add = Widgets.Button(panel, L.ADD_SPELL, 140, function(self)
@@ -125,6 +130,7 @@ end
 
 function TabBuffs.Refresh()
   TabBuffs.options:Refresh()
+  TabBuffs.overrideCheckbox:Refresh()
   TabBuffs.pool:Render(TabBuffs.Items(), PaintRow, 0, LIST_TOP, ROW_HEIGHT)
 end
 

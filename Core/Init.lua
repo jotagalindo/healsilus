@@ -33,6 +33,19 @@ function ns.IsSecret(value)
   return false
 end
 
+-- ¿Se pueden leer ahora las auras? Solo fuera de combate y cuando el cliente no las devuelve secretas.
+-- Ojo: C_Secrets.HasSecretRestrictions() no vale para esto: dice si la versión del juego tiene
+-- restricciones (en Forever, siempre), no si en este momento las auras salen como secretos.
+function ns.CanReadAuras()
+  if InCombatLockdown() then
+    return false
+  end
+  if C_Secrets and C_Secrets.ShouldAurasBeSecret and C_Secrets.ShouldAurasBeSecret() == true then
+    return false
+  end
+  return C_UnitAuras ~= nil
+end
+
 function ns.DeepCopy(value)
   if type(value) ~= "table" then
     return value

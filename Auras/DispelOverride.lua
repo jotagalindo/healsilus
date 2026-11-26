@@ -1,6 +1,8 @@
--- Override de dispel (como el SmartCast de HealBot, opcional): fuera de combate, si una barra tiene un
--- debuff que puedes quitar, cualquier clic sobre ella lanza el hechizo que lo quita. En combate no se
--- puede leer los debuffs ni cambiar clics: al empezar el combate todos los clics vuelven a lo normal.
+-- Override de clics (como el SmartCast de HealBot, opcional), fuera de combate:
+--  · dispel: si una barra tiene un debuff que puedes quitar, cualquier clic lanza el hechizo que lo quita.
+--  · buff: si a una barra le falta uno de tus buffs vigilados, cualquier clic se lo pone.
+-- Si se cumplen los dos, manda el dispel. En combate no se pueden leer auras ni cambiar clics: al
+-- empezar el combate todos los clics vuelven a lo normal.
 local _, ns = ...
 
 local DispelOverride = { dirty = {}, flushScheduled = false }
@@ -10,20 +12,18 @@ local FLUSH_DELAY = 0.3
 local MAX_DEBUFFS = 40
 
 function DispelOverride.CanRead()
-  if InCombatLockdown() then
-    return false
-  end
-  if C_Secrets and C_Secrets.HasSecretRestrictions and C_Secrets.HasSecretRestrictions() then
-    return false
-  end
-  return C_UnitAuras ~= nil and C_UnitAuras.GetAuraDataByIndex ~= nil
+  return ns.CanReadAuras() and C_UnitAuras.GetAuraDataByIndex ~= nil
 end
 
 -- Tipos de los debuffs que tú puedes quitar (filtro "RAID"), como conjunto { Curse = true, ... }.
+-- nil si el cliente devuelve las auras como secretos: entonces no se sabe nada.
 function DispelOverride.DebuffTypes(unit)
   local types = {}
   for position = 1, MAX_DEBUFFS do
     local aura = C_UnitAuras.GetAuraDataByIndex(unit, position, "HARMFUL|RAID")
+    if ns.IsSecret(aura) then
+      return nil
+    end
     if not aura then
       break
     end
@@ -55,9 +55,15 @@ function DispelOverride.CureFor(types, bindings)
   return nil
 end
 
+-- Buff que pone el override de buff: el primero que le falta a la barra (Auras/MissingBuffs.lua).
+function DispelOverride.BuffFor(missing)
+  return missing and missing[1] or nil
+end
+
 function DispelOverride:Evaluate(button)
   local profile = ns.Profiles.active
-  if not profile or not profile.clicks.dispelOverride or not button.unit then
+  local clicks = profile and profile.clicks
+  if not clicks or not (clicks.dispelOverride or clicks.buffOverride) or not button.unit then
     if button.healsilusOverride then
       ns.ClickCast:SetDispelOverride(button, nil)
     end
@@ -66,9 +72,19 @@ function DispelOverride:Evaluate(button)
   if not DispelOverride.CanRead() then
     return
   end
-  local cure = DispelOverride.CureFor(DispelOverride.DebuffTypes(button.unit), profile.bindings)
-  if cure ~= button.healsilusOverride then
-    ns.ClickCast:SetDispelOverride(button, cure)
+  local castString
+  if clicks.dispelOverride then
+    local types = DispelOverride.DebuffTypes(button.unit)
+    if not types then
+      return
+    end
+    castString = DispelOverride.CureFor(types, profile.bindings)
+  end
+  if not castString and clicks.buffOverride then
+    castString = DispelOverride.BuffFor(button.healsilusMissing)
+  end
+  if castString ~= button.healsilusOverride then
+    ns.ClickCast:SetDispelOverride(button, castString)
   end
 end
 

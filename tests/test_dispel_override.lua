@@ -7,7 +7,7 @@ local assertEquals, assertTrue, assertFalse, assertNil = Harness.assertEquals, H
 local FILES = {
   "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
   "Core/StyleData.lua", "Data/Spells.lua", "Data/Druid.lua", "Data/Dispels.lua", "Frames/ClickCast.lua",
-  "Auras/DispelOverride.lua",
+  "Auras/MissingBuffs.lua", "Auras/DispelOverride.lua",
 }
 
 local function LoadOverride()
@@ -18,6 +18,8 @@ local function LoadOverride()
       [2893] = { name = "Suprimir veneno" },
       [8946] = { name = "Curar envenenamiento" },
       [774] = { name = "Rejuvenecimiento" },
+      [1126] = { name = "Marca de lo Salvaje" },
+      [21849] = { name = "Don de lo Salvaje" },
     },
     spellbook = {
       { spellID = 5185, name = "Toque de sanación", subName = "" },
@@ -26,22 +28,48 @@ local function LoadOverride()
     },
   })
   local debuffs = { party1 = {} }
+  local buffs = { party1 = {} }
   environment.C_UnitAuras = {
     GetAuraDataByIndex = function(unit, position)
       local dispelName = debuffs[unit] and debuffs[unit][position]
       return dispelName and { dispelName = dispelName } or nil
     end,
+    GetAuraDataBySpellName = function(unit, name)
+      return buffs[unit] and buffs[unit][name] and { name = name, expirationTime = 0 } or nil
+    end,
   }
+  environment.UnitExists = function()
+    return true
+  end
+  environment.UnitIsConnected = function()
+    return true
+  end
+  environment.UnitIsDeadOrGhost = function()
+    return false
+  end
+  environment.UnitGroupRolesAssigned = function()
+    return "DAMAGER"
+  end
+  environment.UnitIsUnit = function(unit, other)
+    return unit == other
+  end
   local ns = Loader.Load(environment, FILES)
   ns.Spells:Scan()
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
   ns.UnitButton = { buttons = {} }
   ns.Headers = { list = {} }
-  return ns, environment, debuffs
+  -- Solo vigila Marca de lo Salvaje (con Don de lo Salvaje como versión de grupo) para todos.
+  ns.Profiles.active.buffs.watched = { { spellID = 1126, groupSpellID = 21849, targets = "ALL" } }
+  ns.MissingBuffs:Resolve()
+  return ns, environment, debuffs, buffs
 end
 
 local function FakeSecureButton(unit)
-  local button = { unit = unit, attributes = {} }
+  local mark = { shown = false }
+  function mark:SetShown(shown)
+    self.shown = shown
+  end
+  local button = { unit = unit, attributes = {}, healsilus = { missingMark = mark } }
   function button:SetAttribute(name, value)
     self.attributes[name] = value
   end
@@ -149,5 +177,115 @@ describe("DispelOverride", function()
     debuffs.party1 = { "Curse" }
     ns.DispelOverride:Evaluate(button)
     assertNil(button.healsilusOverride)
+  end)
+end)
+
+describe("Buff override", function()
+  it("makes every click cast the missing buff out of combat and gives the clicks back once it is on", function()
+    local ns, _, _, buffs = LoadOverride()
+    ns.Profiles.active.clicks.buffOverride = true
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    ns.MissingBuffs:Evaluate(button)
+    assertEquals(button.healsilusMissing, { "Marca de lo Salvaje" })
+    assertEquals(button.healsilusOverride, "Marca de lo Salvaje")
+    assertEquals(button.attributes.spell1, "Marca de lo Salvaje")
+    assertEquals(button.attributes["ctrl-spell2"], "Marca de lo Salvaje")
+    buffs.party1 = { ["Don de lo Salvaje"] = true }
+    ns.MissingBuffs:Evaluate(button)
+    assertEquals(button.healsilusMissing, {})
+    assertNil(button.healsilusOverride)
+    assertEquals(button.attributes.spell1, "Toque de sanación")
+  end)
+
+  it("does nothing while the option is off", function()
+    local ns = LoadOverride()
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    ns.MissingBuffs:Evaluate(button)
+    assertEquals(button.healsilusMissing, { "Marca de lo Salvaje" })
+    assertNil(button.healsilusOverride)
+    assertEquals(button.attributes.spell1, "Toque de sanación")
+  end)
+
+  it("lets the dispel win when the bar also has a debuff you can remove", function()
+    local ns, _, debuffs = LoadOverride()
+    ns.Profiles.active.clicks.buffOverride = true
+    ns.Profiles.active.clicks.dispelOverride = true
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    debuffs.party1 = { "Curse" }
+    ns.MissingBuffs:Evaluate(button)
+    assertEquals(button.healsilusOverride, "Quitar maldición")
+    debuffs.party1 = {}
+    ns.DispelOverride:Evaluate(button)
+    assertEquals(button.healsilusOverride, "Marca de lo Salvaje")
+  end)
+
+  it("restores the normal clicks when combat starts and never casts buffs in combat", function()
+    local ns, environment = LoadOverride()
+    ns.Profiles.active.clicks.buffOverride = true
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    ns.MissingBuffs:Evaluate(button)
+    assertEquals(button.attributes.spell1, "Marca de lo Salvaje")
+    environment.__fireEvent("PLAYER_REGEN_DISABLED")
+    environment.__state.inCombat = true
+    assertNil(button.healsilusOverride)
+    assertEquals(button.attributes.spell1, "Toque de sanación")
+    ns.DispelOverride:Evaluate(button)
+    assertNil(button.healsilusOverride)
+  end)
+
+  it("works on a client build with secret restrictions while auras are readable", function()
+    local ns, environment = LoadOverride()
+    environment.C_Secrets = {
+      HasSecretRestrictions = function()
+        return true
+      end,
+      ShouldAurasBeSecret = function()
+        return false
+      end,
+    }
+    ns.Profiles.active.clicks.buffOverride = true
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    ns.MissingBuffs:Evaluate(button)
+    assertEquals(button.healsilusOverride, "Marca de lo Salvaje")
+  end)
+end)
+
+describe("DispelOverride with secret auras", function()
+  it("keeps the current clicks when the debuff list comes back secret", function()
+    local ns, environment, debuffs = LoadOverride()
+    ns.Profiles.active.clicks.dispelOverride = true
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    debuffs.party1 = { "Curse" }
+    ns.DispelOverride:Evaluate(button)
+    assertEquals(button.healsilusOverride, "Quitar maldición")
+    environment.C_UnitAuras.GetAuraDataByIndex = function()
+      return Stubs.MakeSecret()
+    end
+    assertNil(ns.DispelOverride.DebuffTypes("party1"))
+    ns.DispelOverride:Evaluate(button)
+    assertEquals(button.healsilusOverride, "Quitar maldición")
+  end)
+
+  it("stops reading auras while the client says they are secret", function()
+    local ns, environment = LoadOverride()
+    assertTrue(ns.DispelOverride.CanRead())
+    environment.C_Secrets = {
+      ShouldAurasBeSecret = function()
+        return true
+      end,
+    }
+    assertFalse(ns.DispelOverride.CanRead())
   end)
 end)

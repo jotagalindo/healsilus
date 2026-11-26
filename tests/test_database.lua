@@ -80,7 +80,7 @@ describe("Database.NormalizeProfile", function()
 
   it("defaults click options to plain casting", function()
     local ns = LoadDatabase()
-    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false })
+    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false, buffOverride = false })
     local valid, field = ns.Database.ValidateProfile({ clicks = { targetOnClick = "yes" } })
     assertFalse(valid)
     assertEquals(field, "clicks.targetOnClick")

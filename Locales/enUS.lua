@@ -267,7 +267,7 @@ L.TARGETS_SELF = "Only me"
 L.BUFFS_COLOR_BAR = "Color the bar of whoever misses a buff (out of combat)"
 L.BUFFS_BAR_COLOR = "Bar color when a buff is missing"
 L.BUFFS_REFRESH_BELOW = "Also warn when less than this many minutes remain (0 = off)"
-L.BUFFS_HELP = "Out of combat, the bar of whoever misses one of your buffs gets the color you pick and a mark in its corner. To recast it with one click, assign \"Cast the missing buff\" to a click in the Clicks tab: it casts on that bar the first buff it is missing."
+L.BUFFS_HELP = "Out of combat, the bar of whoever misses one of your buffs gets the color you pick and a mark in its corner. To recast it, tick the option below (any click casts it) or assign \"Cast the missing buff\" to one click in the Clicks tab. In combat the bars only show health and the clicks do their usual thing."
 L.BINDING_BUFF = "Cast the missing buff"
 
 -- Bloques: imán, mover juntos, bloque principal
@@ -277,3 +277,9 @@ L.FRAMES_SNAP_DISTANCE = "Magnet between blocks (px, 0 = off)"
 
 -- Override de dispel (como el SmartCast de HealBot)
 L.CLICKS_DISPEL_OVERRIDE = "Out of combat, any click removes a debuff you can remove"
+
+-- Override de buff y diagnóstico de auras
+L.CLICKS_BUFF_OVERRIDE = "Out of combat, any click casts the buff a bar is missing"
+L.DIAG_AURAS = "Auras readable now: %s · watched buffs: %d · bars missing a buff: %d"
+L.DIAG_YES = "yes"
+L.DIAG_NO = "no"

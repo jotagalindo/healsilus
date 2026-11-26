@@ -127,7 +127,7 @@ function ClickCast:SetBuffMacro(button, macro)
   if InCombatLockdown() then
     return false
   end
-  -- Mientras el override de dispel manda en esta barra, sus clics no se tocan.
+  -- Mientras el override de clics manda en esta barra, sus clics no se tocan.
   if button.healsilusOverride then
     return true
   end
@@ -137,8 +137,9 @@ function ClickCast:SetBuffMacro(button, macro)
   return true
 end
 
--- Override de dispel (Auras/DispelOverride.lua): con castString, todos los clics de la barra lanzan ese
--- hechizo; con nil, la barra recupera sus clics normales. Solo fuera de combate.
+-- Override de clics (Auras/DispelOverride.lua: quitar un debuff o poner el buff que falta): con
+-- castString, todos los clics de la barra lanzan ese hechizo; con nil, la barra recupera sus clics
+-- normales. Solo fuera de combate.
 function ClickCast:SetDispelOverride(button, castString)
   if InCombatLockdown() then
     return false

@@ -104,7 +104,8 @@ function Database.DefaultProfile()
     -- targetOnClick: además de lanzar, selecciona la unidad. avoidBlueCursor: cancela el cursor azul
     -- si el hechizo no se puede lanzar sobre ella. Ambas convierten el hechizo en una macro [@mouseover].
     -- dispelOverride: fuera de combate, cualquier clic sobre una barra con un debuff que puedes quitar lo quita.
-    clicks = { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false },
+    -- buffOverride: fuera de combate, cualquier clic sobre una barra a la que le falta un buff se lo pone.
+    clicks = { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false, buffOverride = false },
     -- Lo visual (tamaño, textura, textos, iconos, colores) vive en los estilos (Core/StyleData.lua);
     -- el perfil decide cuándo se ven los marcos y qué estilo usar en cada situación.
     frames = {

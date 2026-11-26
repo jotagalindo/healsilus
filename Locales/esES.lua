@@ -273,7 +273,7 @@ L.TARGETS_SELF = "Solo yo"
 L.BUFFS_COLOR_BAR = "Colorear la barra de quien no tenga un buff (fuera de combate)"
 L.BUFFS_BAR_COLOR = "Color de la barra si falta un buff"
 L.BUFFS_REFRESH_BELOW = "Avisar también si quedan menos de estos minutos (0 = no)"
-L.BUFFS_HELP = "Fuera de combate, la barra de quien no tenga uno de tus buffs toma el color que elijas y una marca en la esquina. Para ponérselo con un clic, asigna \"Poner el buff que falta\" a un clic en la pestaña Clics: lanza sobre esa barra el primer buff que le falta."
+L.BUFFS_HELP = "Fuera de combate, la barra de quien no tenga uno de tus buffs toma el color que elijas y una marca en la esquina. Para ponérselo, marca la opción de abajo (cualquier clic se lo pone) o asigna \"Poner el buff que falta\" a un clic en la pestaña Clics. En combate las barras solo muestran la vida y los clics hacen lo de siempre."
 L.BINDING_BUFF = "Poner el buff que falta"
 
 -- Bloques: imán, mover juntos, bloque principal
@@ -283,3 +283,9 @@ L.FRAMES_SNAP_DISTANCE = "Imán entre bloques (px, 0 = sin imán)"
 
 -- Override de dispel (como el SmartCast de HealBot)
 L.CLICKS_DISPEL_OVERRIDE = "Fuera de combate, cualquier clic quita el debuff que puedas quitar"
+
+-- Override de buff y diagnóstico de auras
+L.CLICKS_BUFF_OVERRIDE = "Fuera de combate, cualquier clic pone el buff que le falta a la barra"
+L.DIAG_AURAS = "Auras legibles ahora: %s · buffs vigilados: %d · barras sin algún buff: %d"
+L.DIAG_YES = "sí"
+L.DIAG_NO = "no"

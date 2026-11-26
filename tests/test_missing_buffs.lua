@@ -119,7 +119,7 @@ describe("MissingBuffs", function()
     assertFalse(damager.healsilus.missingMark.shown)
   end)
 
-  it("freezes the last result in combat and under secret restrictions", function()
+  it("freezes the last result in combat and while auras are secret", function()
     local ns, environment, units = LoadMissingBuffs()
     local tank = FakeButton("party1")
     ns.MissingBuffs:Evaluate(tank)
@@ -128,16 +128,74 @@ describe("MissingBuffs", function()
     ns.MissingBuffs:Evaluate(tank)
     assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
     environment.__state.inCombat = false
+    local aurasSecret = true
     environment.C_Secrets = {
-      HasSecretRestrictions = function()
-        return true
+      ShouldAurasBeSecret = function()
+        return aurasSecret
       end,
     }
     ns.MissingBuffs:Evaluate(tank)
     assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
-    environment.C_Secrets = nil
+    aurasSecret = false
     ns.MissingBuffs:Evaluate(tank)
     assertEquals(tank.healsilusMissing, {})
+  end)
+
+  -- WoW Forever es una versión con restricciones (HasSecretRestrictions siempre true), pero fuera de
+  -- combate las auras se leen: eso no debe apagar el aviso de buffs.
+  it("still reads auras on a client build that has secret restrictions", function()
+    local ns, environment = LoadMissingBuffs()
+    environment.C_Secrets = {
+      HasSecretRestrictions = function()
+        return true
+      end,
+      ShouldAurasBeSecret = function()
+        return false
+      end,
+    }
+    local tank = FakeButton("party1")
+    assertTrue(ns.MissingBuffs.CanRead())
+    ns.MissingBuffs:Evaluate(tank)
+    assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
+  end)
+
+  it("keeps the last result when the client returns a secret aura", function()
+    local ns, environment, units = LoadMissingBuffs()
+    local tank = FakeButton("party1")
+    ns.MissingBuffs:Evaluate(tank)
+    units.party1.auras = { ["Marca de lo Salvaje"] = true, ["Espinas"] = true }
+    environment.C_UnitAuras.GetAuraDataBySpellName = function()
+      return Stubs.MakeSecret()
+    end
+    ns.MissingBuffs:Evaluate(tank)
+    assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
+  end)
+
+  it("never compares secret roles or unit checks", function()
+    local ns, environment = LoadMissingBuffs()
+    environment.UnitGroupRolesAssigned = function()
+      return Stubs.MakeSecret()
+    end
+    environment.UnitIsUnit = function()
+      return Stubs.MakeSecret()
+    end
+    local tank = FakeButton("party1")
+    ns.MissingBuffs:Evaluate(tank)
+    assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje" })
+  end)
+
+  it("treats a buff with a secret expiration time as present", function()
+    local ns, environment = LoadMissingBuffs()
+    ns.Profiles.active.buffs.refreshBelow = 5
+    environment.C_UnitAuras.GetAuraDataBySpellName = function(_, name)
+      if name == "Marca de lo Salvaje" then
+        return { name = name, expirationTime = Stubs.MakeSecret() }
+      end
+      return nil
+    end
+    local damager = FakeButton("party2")
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, {})
   end)
 
   it("clears the mark for dead units and when the feature is off", function()
