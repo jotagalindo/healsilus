@@ -9,6 +9,7 @@ local TEST_FILES = {
   "tests/test_database.lua",
   "tests/test_spells.lua",
   "tests/test_druid.lua",
+  "tests/test_profiles.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do
