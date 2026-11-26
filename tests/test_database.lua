@@ -66,6 +66,14 @@ describe("Database.NormalizeProfile", function()
     assertEquals(#fixes, 5)
   end)
 
+  it("defaults click options to plain casting", function()
+    local ns = LoadDatabase()
+    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false })
+    local valid, field = ns.Database.ValidateProfile({ clicks = { targetOnClick = "yes" } })
+    assertFalse(valid)
+    assertEquals(field, "clicks.targetOnClick")
+  end)
+
   it("gives every dispel type a default color", function()
     local ns = LoadDatabase()
     assertEquals(ns.Database.DefaultProfile().auras.dispelColors, {

@@ -35,6 +35,7 @@ local INITIAL_CONFIG = [[
   local header = self:GetParent()
   self:SetWidth(header:GetAttribute("hs-width") or 110)
   self:SetHeight(header:GetAttribute("hs-height") or 34)
+  self:SetAttribute("useOnKeyDown", header:GetAttribute("hs-use-on-key-down"))
   local count = header:GetAttribute("hs-attr-count") or 0
   for position = 1, count do
     self:SetAttribute(header:GetAttribute("hs-attr-name-" .. position), header:GetAttribute("hs-attr-value-" .. position))
@@ -122,6 +123,7 @@ function Headers:ApplyHeaderLayout(header, frames)
   SetAttributes(header, {
     ["hs-width"] = frames.width,
     ["hs-height"] = frames.height,
+    ["hs-use-on-key-down"] = frames.castOnDown == true,
     point = down and "TOP" or "LEFT",
     xOffset = down and 0 or frames.spacing,
     yOffset = down and -frames.spacing or 0,

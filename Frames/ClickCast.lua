@@ -14,9 +14,26 @@ function ClickCast.ResolveSpell(binding)
   return (ns.Spells:CastString(spellID, binding.rank))
 end
 
+-- "Seleccionar al lanzar" y "evitar el cursor azul" (técnica de HealBot, HealBot_Action.lua:5855) con
+-- [@mouseover]: apunta a la barra pulsada aunque la cabecera le cambie la unidad en combate.
+function ClickCast.SpellMacro(castString, options)
+  local lines = {}
+  if options.targetOnClick then
+    lines[#lines + 1] = "/target [@mouseover]"
+  end
+  lines[#lines + 1] = "/cast [@mouseover] " .. castString
+  if options.avoidBlueCursor then
+    lines[#lines + 1] = "/stopspelltarget"
+  end
+  return table.concat(lines, "\n")
+end
+
 -- Lista ordenada { name, value }: prefijos en orden canónico y botones 1..5.
 -- Sin asignación propia, el clic izquierdo selecciona y el derecho abre el menú de unidad.
-function ClickCast.BuildAttributes(bindings, resolveSpell)
+-- options (perfil.clicks) es opcional: sin opciones activas los hechizos usan el tipo "spell".
+function ClickCast.BuildAttributes(bindings, resolveSpell, options)
+  options = options or {}
+  local useMacro = options.targetOnClick or options.avoidBlueCursor
   local attributes = {}
   local function Add(name, value)
     attributes[#attributes + 1] = { name = name, value = value }
@@ -27,7 +44,10 @@ function ClickCast.BuildAttributes(bindings, resolveSpell)
       if binding then
         if binding.kind == "spell" then
           local castString = resolveSpell(binding)
-          if castString then
+          if castString and useMacro then
+            Add(prefix .. "type" .. button, "macro")
+            Add(prefix .. "macrotext" .. button, ClickCast.SpellMacro(castString, options))
+          elseif castString then
             Add(prefix .. "type" .. button, "spell")
             Add(prefix .. "spell" .. button, castString)
           end
@@ -79,7 +99,7 @@ function ClickCast:Apply(profile)
   if InCombatLockdown() then
     error("ClickCast:Apply called in combat")
   end
-  local attributes = ClickCast.BuildAttributes(profile.bindings, ClickCast.ResolveSpell)
+  local attributes = ClickCast.BuildAttributes(profile.bindings, ClickCast.ResolveSpell, profile.clicks)
   for button in pairs(ns.UnitButton.buttons) do
     ClickCast.ApplyToButton(button, attributes)
   end
@@ -108,7 +128,7 @@ function ClickCast:Refresh()
 end
 
 ns.Events:Register("SETTINGS_CHANGED", function(section)
-  if section == "bindings" then
+  if section == "bindings" or section == "clicks" then
     ClickCast:Refresh()
   end
 end)

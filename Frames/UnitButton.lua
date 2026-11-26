@@ -104,9 +104,13 @@ function UnitButton:ApplyStyle(frame)
   frame.healsilus.healthBar:SetStatusBarTexture(ns.Media.Texture(Frames().texture))
 end
 
+-- SecureActionButtonTemplate (SecureTemplates.lua:810-811 en Forever) solo actúa en el flanco que dice
+-- useOnKeyDown, que por defecto sigue la opción del juego "lanzar al pulsar". Se registran los dos
+-- flancos y se fija useOnKeyDown para que el hechizo salga una sola vez, en el momento elegido.
 function UnitButton:ApplyClickRegistration(button)
   ns.CombatQueue:Run("clicks:" .. tostring(button), function()
-    button:RegisterForClicks(Frames().castOnDown and "AnyDown" or "AnyUp")
+    button:RegisterForClicks("AnyUp", "AnyDown")
+    button:SetAttribute("useOnKeyDown", Frames().castOnDown == true)
   end)
 end
 

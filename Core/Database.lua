@@ -68,6 +68,9 @@ Database.DEFAULT_MINIMAP_ANGLE = 225
 function Database.DefaultProfile()
   return {
     bindings = {},
+    -- targetOnClick: además de lanzar, selecciona la unidad. avoidBlueCursor: cancela el cursor azul
+    -- si el hechizo no se puede lanzar sobre ella. Ambas convierten el hechizo en una macro [@mouseover].
+    clicks = { targetOnClick = false, avoidBlueCursor = false },
     frames = {
       width = 110, height = 34, spacing = 2, columns = 8, unitsPerColumn = 5,
       sortBy = "GROUP", growth = "DOWN",
@@ -242,7 +245,7 @@ function Database.ValidateProfile(profile)
       end
     end
   end
-  for _, section in ipairs({ "frames", "auras", "buffs" }) do
+  for _, section in ipairs({ "clicks", "frames", "auras", "buffs" }) do
     local values = profile[section]
     if values ~= nil then
       if type(values) ~= "table" then

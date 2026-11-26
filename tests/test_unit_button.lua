@@ -41,6 +41,37 @@ local function LoadUnitButton()
   return ns, environment, world
 end
 
+-- Con la opción del juego "lanzar al pulsar", SecureActionButtonTemplate solo actúa al pulsar:
+-- hay que registrar pulsar y soltar y decidir con useOnKeyDown cuál de los dos lanza.
+describe("UnitButton click registration", function()
+  local function FakeSecureButton()
+    local button = { attributes = {} }
+    function button:RegisterForClicks(...)
+      self.clicks = { ... }
+    end
+    function button:SetAttribute(name, value)
+      self.attributes[name] = value
+    end
+    return button
+  end
+
+  it("listens to press and release and casts on release by default", function()
+    local ns = LoadUnitButton()
+    local button = FakeSecureButton()
+    ns.UnitButton:ApplyClickRegistration(button)
+    assertEquals(button.clicks, { "AnyUp", "AnyDown" })
+    assertEquals(button.attributes.useOnKeyDown, false)
+  end)
+
+  it("casts on press when the profile asks for it", function()
+    local ns = LoadUnitButton()
+    ns.Profiles.active.frames.castOnDown = true
+    local button = FakeSecureButton()
+    ns.UnitButton:ApplyClickRegistration(button)
+    assertEquals(button.attributes.useOnKeyDown, true)
+  end)
+end)
+
 local function InstallCurves(environment)
   local function Factory()
     local curve = {}

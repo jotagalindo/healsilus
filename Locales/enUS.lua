@@ -58,6 +58,8 @@ L.MENU_MACRO = "Macro..."
 L.MENU_CLEAR = "Clear"
 L.MACRO_TITLE = "Macro for this click (use [@mouseover] to target the bar)"
 L.MACRO_TOO_LONG = "The macro is too long (1023 characters maximum)."
+L.CLICKS_TARGET_ON_CLICK = "Also target the unit when casting"
+L.CLICKS_AVOID_BLUE_CURSOR = "Avoid the blue targeting cursor"
 
 -- Pestaña Marcos
 L.TAB_FRAMES = "Frames"

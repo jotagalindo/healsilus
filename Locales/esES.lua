@@ -64,6 +64,8 @@ L.MENU_MACRO = "Macro..."
 L.MENU_CLEAR = "Vaciar"
 L.MACRO_TITLE = "Macro para este clic (usa [@mouseover] para apuntar a la barra)"
 L.MACRO_TOO_LONG = "La macro es demasiado larga (máximo 1023 caracteres)."
+L.CLICKS_TARGET_ON_CLICK = "Seleccionar también como objetivo al lanzar"
+L.CLICKS_AVOID_BLUE_CURSOR = "Evitar el cursor azul"
 
 -- Pestaña Marcos
 L.TAB_FRAMES = "Marcos"

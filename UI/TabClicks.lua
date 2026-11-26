@@ -39,6 +39,11 @@ function TabClicks.KeyLabel(key)
   return MODIFIER_LABELS[prefix] .. " + " .. BUTTON_LABELS[button]
 end
 
+TabClicks.OPTIONS = {
+  { key = "targetOnClick", label = L.CLICKS_TARGET_ON_CLICK },
+  { key = "avoidBlueCursor", label = L.CLICKS_AVOID_BLUE_CURSOR },
+}
+
 local function Bindings()
   return ns.Profiles.active.bindings
 end
@@ -189,9 +194,16 @@ function TabClicks.Build(panel)
       TabClicks.cells[key] = cell
     end
   end
+  local optionsTop = GRID_TOP - #ns.BINDING_PREFIXES * CELL_HEIGHT - 12
+  local options = Widgets.Stack(panel, 0, optionsTop)
+  for _, spec in ipairs(TabClicks.OPTIONS) do
+    options:Add(Widgets.Checkbox(panel, spec.label, Widgets.SectionGetter("clicks", spec.key), Widgets.SectionSetter("clicks", spec.key)), 28)
+  end
+  TabClicks.options = options
 end
 
 function TabClicks.Refresh()
+  TabClicks.options:Refresh()
   for key, cell in pairs(TabClicks.cells) do
     local text, icon, valid = TabClicks.Describe(Bindings()[key], key)
     cell.text:SetText(text)

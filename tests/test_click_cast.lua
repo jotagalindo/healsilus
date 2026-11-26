@@ -66,6 +66,22 @@ describe("ClickCast.BuildAttributes", function()
     local ns = LoadClickCast()
     assertEquals(AsPairs(ns.ClickCast.BuildAttributes({ ["1"] = { kind = "spell", spellID = 999 } }, FakeResolver)), { "type2=togglemenu" })
   end)
+
+  it("turns spells into a mouseover macro that also targets and/or cancels the blue cursor", function()
+    local ns = LoadClickCast()
+    local bindings = { ["shift-2"] = { kind = "spell", spellID = 774 } }
+    assertEquals(AsPairs(ns.ClickCast.BuildAttributes(bindings, FakeResolver, { targetOnClick = true, avoidBlueCursor = true })), {
+      "type1=target", "type2=togglemenu",
+      "shift-type2=macro", "shift-macrotext2=/target [@mouseover]\n/cast [@mouseover] Spell774\n/stopspelltarget",
+    })
+    assertEquals(AsPairs(ns.ClickCast.BuildAttributes(bindings, FakeResolver, { targetOnClick = false, avoidBlueCursor = true })), {
+      "type1=target", "type2=togglemenu",
+      "shift-type2=macro", "shift-macrotext2=/cast [@mouseover] Spell774\n/stopspelltarget",
+    })
+    assertEquals(AsPairs(ns.ClickCast.BuildAttributes(bindings, FakeResolver, { targetOnClick = false, avoidBlueCursor = false })), {
+      "type1=target", "type2=togglemenu", "shift-type2=spell", "shift-spell2=Spell774",
+    })
+  end)
 end)
 
 describe("ClickCast.ResolveSpell", function()
