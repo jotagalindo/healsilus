@@ -97,11 +97,15 @@ describe("Headers layout", function()
     assertEquals(ns.Headers:CountButtons(header), 2)
   end)
 
-  it("precreates every button by showing with a negative starting index", function()
+  -- La initialConfigFunction lee hs-width/hs-height: sin ellos el primer botón falla y la cabecera
+  -- deja de crear el resto (en el juego salían "1 botones" en /hs diag).
+  it("sets the button size before showing, then precreates with a negative starting index", function()
     local ns = LoadHeaders()
     local header = FakeHeader("party")
-    ns.Headers:Precreate(header)
-    assertEquals(header.history, { "unitsPerColumn=40", "maxColumns=1", "startingIndex=-39", "Show", "startingIndex=1" })
+    ns.Headers:Precreate(header, ns.Database.DefaultProfile().frames)
+    assertEquals(header.history, {
+      "hs-width=110", "hs-height=34", "unitsPerColumn=40", "maxColumns=1", "startingIndex=-39", "Show", "startingIndex=1",
+    })
   end)
 end)
 

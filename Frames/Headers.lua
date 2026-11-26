@@ -33,8 +33,8 @@ local SORT_ATTRIBUTES = {
 -- Entorno restringido: cada botón nuevo toma tamaño y clics de su cabecera y pide su parte visual.
 local INITIAL_CONFIG = [[
   local header = self:GetParent()
-  self:SetWidth(header:GetAttribute("hs-width"))
-  self:SetHeight(header:GetAttribute("hs-height"))
+  self:SetWidth(header:GetAttribute("hs-width") or 110)
+  self:SetHeight(header:GetAttribute("hs-height") or 34)
   local count = header:GetAttribute("hs-attr-count") or 0
   for position = 1, count do
     self:SetAttribute(header:GetAttribute("hs-attr-name-" .. position), header:GetAttribute("hs-attr-value-" .. position))
@@ -162,8 +162,12 @@ end
 
 -- Con startingIndex negativo la cabecera cree que hay más unidades y crea todos sus botones ya,
 -- fuera de combate, para que nunca haga falta crear botones ni contenedores de auras en combate.
-function Headers:Precreate(header)
+-- La plantilla nace oculta y se actualiza al mostrarse (OnShow), así que los atributos que lee
+-- la initialConfigFunction (tamaño) tienen que estar puestos antes del Show.
+function Headers:Precreate(header, frames)
   local maximum = MAX_BUTTONS[header.healsilusKind]
+  header:SetAttribute("hs-width", frames.width)
+  header:SetAttribute("hs-height", frames.height)
   header:SetAttribute("unitsPerColumn", maximum)
   header:SetAttribute("maxColumns", 1)
   header:SetAttribute("startingIndex", 1 - maximum)
@@ -219,7 +223,7 @@ function Headers:Create()
   -- Los clics se guardan en las cabeceras antes de que existan sus botones.
   ns.ClickCast:Apply(ns.Profiles.active)
   for _, header in ipairs(self.list) do
-    self:Precreate(header)
+    self:Precreate(header, frames)
     self:ApplyHeaderLayout(header, frames)
   end
   self.initialized = true
