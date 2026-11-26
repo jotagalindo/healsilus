@@ -42,6 +42,7 @@ Luego, en el juego, `/reload` y `/hs`.
 | `/hs lock` | Bloquea o desbloquea los marcos para moverlos |
 | `/hs preview 5` (10, 20, 40) | Vista previa con miembros falsos; `/hs preview` la cierra |
 | `/hs debug` | Mensajes de depuración |
+| `/hs minimap` | Muestra u oculta el botón del minimapa (clic izquierdo: configuración; derecho: bloquear marcos) |
 
 ## Pruebas
 

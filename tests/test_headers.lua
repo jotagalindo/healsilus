@@ -75,6 +75,19 @@ describe("Headers layout", function()
     assertEquals(header.attributes.groupBy, "CLASS")
   end)
 
+  it("shows each header only in the situations chosen (solo, party, raid)", function()
+    local ns = LoadHeaders()
+    local frames = ns.Database.DefaultProfile().frames
+    frames.showSolo, frames.showInParty, frames.showInRaid = false, false, true
+    for _, kind in ipairs({ "party", "tanks", "pets" }) do
+      local header = FakeHeader(kind)
+      ns.Headers:ApplyHeaderLayout(header, frames)
+      assertEquals(header.attributes.showSolo, false, kind)
+      assertEquals(header.attributes.showParty, false, kind)
+      assertEquals(header.attributes.showRaid, true, kind)
+    end
+  end)
+
   it("filters the tanks header by role in a single column", function()
     local ns = LoadHeaders()
     local header = FakeHeader("tanks")

@@ -18,7 +18,7 @@ local KNOWN = {
 local function LoadTools()
   local environment = Stubs.NewEnvironment({ spells = KNOWN })
   environment.SlashCmdList = {}
-  environment.HealsilusDB = { debug = false }
+  environment.HealsilusDB = { debug = false, minimap = { angle = 225, hide = false } }
   local ns = Loader.Load(environment, FILES)
   local calls = {}
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}), source = "class" }
@@ -103,6 +103,20 @@ describe("Commands", function()
     environment.SlashCmdList.HEALSILUS("preview 99")
     environment.SlashCmdList.HEALSILUS("preview")
     assertEquals(calls, { "preview:10", "preview:40", "preview:hide" })
+  end)
+
+  it("toggles the minimap button", function()
+    local ns, environment = LoadTools()
+    local requested = {}
+    ns.MinimapButton = {
+      SetHidden = function(_, hidden)
+        requested[#requested + 1] = hidden
+        environment.HealsilusDB.minimap.hide = hidden
+      end,
+    }
+    environment.SlashCmdList.HEALSILUS("minimap")
+    environment.SlashCmdList.HEALSILUS("minimap")
+    assertEquals(requested, { true, false })
   end)
 
   it("prints the help for unknown commands", function()

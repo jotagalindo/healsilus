@@ -41,13 +41,16 @@ local WATCHED_FIELDS = { spellID = true, groupSpellID = true, targets = true }
 
 local MAX_MACRO_LENGTH = 1023
 
+Database.DEFAULT_MINIMAP_ANGLE = 225
+
 function Database.DefaultProfile()
   return {
     bindings = {},
     frames = {
       width = 110, height = 34, spacing = 2, columns = 8, unitsPerColumn = 5,
       sortBy = "GROUP", growth = "DOWN",
-      showSolo = true, showTanks = true, showPets = false, showTarget = true, showFocus = true,
+      showSolo = true, showInParty = true, showInRaid = true,
+      showTanks = true, showPets = false, showTarget = true, showFocus = true,
       hideBlizzard = true, locked = true, castOnDown = false,
       texture = "BLIZZARD", colorMode = "CLASS", healthText = "DEFICIT", outOfRangeAlpha = 0.4,
     },
@@ -290,6 +293,16 @@ function Database:Initialize()
   end
   if type(db.debug) ~= "boolean" then
     db.debug = false
+  end
+  -- Botón del minimapa: común a toda la cuenta, no depende del perfil.
+  if type(db.minimap) ~= "table" then
+    db.minimap = {}
+  end
+  if type(db.minimap.angle) ~= "number" then
+    db.minimap.angle = Database.DEFAULT_MINIMAP_ANGLE
+  end
+  if type(db.minimap.hide) ~= "boolean" then
+    db.minimap.hide = false
   end
   for classToken, profile in pairs(db.classProfiles) do
     if type(profile) == "table" then

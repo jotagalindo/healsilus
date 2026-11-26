@@ -6,7 +6,8 @@ ns.name = addonName
 -- Debe coincidir con "## Version" de Healsilus.toc (lo comprueba tests/test_init.lua).
 ns.version = "0.0.1"
 
--- Único global del addon: acceso desde /run y desde los comandos de depuración.
+-- Global del addon: acceso desde /run y desde los comandos de depuración. Los otros globales son
+-- HealsilusDB, los SLASH_HEALSILUS* y las funciones del desplegable de addons (UI/MinimapButton.lua).
 Healsilus = ns
 
 -- Prefijos de modificador en orden canónico (alt, ctrl, shift) y botones del ratón admitidos.

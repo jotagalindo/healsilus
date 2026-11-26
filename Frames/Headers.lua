@@ -127,8 +127,8 @@ function Headers:ApplyHeaderLayout(header, frames)
     yOffset = down and -frames.spacing or 0,
     columnAnchorPoint = down and "LEFT" or "TOP",
     columnSpacing = frames.spacing,
-    showRaid = true,
-    showParty = true,
+    showRaid = frames.showInRaid,
+    showParty = frames.showInParty,
     showPlayer = true,
   })
   if kind == "tanks" then

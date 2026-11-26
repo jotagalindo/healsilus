@@ -26,6 +26,7 @@ local TEST_FILES = {
   "tests/test_diagnostics_commands.lua",
   "tests/test_bootstrap.lua",
   "tests/test_load_all.lua",
+  "tests/test_minimap_button.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do

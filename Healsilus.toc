@@ -7,6 +7,9 @@
 ## Version: 0.0.1
 ## SavedVariables: HealsilusDB
 ## IconTexture: Interface\Icons\Spell_Nature_HealingTouch
+## AddonCompartmentFunc: Healsilus_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: Healsilus_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: Healsilus_OnAddonCompartmentLeave
 
 Core\Init.lua
 Locales\enUS.lua
@@ -34,6 +37,7 @@ UI\TabFrames.lua
 UI\TabAuras.lua
 UI\TabBuffs.lua
 UI\TabProfiles.lua
+UI\MinimapButton.lua
 Core\Diagnostics.lua
 Core\Commands.lua
 Core\Bootstrap.lua

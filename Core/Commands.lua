@@ -1,4 +1,4 @@
--- Comandos: /hs (configuración), /hs diag, /hs debug, /hs lock, /hs preview N.
+-- Comandos: /hs (configuración), /hs diag, /hs debug, /hs lock, /hs preview N, /hs minimap.
 local _, ns = ...
 local L = ns.L
 
@@ -26,6 +26,8 @@ local function HandleCommand(message)
     else
       ns.Preview:Hide()
     end
+  elseif command == "minimap" then
+    ns.MinimapButton:SetHidden(not HealsilusDB.minimap.hide)
   else
     ns.Print(L.HELP)
   end

@@ -46,6 +46,8 @@ end
 
 TabFrames.CHECKBOXES = {
   { key = "showSolo", label = L.FRAMES_SHOW_SOLO },
+  { key = "showInParty", label = L.FRAMES_SHOW_IN_PARTY },
+  { key = "showInRaid", label = L.FRAMES_SHOW_IN_RAID },
   { key = "showTanks", label = L.FRAMES_SHOW_TANKS },
   { key = "showPets", label = L.FRAMES_SHOW_PETS },
   { key = "showTarget", label = L.FRAMES_SHOW_TARGET },
@@ -75,6 +77,12 @@ function TabFrames.Build(panel)
     checkboxes:Add(Widgets.Checkbox(panel, spec.label, Widgets.SectionGetter("frames", spec.key),
       Widgets.SectionSetter("frames", spec.key, spec.afterChange)), 28)
   end
+  -- El botón del minimapa es de toda la cuenta, no del perfil.
+  checkboxes:Add(Widgets.Checkbox(panel, L.MINIMAP_SHOW, function()
+    return not HealsilusDB.minimap.hide
+  end, function(shown)
+    ns.MinimapButton:SetHidden(not shown)
+  end), 28)
   TabFrames.stacks = { sliders, dropdowns, checkboxes }
 
   local previewLabel = Widgets.Label(panel, L.PREVIEW_LABEL, "GameFontNormal")

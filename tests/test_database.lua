@@ -113,6 +113,17 @@ describe("Database:Initialize", function()
     assertEquals(db.characters, {})
     assertEquals(db.framePositions, {})
     assertFalse(db.debug)
+    assertEquals(db.minimap, { angle = 225, hide = false })
+  end)
+
+  it("repairs minimap button settings of the wrong type", function()
+    local ns, environment = LoadDatabase()
+    environment.HealsilusDB = { minimap = { angle = "left", hide = 1 } }
+    assertEquals(ns.Database:Initialize().minimap, { angle = 225, hide = false })
+    environment.HealsilusDB = { minimap = true }
+    assertEquals(ns.Database:Initialize().minimap, { angle = 225, hide = false })
+    environment.HealsilusDB = { minimap = { angle = 40, hide = true } }
+    assertEquals(ns.Database:Initialize().minimap, { angle = 40, hide = true })
   end)
 
   it("normalizes stored class and character profiles", function()
