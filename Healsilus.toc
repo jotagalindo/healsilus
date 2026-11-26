@@ -21,3 +21,4 @@ Core\Serializer.lua
 Frames\Media.lua
 Frames\Curves.lua
 Frames\ClickCast.lua
+Frames\Prediction.lua
