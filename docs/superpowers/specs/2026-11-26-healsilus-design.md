@@ -96,7 +96,7 @@ Orden de carga en el TOC: Init → Locales → Events → CombatQueue → Databa
 ## Notes-esES: Marcos de curación con click-casting hechos para las restricciones de addons de WoW Forever.
 ## Notes-esMX: Marcos de curación con click-casting hechos para las restricciones de addons de WoW Forever.
 ## Author: jotagalindo
-## Version: 0.1.0
+## Version: 0.0.1
 ## SavedVariables: HealsilusDB
 ## IconTexture: Interface\Icons\Spell_Nature_HealingTouch
 ```

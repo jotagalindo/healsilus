@@ -3,7 +3,8 @@
 local addonName, ns = ...
 
 ns.name = addonName
-ns.version = "0.1.0"
+-- Debe coincidir con "## Version" de Healsilus.toc (lo comprueba tests/test_init.lua).
+ns.version = "0.0.1"
 
 -- Único global del addon: acceso desde /run y desde los comandos de depuración.
 Healsilus = ns
