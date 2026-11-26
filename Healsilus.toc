@@ -13,3 +13,4 @@ Locales\enUS.lua
 Locales\esES.lua
 Core\Events.lua
 Core\CombatQueue.lua
+Core\Database.lua
