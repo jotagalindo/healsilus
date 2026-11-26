@@ -15,6 +15,7 @@ local TEST_FILES = {
   "tests/test_click_cast.lua",
   "tests/test_prediction.lua",
   "tests/test_containers.lua",
+  "tests/test_missing_buffs.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do
