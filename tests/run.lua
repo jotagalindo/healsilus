@@ -5,6 +5,7 @@ local Harness = require("harness")
 local TEST_FILES = {
   "tests/test_init.lua",
   "tests/test_events.lua",
+  "tests/test_combat_queue.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do

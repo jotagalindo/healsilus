@@ -12,3 +12,4 @@ Core\Init.lua
 Locales\enUS.lua
 Locales\esES.lua
 Core\Events.lua
+Core\CombatQueue.lua
