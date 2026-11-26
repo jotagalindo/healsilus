@@ -22,3 +22,4 @@ Frames\Media.lua
 Frames\Curves.lua
 Frames\ClickCast.lua
 Frames\Prediction.lua
+Auras\Containers.lua
