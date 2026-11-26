@@ -34,3 +34,5 @@ UI\TabFrames.lua
 UI\TabAuras.lua
 UI\TabBuffs.lua
 UI\TabProfiles.lua
+Core\Diagnostics.lua
+Core\Commands.lua
