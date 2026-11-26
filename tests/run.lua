@@ -11,6 +11,7 @@ local TEST_FILES = {
   "tests/test_druid.lua",
   "tests/test_profiles.lua",
   "tests/test_serializer.lua",
+  "tests/test_media_curves.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do

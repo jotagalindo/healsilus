@@ -18,3 +18,5 @@ Data\Spells.lua
 Data\Druid.lua
 Core\Profiles.lua
 Core\Serializer.lua
+Frames\Media.lua
+Frames\Curves.lua

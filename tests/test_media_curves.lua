@@ -1,0 +1,91 @@
+local Harness = require("harness")
+local Stubs = require("wow_stubs")
+local Loader = require("loader")
+local describe, it = Harness.describe, Harness.it
+local assertEquals, assertTrue, assertFalse = Harness.assertEquals, Harness.assertTrue, Harness.assertFalse
+
+local function LoadMedia()
+  local environment = Stubs.NewEnvironment()
+  environment.CreateColor = function(red, green, blue, alpha)
+    return { r = red, g = green, b = blue, a = alpha }
+  end
+  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Frames/Media.lua", "Frames/Curves.lua" })
+  return ns, environment
+end
+
+local function InstallCurveApi(environment)
+  local created = {}
+  local function Factory()
+    local curve = { points = {} }
+    function curve:SetType(kind)
+      self.kind = kind
+    end
+    function curve:AddPoint(position, value)
+      self.points[#self.points + 1] = { position, value }
+    end
+    created[#created + 1] = curve
+    return curve
+  end
+  environment.C_CurveUtil = { CreateCurve = Factory, CreateColorCurve = Factory }
+  environment.Enum.LuaCurveType = { Linear = 0, Step = 1 }
+  environment.UnitHealthPercent = function()
+    return 1
+  end
+  return created
+end
+
+describe("Media", function()
+  it("maps texture keys to paths and falls back to the Blizzard bar", function()
+    local ns = LoadMedia()
+    assertEquals(ns.Media.Texture("FLAT"), "Interface\\Buttons\\WHITE8X8")
+    assertEquals(ns.Media.Texture("UNKNOWN"), "Interface\\TargetingFrame\\UI-StatusBar")
+  end)
+
+  it("reads class colors from C_ClassColor, then RAID_CLASS_COLORS, then a fallback", function()
+    local ns, environment = LoadMedia()
+    environment.RAID_CLASS_COLORS = { DRUID = { r = 1, g = 0.49, b = 0.04 } }
+    assertEquals({ ns.Media.ClassColor("DRUID") }, { 1, 0.49, 0.04 })
+    environment.C_ClassColor = {
+      GetClassColor = function()
+        return { r = 0.5, g = 0.5, b = 0.5 }
+      end,
+    }
+    assertEquals({ ns.Media.ClassColor("DRUID") }, { 0.5, 0.5, 0.5 })
+    environment.C_ClassColor = nil
+    assertEquals({ ns.Media.ClassColor(nil) }, { 0.3, 0.7, 0.3 })
+  end)
+
+  it("builds the dispel color map, preferring the client's debuff colors", function()
+    local ns, environment = LoadMedia()
+    environment.DebuffTypeColor = { Magic = { r = 0.1, g = 0.2, b = 0.3 } }
+    local map = ns.Media.DispelColorMap()
+    assertEquals(map.Magic, { r = 0.1, g = 0.2, b = 0.3, a = 1 })
+    assertEquals(map.Poison, { r = 0, g = 0.6, b = 0, a = 1 })
+  end)
+end)
+
+describe("Curves", function()
+  it("reports support only when every curve API exists", function()
+    local ns, environment = LoadMedia()
+    assertFalse(ns.Curves.IsSupported())
+    InstallCurveApi(environment)
+    assertTrue(ns.Curves.IsSupported())
+  end)
+
+  it("builds the health color curve once and reuses it", function()
+    local ns, environment = LoadMedia()
+    local created = InstallCurveApi(environment)
+    local curve = ns.Curves:HealthColor()
+    assertTrue(ns.Curves:HealthColor() == curve)
+    assertEquals(#created, 1)
+    assertEquals(#curve.points, 5)
+    assertEquals(curve.points[1][2], { r = 1, g = 0, b = 0, a = 1 })
+    assertEquals(curve.points[5][2], { r = 0, g = 1, b = 0, a = 1 })
+  end)
+
+  it("maps health fraction to 0-100 for the percent text", function()
+    local ns, environment = LoadMedia()
+    InstallCurveApi(environment)
+    assertEquals(ns.Curves:Percent().points, { { 0, 0 }, { 1, 100 } })
+  end)
+end)
