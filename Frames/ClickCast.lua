@@ -58,6 +58,10 @@ function ClickCast.BuildAttributes(bindings, resolveSpell, options)
           Add(prefix .. "type" .. button, "target")
         elseif binding.kind == "menu" then
           Add(prefix .. "type" .. button, "togglemenu")
+        elseif binding.kind == "buff" then
+          -- Macro vacía: MissingBuffs la rellena en cada barra, fuera de combate, con el buff que falta.
+          Add(prefix .. "type" .. button, "macro")
+          Add(prefix .. "macrotext" .. button, "")
         end
       elseif prefix == "" and button == "1" then
         Add("type1", "target")
@@ -107,6 +111,25 @@ function ClickCast:Apply(profile)
     ClickCast.StoreOnHeader(header, attributes)
   end
   self.current = attributes
+  self.buffAttributes = {}
+  for key, binding in pairs(profile.bindings) do
+    if binding.kind == "buff" then
+      local prefix, button = string.match(key, "^(.-)(%d)$")
+      self.buffAttributes[#self.buffAttributes + 1] = prefix .. "macrotext" .. button
+    end
+  end
+  ns.Events:Fire("CLICKS_APPLIED")
+end
+
+-- Escribe en una barra la macro de sus clics "Poner el buff que falta". Solo fuera de combate.
+function ClickCast:SetBuffMacro(button, macro)
+  if InCombatLockdown() then
+    return false
+  end
+  for _, name in ipairs(self.buffAttributes or {}) do
+    button:SetAttribute(name, macro)
+  end
+  return true
 end
 
 -- Un botón recién creado por la cabecera ya copió los atributos en el entorno seguro:

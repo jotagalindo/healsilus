@@ -56,9 +56,14 @@ describe("TabBuffs", function()
     assertEquals(ns.TabBuffs.TARGET_LABELS[items[2].entry.targets], "Tanks only")
   end)
 
-  it("cycles targets between everyone and tanks", function()
+  it("cycles targets through everyone, tanks, healers and only me", function()
     local ns = LoadTabs()
     assertEquals(ns.TabBuffs.NextTargets("ALL"), "TANKS")
-    assertEquals(ns.TabBuffs.NextTargets("TANKS"), "ALL")
+    assertEquals(ns.TabBuffs.NextTargets("TANKS"), "HEALERS")
+    assertEquals(ns.TabBuffs.NextTargets("HEALERS"), "SELF")
+    assertEquals(ns.TabBuffs.NextTargets("SELF"), "ALL")
+    for target in pairs(ns.Database.WATCH_TARGETS) do
+      assertTrue(ns.TabBuffs.TARGET_LABELS[target] ~= nil, target)
+    end
   end)
 end)

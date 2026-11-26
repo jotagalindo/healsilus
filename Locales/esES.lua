@@ -266,3 +266,12 @@ L.STYLE_ERROR_INVALID = "Escribe un nombre de 1 a 40 caracteres."
 L.STYLE_ERROR_TAKEN = "Ya existe un estilo con ese nombre."
 L.STYLE_ERROR_LAST = "No puedes borrar tu único estilo."
 L.STYLE_ERROR_UNKNOWN = "Ese estilo ya no existe."
+
+-- Buffs como en HealBot
+L.TARGETS_HEALERS = "Solo sanadores"
+L.TARGETS_SELF = "Solo yo"
+L.BUFFS_COLOR_BAR = "Colorear la barra de quien no tenga un buff (fuera de combate)"
+L.BUFFS_BAR_COLOR = "Color de la barra si falta un buff"
+L.BUFFS_REFRESH_BELOW = "Avisar también si quedan menos de estos minutos (0 = no)"
+L.BUFFS_HELP = "Fuera de combate, la barra de quien no tenga uno de tus buffs toma el color que elijas y una marca en la esquina. Para ponérselo con un clic, asigna \"Poner el buff que falta\" a un clic en la pestaña Clics: lanza sobre esa barra el primer buff que le falta."
+L.BINDING_BUFF = "Poner el buff que falta"

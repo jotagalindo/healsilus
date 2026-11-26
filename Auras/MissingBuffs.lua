@@ -7,11 +7,19 @@ ns.MissingBuffs = MissingBuffs
 
 local FLUSH_DELAY = 0.5
 
--- watched: { { label, names = {...}, targets = "ALL"|"TANKS" } }; auraPresent(name) → boolean.
-function MissingBuffs.Compute(watched, auraPresent, isTank)
+local function AppliesTo(targets, who)
+  return targets == "ALL"
+    or (targets == "TANKS" and who.tank == true)
+    or (targets == "HEALERS" and who.healer == true)
+    or (targets == "SELF" and who.self == true)
+end
+
+-- watched: { { label, names = {...}, targets } }; auraPresent(name) → boolean;
+-- who: { tank = bool, healer = bool, self = bool } de la unidad que se revisa.
+function MissingBuffs.Compute(watched, auraPresent, who)
   local missing = {}
   for _, entry in ipairs(watched) do
-    if entry.targets == "ALL" or (entry.targets == "TANKS" and isTank) then
+    if AppliesTo(entry.targets, who) then
       local present = false
       for _, name in ipairs(entry.names) do
         if auraPresent(name) then
@@ -67,9 +75,23 @@ local function IsTank(unit)
   return false
 end
 
+-- Macro del clic "Poner el buff que falta": el primer buff que le falta, sobre la barra pulsada.
+function MissingBuffs.BuffMacro(missing)
+  if missing and missing[1] then
+    return "/cast [@mouseover] " .. missing[1]
+  end
+  return ""
+end
+
 function MissingBuffs:Render(button)
   local missing = button.healsilusMissing
   button.healsilus.missingMark:SetShown(missing ~= nil and #missing > 0)
+  if ns.ClickCast and ns.ClickCast.SetBuffMacro then
+    ns.ClickCast:SetBuffMacro(button, MissingBuffs.BuffMacro(missing))
+  end
+  if ns.UnitButton and ns.UnitButton.UpdateColor and button.unit then
+    ns.UnitButton:UpdateColor(button)
+  end
 end
 
 function MissingBuffs:Clear(button)
@@ -98,9 +120,24 @@ function MissingBuffs:Evaluate(button)
     self:Clear(button)
     return
   end
-  button.healsilusMissing = MissingBuffs.Compute(self.resolved, function(name)
-    return C_UnitAuras.GetAuraDataBySpellName(unit, name, "HELPFUL") ~= nil
-  end, IsTank(unit))
+  -- Fuera de combate los datos de auras son legibles: se puede mirar cuánto le queda al buff.
+  local refreshSeconds = ns.Profiles.active.buffs.refreshBelow * 60
+  local function AuraPresent(name)
+    local aura = C_UnitAuras.GetAuraDataBySpellName(unit, name, "HELPFUL")
+    if not aura then
+      return false
+    end
+    if refreshSeconds <= 0 or not aura.expirationTime or aura.expirationTime == 0 then
+      return true
+    end
+    return aura.expirationTime - GetTime() > refreshSeconds
+  end
+  local who = {
+    tank = IsTank(unit),
+    healer = UnitGroupRolesAssigned ~= nil and UnitGroupRolesAssigned(unit) == "HEALER",
+    self = UnitIsUnit ~= nil and UnitIsUnit(unit, "player") == true,
+  }
+  button.healsilusMissing = MissingBuffs.Compute(self.resolved, AuraPresent, who)
   self:Render(button)
 end
 
@@ -143,6 +180,7 @@ end
 ns.Events:Register("PROFILE_CHANGED", RefreshAll)
 ns.Events:Register("SPELLBOOK_UPDATED", RefreshAll)
 ns.Events:Register("COMBAT_ENDED", RefreshAll)
+ns.Events:Register("CLICKS_APPLIED", RefreshAll)
 ns.Events:Register("SETTINGS_CHANGED", function(section)
   if section == "buffs" then
     RefreshAll()

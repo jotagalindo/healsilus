@@ -230,6 +230,38 @@ describe("UnitButton health text", function()
   end)
 end)
 
+describe("UnitButton color", function()
+  local function ColoredButton(unit)
+    local texture = {}
+    function texture:SetVertexColor(red, green, blue)
+      self.color = { red, green, blue }
+    end
+    local button = { unit = unit, healsilus = { healthBar = {} } }
+    function button.healsilus.healthBar:GetStatusBarTexture()
+      return texture
+    end
+    return button, texture
+  end
+
+  it("paints the bar with the missing-buff color only out of combat", function()
+    local ns, environment = LoadUnitButton()
+    environment.UnitClass = function()
+      return "Warrior", "WARRIOR"
+    end
+    local button, texture = ColoredButton("party1")
+    button.healsilusMissing = { "Espinas" }
+    ns.UnitButton:UpdateColor(button)
+    assertEquals(texture.color, { 0.94, 0.62, 0.15 })
+    environment.__fireEvent("PLAYER_REGEN_DISABLED")
+    ns.UnitButton:UpdateColor(button)
+    assertEquals(texture.color, { 0.3, 0.7, 0.3 })
+    environment.__fireEvent("PLAYER_REGEN_ENABLED")
+    ns.Profiles.active.buffs.colorBar = false
+    ns.UnitButton:UpdateColor(button)
+    assertEquals(texture.color, { 0.3, 0.7, 0.3 })
+  end)
+end)
+
 describe("UnitButton status", function()
   it("labels offline and dead units and stays quiet with secret flags", function()
     local ns, _, world = LoadUnitButton()

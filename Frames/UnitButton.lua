@@ -3,7 +3,7 @@
 local _, ns = ...
 local L = ns.L
 
-local UnitButton = { buttons = {}, alphaFromBooleanWorks = false }
+local UnitButton = { buttons = {}, alphaFromBooleanWorks = false, inCombat = false }
 ns.UnitButton = UnitButton
 
 local UNIT_EVENTS = {
@@ -274,6 +274,14 @@ function UnitButton:UpdateColor(button)
     texture:SetVertexColor(color.r, color.g, color.b)
     return
   end
+  -- Le falta un buff tuyo: solo fuera de combate, como HealBot (en combate manda la vida).
+  local buffs = ns.Profiles.active.buffs
+  local missing = button.healsilusMissing
+  if buffs.colorBar and missing and #missing > 0 and not UnitButton.inCombat and not InCombatLockdown() then
+    local color = buffs.barColor
+    texture:SetVertexColor(color.r, color.g, color.b)
+    return
+  end
   if Style().bar.colorMode == "HEALTH" and ns.Curves.IsSupported() then
     local color = UnitHealthPercent(button.unit, true, ns.Curves:HealthColor(Style().bar))
     texture:SetVertexColor(color:GetRGB())
@@ -446,6 +454,24 @@ end)
 
 ns.Events:Register("STYLE_CHANGED", function()
   UnitButton:ApplyVisualSettings()
+end)
+
+local function RecolorAll()
+  for button in pairs(UnitButton.buttons) do
+    if button.unit then
+      UnitButton:UpdateColor(button)
+    end
+  end
+end
+
+ns.Events:Register("COMBAT_STARTED", function()
+  UnitButton.inCombat = true
+  RecolorAll()
+end)
+
+ns.Events:Register("COMBAT_ENDED", function()
+  UnitButton.inCombat = false
+  RecolorAll()
 end)
 
 ns.Events:Register("SETTINGS_CHANGED", function(section)

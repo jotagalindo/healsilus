@@ -27,7 +27,7 @@ Database.ENUMS = {
   dispelMode = { RING = true, BAR = true, BOTH = true },
 }
 
-Database.WATCH_TARGETS = { ALL = true, TANKS = true }
+Database.WATCH_TARGETS = { ALL = true, TANKS = true, HEALERS = true, SELF = true }
 
 Database.RANGES = {
   width = { 40, 300 },
@@ -39,6 +39,8 @@ Database.RANGES = {
   hotsMax = { 0, 8 },
   debuffsMax = { 0, 6 },
   iconSize = { 8, 32 },
+  -- Minutos restantes por debajo de los cuales un buff vigilado cuenta como que falta (0 = no avisar).
+  refreshBelow = { 0, 60 },
   -- Canales de color (dispel, fondo y curva de vida de los estilos).
   r = { 0, 1 },
   g = { 0, 1 },
@@ -72,6 +74,8 @@ local BINDING_FIELDS = {
   macro = { kind = true, text = true },
   target = { kind = true },
   menu = { kind = true },
+  -- Lanza sobre esa barra el primer buff vigilado que le falta (se decide fuera de combate).
+  buff = { kind = true },
 }
 
 local WATCHED_FIELDS = { spellID = true, groupSpellID = true, targets = true }
@@ -109,7 +113,10 @@ function Database.DefaultProfile()
       hotsEnabled = true, hotsMax = 4, hotSpellIDs = {},
       debuffsEnabled = true, debuffsMax = 2, debuffsDispellableOnly = true,
     },
-    buffs = { enabled = true, watched = {} },
+    buffs = {
+      enabled = true, watched = {},
+      colorBar = true, barColor = { r = 0.94, g = 0.62, b = 0.15 }, refreshBelow = 0,
+    },
     styleRules = Database.DefaultStyleRules(),
   }
 end
@@ -286,6 +293,9 @@ function Database.ValidateProfile(profile)
         return false, "auras.hotSpellIDs"
       end
     end
+  end
+  if profile.buffs and profile.buffs.barColor ~= nil and not Database.IsValidColor(profile.buffs.barColor) then
+    return false, "buffs.barColor"
   end
   if profile.buffs and profile.buffs.watched then
     for position, entry in pairs(profile.buffs.watched) do

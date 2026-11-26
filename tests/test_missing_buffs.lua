@@ -35,9 +35,19 @@ local function LoadMissingBuffs()
   end
   environment.C_UnitAuras = {
     GetAuraDataBySpellName = function(unit, name)
-      return units[unit].auras[name] and { name = name } or nil
+      local aura = units[unit].auras[name]
+      if not aura then
+        return nil
+      end
+      return { name = name, expirationTime = type(aura) == "number" and aura or 0 }
     end,
   }
+  environment.GetTime = function()
+    return 1000
+  end
+  environment.UnitIsUnit = function(unit, other)
+    return unit == other
+  end
   local ns = Loader.Load(environment, FILES)
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
   ns.UnitButton = { buttons = {} }
@@ -54,21 +64,32 @@ local function FakeButton(unit)
 end
 
 describe("MissingBuffs.Compute", function()
-  it("checks everyone for ALL entries and only tanks for TANKS entries", function()
+  it("checks each buff only on the targets chosen for it", function()
     local ns = LoadMissingBuffs()
     local watched = {
       { label = "Marca", names = { "Marca", "Don" }, targets = "ALL" },
       { label = "Espinas", names = { "Espinas" }, targets = "TANKS" },
+      { label = "Espiritu", names = { "Espiritu" }, targets = "HEALERS" },
+      { label = "Armadura", names = { "Armadura" }, targets = "SELF" },
     }
     local function Nothing()
       return false
     end
-    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, true), { "Marca", "Espinas" })
-    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, false), { "Marca" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, { tank = true }), { "Marca", "Espinas" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, {}), { "Marca" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, { healer = true }), { "Marca", "Espiritu" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, { self = true }), { "Marca", "Armadura" })
     local function HasGift(name)
       return name == "Don"
     end
-    assertEquals(ns.MissingBuffs.Compute(watched, HasGift, false), {})
+    assertEquals(ns.MissingBuffs.Compute(watched, HasGift, {}), {})
+  end)
+
+  it("builds the macro that casts the first missing buff on the bar under the mouse", function()
+    local ns = LoadMissingBuffs()
+    assertEquals(ns.MissingBuffs.BuffMacro({ "Marca de lo Salvaje", "Espinas" }), "/cast [@mouseover] Marca de lo Salvaje")
+    assertEquals(ns.MissingBuffs.BuffMacro({}), "")
+    assertEquals(ns.MissingBuffs.BuffMacro(nil), "")
   end)
 end)
 
@@ -132,6 +153,20 @@ describe("MissingBuffs", function()
     ns.MissingBuffs:Resolve()
     ns.MissingBuffs:Evaluate(tank)
     assertNil(tank.healsilusMissing)
+  end)
+
+  it("also warns when a buff has less time left than the chosen minutes", function()
+    local ns, _, units = LoadMissingBuffs()
+    units.party2.auras = { ["Marca de lo Salvaje"] = 1000 + 120 }
+    local damager = FakeButton("party2")
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, {})
+    ns.Profiles.active.buffs.refreshBelow = 5
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, { "Marca de lo Salvaje" })
+    units.party2.auras = { ["Marca de lo Salvaje"] = 1000 + 600 }
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, {})
   end)
 
   it("groups aura changes into one delayed evaluation", function()

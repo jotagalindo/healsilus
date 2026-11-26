@@ -75,6 +75,8 @@ function TabClicks.Describe(binding, key)
     return L.BINDING_MACRO, MACRO_ICON, true
   elseif binding.kind == "target" then
     return L.BINDING_TARGET, nil, true
+  elseif binding.kind == "buff" then
+    return L.BINDING_BUFF, nil, true
   end
   return L.BINDING_MENU, nil, true
 end
@@ -137,6 +139,9 @@ function TabClicks:OpenMenu(cell)
     end)
     root:CreateButton(L.BINDING_MENU, function()
       SetBinding(cell.key, { kind = "menu" })
+    end)
+    root:CreateButton(L.BINDING_BUFF, function()
+      SetBinding(cell.key, { kind = "buff" })
     end)
     root:CreateButton(L.MENU_CLEAR, function()
       SetBinding(cell.key, nil)

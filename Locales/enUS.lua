@@ -260,3 +260,12 @@ L.STYLE_ERROR_INVALID = "Write a name of 1 to 40 characters."
 L.STYLE_ERROR_TAKEN = "A style with that name already exists."
 L.STYLE_ERROR_LAST = "You can't delete your only style."
 L.STYLE_ERROR_UNKNOWN = "That style no longer exists."
+
+-- Buffs como en HealBot
+L.TARGETS_HEALERS = "Healers only"
+L.TARGETS_SELF = "Only me"
+L.BUFFS_COLOR_BAR = "Color the bar of whoever misses a buff (out of combat)"
+L.BUFFS_BAR_COLOR = "Bar color when a buff is missing"
+L.BUFFS_REFRESH_BELOW = "Also warn when less than this many minutes remain (0 = off)"
+L.BUFFS_HELP = "Out of combat, the bar of whoever misses one of your buffs gets the color you pick and a mark in its corner. To recast it with one click, assign \"Cast the missing buff\" to a click in the Clicks tab: it casts on that bar the first buff it is missing."
+L.BINDING_BUFF = "Cast the missing buff"

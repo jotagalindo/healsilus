@@ -164,4 +164,20 @@ describe("ClickCast application", function()
     environment.__fireEvent("PLAYER_REGEN_ENABLED")
     assertTrue(button.attributes.type1 == "target")
   end)
+
+  it("turns the 'missing buff' click into a per-bar macro filled only out of combat", function()
+    local ns, environment = LoadClickCast()
+    local button = FakeSecureFrame()
+    ns.UnitButton.buttons[button] = true
+    local profile = ns.Database.DefaultProfile()
+    profile.bindings["shift-3"] = { kind = "buff" }
+    ns.ClickCast:Apply(profile)
+    assertEquals(button.attributes["shift-type3"], "macro")
+    assertEquals(button.attributes["shift-macrotext3"], "")
+    assertTrue(ns.ClickCast:SetBuffMacro(button, "/cast [@mouseover] Espinas"))
+    assertEquals(button.attributes["shift-macrotext3"], "/cast [@mouseover] Espinas")
+    environment.__state.inCombat = true
+    assertEquals(ns.ClickCast:SetBuffMacro(button, ""), false)
+    assertEquals(button.attributes["shift-macrotext3"], "/cast [@mouseover] Espinas")
+  end)
 end)

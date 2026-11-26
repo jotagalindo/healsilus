@@ -1,17 +1,25 @@
--- Pestaña Buffs: qué buffs tuyos vigilar, a quién (todos o tanques) y su versión de grupo.
+-- Pestaña Buffs (como en HealBot): qué buffs tuyos vigilar, a quién, su versión de grupo, colorear la
+-- barra de quien no los tenga y avisar antes de que se acaben. Todo se revisa fuera de combate.
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
 
-local TabBuffs = { checkbox = nil, pool = nil }
+local TabBuffs = { options = nil, pool = nil }
 ns.TabBuffs = TabBuffs
 
-local LIST_TOP, ROW_HEIGHT = -84, 26
+local LIST_TOP, ROW_HEIGHT = -170, 26
 
-TabBuffs.TARGET_LABELS = { ALL = L.TARGETS_ALL, TANKS = L.TARGETS_TANKS }
+TabBuffs.TARGET_LABELS = {
+  ALL = L.TARGETS_ALL,
+  TANKS = L.TARGETS_TANKS,
+  HEALERS = L.TARGETS_HEALERS,
+  SELF = L.TARGETS_SELF,
+}
+
+local TARGET_CYCLE = { ALL = "TANKS", TANKS = "HEALERS", HEALERS = "SELF", SELF = "ALL" }
 
 function TabBuffs.NextTargets(targets)
-  return targets == "ALL" and "TANKS" or "ALL"
+  return TARGET_CYCLE[targets] or "ALL"
 end
 
 local function Watched()
@@ -80,10 +88,26 @@ local function PaintRow(row, item)
 end
 
 function TabBuffs.Build(panel)
-  TabBuffs.checkbox = Widgets.Checkbox(panel, L.BUFFS_ENABLED, Widgets.SectionGetter("buffs", "enabled"), Widgets.SectionSetter("buffs", "enabled"))
-  TabBuffs.checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+  local options = Widgets.Stack(panel, 0, 0)
+  options:Add(Widgets.Checkbox(panel, L.BUFFS_ENABLED, Widgets.SectionGetter("buffs", "enabled"), Widgets.SectionSetter("buffs", "enabled")), 28)
+  options:Add(Widgets.Checkbox(panel, L.BUFFS_COLOR_BAR, Widgets.SectionGetter("buffs", "colorBar"), Widgets.SectionSetter("buffs", "colorBar")), 28)
+  local swatch = Widgets.ColorSwatch(panel, Widgets.SectionGetter("buffs", "barColor"), function(red, green, blue)
+    Widgets.Debounce("buffs:barColor", function()
+      Widgets.SectionSetter("buffs", "barColor")({ r = red, g = green, b = blue })
+    end)
+  end)
+  local swatchLabel = Widgets.Label(panel, L.BUFFS_BAR_COLOR)
+  swatchLabel:SetPoint("LEFT", swatch, "RIGHT", 8, 0)
+  options:Add(swatch, 30)
+  local range = ns.Database.RANGES.refreshBelow
+  options:Add(Widgets.Slider(panel, L.BUFFS_REFRESH_BELOW, range[1], range[2], 1,
+    Widgets.SectionGetter("buffs", "refreshBelow"), Widgets.SectionSetter("buffs", "refreshBelow")), 48)
+  TabBuffs.options = options
+  local help = Widgets.Label(panel, L.BUFFS_HELP, "GameFontHighlightSmall")
+  help:SetPoint("TOPLEFT", panel, "TOPLEFT", 330, -4)
+  help:SetPoint("RIGHT", panel, "RIGHT", 0, 0)
   local title = Widgets.Label(panel, L.BUFFS_LIST, "GameFontNormal")
-  title:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -36)
+  title:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -122)
   local add = Widgets.Button(panel, L.ADD_SPELL, 140, function(self)
     if #Watched() >= Widgets.MAX_LIST_ROWS then
       ns.Print(L.LIST_FULL)
@@ -95,12 +119,12 @@ function TabBuffs.Build(panel)
       ns.Config:Changed("buffs")
     end)
   end)
-  add:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -56)
+  add:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -142)
   TabBuffs.pool = Widgets.RowPool(panel, CreateBuffRow)
 end
 
 function TabBuffs.Refresh()
-  TabBuffs.checkbox:Refresh()
+  TabBuffs.options:Refresh()
   TabBuffs.pool:Render(TabBuffs.Items(), PaintRow, 0, LIST_TOP, ROW_HEIGHT)
 end
 
