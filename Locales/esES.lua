@@ -24,3 +24,20 @@ L.ANCHOR_FOCUS = "Healsilus: foco"
 
 -- Vista previa
 L.PREVIEW_COMBAT = "La vista previa no está disponible en combate."
+
+-- Ventana de configuración
+L.CONFIG_TITLE = "Healsilus"
+L.CONFIG_PENDING = "Pendiente: se aplicará al salir de combate"
+L.PROFILES_ACTIVE = "Perfil activo: %s"
+L.SOURCE_SPEC = "%s · especialización %d"
+L.SOURCE_CHARACTER = "%s · perfil propio"
+L.SOURCE_CLASS = "%s · perfil de clase"
+L.SETTINGS_DESCRIPTION = "Marcos de curación con click-casting para WoW Forever. Escribe /hs para abrir la configuración cuando quieras."
+L.SETTINGS_OPEN = "Abrir la configuración de Healsilus"
+L.ACCEPT = "Aceptar"
+L.CLOSE = "Cerrar"
+L.MENU_UNAVAILABLE = "Los menús no están disponibles en este cliente (consulta /hs diag)."
+L.REMOVE = "Quitar"
+L.ADD_SPELL = "Añadir hechizo"
+L.LIST_FULL = "La lista está llena (12)."
+L.NONE = "Ninguna"

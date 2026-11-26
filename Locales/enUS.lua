@@ -18,3 +18,20 @@ L.ANCHOR_FOCUS = "Healsilus: focus"
 
 -- Vista previa
 L.PREVIEW_COMBAT = "Preview is not available in combat."
+
+-- Ventana de configuración
+L.CONFIG_TITLE = "Healsilus"
+L.CONFIG_PENDING = "Pending: applies when combat ends"
+L.PROFILES_ACTIVE = "Active profile: %s"
+L.SOURCE_SPEC = "%s · specialization %d"
+L.SOURCE_CHARACTER = "%s · own profile"
+L.SOURCE_CLASS = "%s · class profile"
+L.SETTINGS_DESCRIPTION = "Click-casting healing frames for WoW Forever. Type /hs to open the settings at any time."
+L.SETTINGS_OPEN = "Open Healsilus settings"
+L.ACCEPT = "Accept"
+L.CLOSE = "Close"
+L.MENU_UNAVAILABLE = "Menus are not available in this client (see /hs diag)."
+L.REMOVE = "Remove"
+L.ADD_SPELL = "Add spell"
+L.LIST_FULL = "The list is full (12)."
+L.NONE = "None"
