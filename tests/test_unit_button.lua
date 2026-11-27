@@ -574,6 +574,27 @@ describe("UnitButton power bar", function()
     assertEquals(party.healsilus.powerBar.value, 100)
   end)
 
+  it("hides the bar for the resource types the style turns off, also when a druid changes form", function()
+    local ns, _, world = LoadPower()
+    local party = PowerButton("party1")
+    local types = ns.Styles.active.power.types
+    types.RAGE = false
+    ns.UnitButton:UpdatePower(party)
+    assertFalse(party.healsilus.powerBar.shown)
+    assertEquals(party.healsilus.healthBar.points.BOTTOMRIGHT, { -2, 2 })
+    world.powerToken = "MANA"
+    ns.UnitButton:OnUnitEvent(party, "UNIT_DISPLAYPOWER")
+    assertTrue(party.healsilus.powerBar.shown)
+    -- Tipos sin casilla propia siguen a "Otros"; un tipo secreto cuenta como maná.
+    world.powerToken = "LUNAR_POWER"
+    types.OTHER = false
+    ns.UnitButton:OnUnitEvent(party, "UNIT_DISPLAYPOWER")
+    assertFalse(party.healsilus.powerBar.shown)
+    assertTrue(ns.UnitButton.WantsPowerType(ns.Styles.active, nil))
+    types.MANA = false
+    assertFalse(ns.UnitButton.WantsPowerType(ns.Styles.active, nil))
+  end)
+
   it("lets a thicker bar push the health bar further up", function()
     local ns = LoadPower()
     local party = PowerButton("party1")

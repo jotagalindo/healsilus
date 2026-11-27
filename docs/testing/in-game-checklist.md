@@ -135,3 +135,8 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 
 ## 22. Parpadeo del borde de aggro
 - [ ] Aspecto → Rol y aggro → "Parpadear el borde": el borde rojo de quien tanquea late suave; al perder el aggro se apaga y deja de parpadear.
+
+## 23. Barra de recurso por tipo
+- [ ] Aspecto → Barra → "Mostrar la barra de:": desmarca Ira y los guerreros se quedan sin franja (la vida ocupa todo el alto); el resto la mantiene.
+- [ ] Desmarca Energía y pasa a felino con un druida: la franja desaparece; al volver a forma normal (maná) vuelve.
+- [ ] Foco es el de las mascotas de cazador; "Otros" cubre cualquier recurso sin casilla propia.

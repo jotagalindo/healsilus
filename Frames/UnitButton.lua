@@ -271,6 +271,17 @@ function UnitButton.WantsPower(style, role)
   return true
 end
 
+-- ¿Se muestra este tipo de recurso? Un tipo desconocido o secreto (nil) cuenta como maná, que es el
+-- color con el que se pinta; los que no tienen casilla propia siguen a "Otros".
+function UnitButton.WantsPowerType(style, token)
+  local types = style.power.types
+  local key = token or "MANA"
+  if types[key] == nil then
+    key = "OTHER"
+  end
+  return types[key] == true
+end
+
 -- token: "MANA", "RAGE", "ENERGY"… o nil si no se sabe (entonces, color de maná).
 function UnitButton.PowerColor(token)
   local color = token and ((PowerBarColor and PowerBarColor[token]) or UnitButton.POWER_COLORS[token])
@@ -671,14 +682,19 @@ end
 function UnitButton:UpdatePower(button)
   local visual = button.healsilus
   local style = Style()
+  local token
   local wanted = UnitButton.WantsPower(style, ReadableRole(button.unit))
+  if wanted then
+    local _
+    _, token = UnitPowerType(button.unit)
+    if ns.IsSecret(token) then
+      token = nil
+    end
+    wanted = UnitButton.WantsPowerType(style, token)
+  end
   UnitButton.ShowPowerBar(visual, wanted, style.power.thickness)
   if not wanted then
     return
-  end
-  local _, token = UnitPowerType(button.unit)
-  if ns.IsSecret(token) then
-    token = nil
   end
   UnitButton.PaintPower(visual, token)
   self:UpdatePowerValue(button)

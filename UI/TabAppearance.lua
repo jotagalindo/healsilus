@@ -217,6 +217,36 @@ local COLOR_MODE_OPTIONS = {
   { value = "CLASS", label = L.COLOR_CLASS }, { value = "HEALTH", label = L.COLOR_HEALTH },
 }
 
+-- Casillas de cada recurso en dos columnas (style.power.types).
+TabAppearance.POWER_TYPES = {
+  { key = "MANA", label = L.POWER_MANA },
+  { key = "RAGE", label = L.POWER_RAGE },
+  { key = "ENERGY", label = L.POWER_ENERGY },
+  { key = "FOCUS", label = L.POWER_FOCUS },
+  { key = "RUNIC_POWER", label = L.POWER_RUNIC },
+  { key = "OTHER", label = L.POWER_OTHER },
+}
+local POWER_ROW_HEIGHT, POWER_COLUMN_WIDTH = 24, 110
+
+function TabAppearance.PowerTypeGrid(parent)
+  local grid = CreateFrame("Frame", nil, parent)
+  grid:SetSize(2 * POWER_COLUMN_WIDTH, 3 * POWER_ROW_HEIGHT)
+  grid.checks = {}
+  for position, entry in ipairs(TabAppearance.POWER_TYPES) do
+    local check = Widgets.Checkbox(grid, entry.label, Widgets.StyleGetter("power", "types", entry.key),
+      Widgets.StyleSetter("power", "types", entry.key))
+    local column, row = (position - 1) % 2, math.floor((position - 1) / 2)
+    check:SetPoint("TOPLEFT", grid, "TOPLEFT", column * POWER_COLUMN_WIDTH, -row * POWER_ROW_HEIGHT)
+    grid.checks[position] = check
+  end
+  grid.Refresh = function(self)
+    for _, check in ipairs(self.checks) do
+      check:Refresh()
+    end
+  end
+  return grid
+end
+
 -- Página "Barra": textura y fondo, colores de vida, opacidades y barra de maná/energía.
 local function BuildBarPage(page)
   local left, right = Widgets.Column(page, COLUMN_X[1], 0), Widgets.Column(page, COLUMN_X[2], 0)
@@ -246,6 +276,8 @@ local function BuildBarPage(page)
   Checkbox(power, L.APPEARANCE_POWER_SHOW, Widgets.StyleGetter("power", "show"), Widgets.StyleSetter("power", "show"))
   Checkbox(power, L.APPEARANCE_POWER_HEALERS, Widgets.StyleGetter("power", "healersOnly"),
     Widgets.StyleSetter("power", "healersOnly"))
+  power:Add(Widgets.Label(power.frame, L.APPEARANCE_POWER_TYPES, "GameFontNormalSmall"), 18)
+  power:Add(TabAppearance.PowerTypeGrid(power.frame), 3 * POWER_ROW_HEIGHT + 2)
   Slider(power, L.APPEARANCE_POWER_THICKNESS, "thickness", Widgets.StyleGetter("power", "thickness"),
     Widgets.StyleSetter("power", "thickness"), 1)
   return { left, right }

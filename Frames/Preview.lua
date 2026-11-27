@@ -199,6 +199,7 @@ function Preview:Paint(frame, member, style)
     ns.UnitButton.PaintFill(visual, ns.Media.ClassColor(member.class))
   end
   local showPower = ns.UnitButton.WantsPower(style, member.role)
+    and ns.UnitButton.WantsPowerType(style, member.powerToken)
   ns.UnitButton.ShowPowerBar(visual, showPower, style.power.thickness)
   if showPower then
     ns.UnitButton.PaintPower(visual, member.powerToken)

@@ -79,7 +79,11 @@ function StyleData.DefaultStyle()
     aggro = { border = true, dots = true, blink = false, size = 8, point = "RIGHT", x = -3, y = 0 },
     -- Barra de maná, ira, energía… (el recurso que use cada unidad) debajo de la de vida.
     -- healersOnly la deja solo en quien tiene el rol de sanador; thickness es su alto en píxeles.
-    power = { show = true, healersOnly = false, thickness = 4 },
+    -- types: qué recursos se ven (maná, ira, energía, foco de mascotas, poder rúnico y el resto).
+    power = {
+      show = true, healersOnly = false, thickness = 4,
+      types = { MANA = true, RAGE = true, ENERGY = true, FOCUS = true, RUNIC_POWER = true, OTHER = true },
+    },
     -- Grupos de iconos sobre la barra: posición (dentro o fuera), desplazamiento, tamaño y hacia dónde
     -- crecen. buffs es el aviso de buff tuyo que falta (un icono).
     auras = {
