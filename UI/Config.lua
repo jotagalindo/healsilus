@@ -1,15 +1,38 @@
--- Ventana de configuración: cabecera con el perfil activo, aviso de cambios pendientes y pestañas.
+-- Ventana de configuración: barra lateral con el logo y las pestañas, cabecera con el perfil activo,
+-- el aviso de cambios pendientes y los atajos, y una tarjeta con el contenido de la pestaña elegida.
 -- Las pestañas se registran desde UI/Tab*.lua en el orden de carga del TOC.
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
+local THEME = Widgets.THEME
+local ColorValues = Widgets.ColorValues
 
 local Config = { tabs = {}, tabOrder = {}, built = false, selected = nil }
 ns.Config = Config
 
-local WIDTH, HEIGHT = 820, 560
--- Ocho pestañas caben en el ancho de la ventana: 20 + 8 × (94 + 4) = 804.
-local TAB_WIDTH = 94
+-- Las pestañas se diseñaron para un área de 780 × 444; la tarjeta la rodea con su margen interior.
+local CONTENT_WIDTH, CONTENT_HEIGHT = 780, 444
+local SIDEBAR_WIDTH, HEADER_HEIGHT, MARGIN = 168, 60, 14
+local CARD_PADDING, CARD_TITLE_HEIGHT = 16, 34
+local CARD_WIDTH = CONTENT_WIDTH + 2 * CARD_PADDING
+local CARD_HEIGHT = CONTENT_HEIGHT + CARD_TITLE_HEIGHT + 2 * CARD_PADDING
+local WIDTH = SIDEBAR_WIDTH + MARGIN + CARD_WIDTH + MARGIN
+local HEIGHT = HEADER_HEIGHT + CARD_HEIGHT + MARGIN
+local TAB_HEIGHT, TAB_GAP, TABS_TOP = 32, 4, -70
+Config.SIZE = { width = WIDTH, height = HEIGHT, content = { CONTENT_WIDTH, CONTENT_HEIGHT } }
+
+local LOGO = "Interface\\Icons\\Spell_Nature_HealingTouch"
+-- Icono de cada pestaña en la barra lateral; una pestaña sin icono propio lleva el logo.
+Config.TAB_ICONS = {
+  clicks = "Interface\\Icons\\Spell_Holy_FlashHeal",
+  frames = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02",
+  appearance = "Interface\\Icons\\INV_Misc_Gem_Variety_01",
+  auras = "Interface\\Icons\\Spell_Nature_Rejuvenation",
+  debuffs = "Interface\\Icons\\Spell_Nature_NullifyPoison",
+  buffs = "Interface\\Icons\\Spell_Nature_Regeneration",
+  styles = "Interface\\Icons\\INV_Scroll_03",
+  profiles = "Interface\\Icons\\INV_Misc_Head_Human_01",
+}
 
 local function ClassName(classToken)
   return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classToken]) or tostring(classToken)
@@ -41,12 +64,96 @@ function Config:RegisterTab(key, label, build, refresh)
   self.tabOrder[#self.tabOrder + 1] = key
 end
 
+-- Columna izquierda: logo, nombre con la etiqueta beta, una pestaña por fila y la versión abajo.
+local function BuildSidebar(frame)
+  local sidebar = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+  sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -3)
+  sidebar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+  sidebar:SetWidth(SIDEBAR_WIDTH)
+  sidebar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+  sidebar:SetBackdropColor(ColorValues(THEME.sidebar))
+  local edge = Widgets.Line(sidebar, THEME.border)
+  edge:SetPoint("TOPRIGHT", sidebar, "TOPRIGHT", 0, 0)
+  edge:SetPoint("BOTTOMRIGHT", sidebar, "BOTTOMRIGHT", 0, 0)
+  edge:SetWidth(1)
+
+  local logo = sidebar:CreateTexture(nil, "ARTWORK")
+  logo:SetSize(30, 30)
+  logo:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 14, -16)
+  logo:SetTexture(LOGO)
+  logo:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  local logoBorder = Widgets.Line(sidebar, THEME.accent, "BORDER")
+  logoBorder:SetPoint("TOPLEFT", logo, "TOPLEFT", -1, 1)
+  logoBorder:SetPoint("BOTTOMRIGHT", logo, "BOTTOMRIGHT", 1, -1)
+  local title = Widgets.Label(sidebar, L.CONFIG_TITLE, "GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, -1)
+  local badge = Widgets.Label(sidebar, "BETA", "GameFontHighlightSmall")
+  badge:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
+  badge:SetTextColor(ColorValues(THEME.badge))
+
+  local version = Widgets.Label(sidebar, "v" .. tostring(ns.version) .. "  ·  /hs", "GameFontDisableSmall")
+  version:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMLEFT", 14, 12)
+  return sidebar
+end
+
+-- Franja superior derecha: perfil y estilo activos, aviso de pendientes y los atajos.
+function Config:BuildHeader(frame)
+  local sourceText = Widgets.Label(frame, "", "GameFontHighlight")
+  sourceText:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_WIDTH + MARGIN + 2, -18)
+  sourceText:SetWordWrap(false)
+  local pendingText = Widgets.Label(frame, L.CONFIG_PENDING, "GameFontHighlightSmall")
+  pendingText:SetPoint("TOPLEFT", sourceText, "BOTTOMLEFT", 0, -5)
+  pendingText:SetTextColor(ColorValues(THEME.badge))
+  pendingText:Hide()
+
+  local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+  close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -10)
+  -- Atajos siempre a mano: modo mover (rejilla y relleno de ejemplo) y activar/desactivar Healsilus.
+  local toggleButton = Widgets.Button(frame, "", 150, function()
+    ns.Headers:SetEnabled(not ns.Headers.IsEnabled())
+  end)
+  toggleButton:SetHeight(26)
+  toggleButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -44, -17)
+  local moveButton = Widgets.Button(frame, L.CONFIG_MOVE_FRAMES, 130, function()
+    ns.MoveMode:Start()
+  end)
+  moveButton:SetHeight(26)
+  moveButton:SetPoint("RIGHT", toggleButton, "LEFT", -8, 0)
+  moveButton:SetVariant("primary")
+  sourceText:SetPoint("RIGHT", moveButton, "LEFT", -12, 0)
+
+  local divider = Widgets.Line(frame, THEME.border)
+  divider:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_WIDTH + 1, -HEADER_HEIGHT + 4)
+  divider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -HEADER_HEIGHT + 4)
+  divider:SetHeight(1)
+  self.sourceText, self.pendingText, self.toggleButton = sourceText, pendingText, toggleButton
+end
+
+-- Tarjeta con el título de la pestaña elegida y el área donde se dibuja su contenido.
+function Config:BuildCard(frame)
+  local card = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+  card:SetSize(CARD_WIDTH, CARD_HEIGHT)
+  card:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_WIDTH + MARGIN, -(HEADER_HEIGHT + 4))
+  Widgets.Surface(card, THEME.card, THEME.border)
+  local cardTitle = Widgets.Label(card, "", "GameFontNormalLarge")
+  cardTitle:SetPoint("TOPLEFT", card, "TOPLEFT", CARD_PADDING, -CARD_PADDING)
+  local underline = Widgets.Line(card, THEME.accent, "ARTWORK")
+  underline:SetPoint("TOPLEFT", cardTitle, "BOTTOMLEFT", 0, -6)
+  underline:SetSize(36, 2)
+  local content = CreateFrame("Frame", nil, card)
+  content:SetSize(CONTENT_WIDTH, CONTENT_HEIGHT)
+  content:SetPoint("TOPLEFT", card, "TOPLEFT", CARD_PADDING, -(CARD_PADDING + CARD_TITLE_HEIGHT))
+  self.cardTitle = cardTitle
+  return content
+end
+
 function Config:Build()
   local frame = CreateFrame("Frame", "HealsilusConfigFrame", UIParent, "BackdropTemplate")
   frame:SetSize(WIDTH, HEIGHT)
   frame:SetPoint("CENTER")
   frame:SetFrameStrata("DIALOG")
-  frame:SetBackdrop(Widgets.DIALOG_BACKDROP)
+  Widgets.Surface(frame, THEME.window, THEME.border)
+  Widgets.AccentStrip(frame)
   frame:EnableMouse(true)
   frame:SetMovable(true)
   frame:SetClampedToScreen(true)
@@ -56,44 +163,22 @@ function Config:Build()
   frame:Hide()
   table.insert(UISpecialFrames, "HealsilusConfigFrame")
 
-  local title = Widgets.Label(frame, L.CONFIG_TITLE, "GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -18)
-  local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
-  local sourceText = Widgets.Label(frame, "", "GameFontHighlight")
-  sourceText:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-  local pendingText = Widgets.Label(frame, L.CONFIG_PENDING, "GameFontRed")
-  pendingText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, -22)
-  pendingText:Hide()
-  -- Atajos siempre a mano: modo mover (rejilla y relleno de ejemplo) y activar/desactivar Healsilus.
-  local toggleButton = Widgets.Button(frame, "", 150, function()
-    ns.Headers:SetEnabled(not ns.Headers.IsEnabled())
-  end)
-  toggleButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -36)
-  local moveButton = Widgets.Button(frame, L.CONFIG_MOVE_FRAMES, 130, function()
-    ns.MoveMode:Start()
-  end)
-  moveButton:SetPoint("RIGHT", toggleButton, "LEFT", -6, 0)
-  sourceText:SetPoint("RIGHT", moveButton, "LEFT", -10, 0)
-  sourceText:SetWordWrap(false)
-  self.toggleButton = toggleButton
-
-  local content = CreateFrame("Frame", nil, frame)
-  content:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -96)
-  content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 20)
+  local sidebar = BuildSidebar(frame)
+  self:BuildHeader(frame)
+  local content = self:BuildCard(frame)
   for position, key in ipairs(self.tabOrder) do
     local tab = self.tabs[key]
-    tab.button = Widgets.Button(frame, tab.label, TAB_WIDTH, function()
+    tab.button = Widgets.SidebarTab(sidebar, tab.label, self.TAB_ICONS[key] or LOGO, SIDEBAR_WIDTH - 16, function()
       Config:SelectTab(key)
     end)
-    tab.button:SetPoint("TOPLEFT", frame, "TOPLEFT", 20 + (position - 1) * (TAB_WIDTH + 4), -62)
+    tab.button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 8, TABS_TOP - (position - 1) * (TAB_HEIGHT + TAB_GAP))
     tab.panel = CreateFrame("Frame", nil, content)
     tab.panel:SetAllPoints(content)
     tab.panel:Hide()
     tab.build(tab.panel)
   end
 
-  self.frame, self.sourceText, self.pendingText = frame, sourceText, pendingText
+  self.frame = frame
   self.built = true
   frame:SetScript("OnShow", function()
     Config:Refresh()
@@ -105,11 +190,10 @@ function Config:SelectTab(key)
   self.selected = key
   for tabKey, tab in pairs(self.tabs) do
     tab.panel:SetShown(tabKey == key)
-    if tabKey == key then
-      tab.button:LockHighlight()
-    else
-      tab.button:UnlockHighlight()
-    end
+    tab.button:SetSelected(tabKey == key)
+  end
+  if self.cardTitle and self.tabs[key] then
+    self.cardTitle:SetText(self.tabs[key].label)
   end
   self:Refresh()
 end
@@ -136,7 +220,9 @@ function Config:Refresh()
     header = header .. " · " .. string.format(L.CONFIG_STYLE, ns.Styles.activeName)
   end
   self.sourceText:SetText(header)
-  self.toggleButton:SetText(ns.Headers.IsEnabled() and L.CONFIG_DISABLE or L.CONFIG_ENABLE)
+  local enabled = ns.Headers.IsEnabled()
+  self.toggleButton:SetText(enabled and L.CONFIG_DISABLE or L.CONFIG_ENABLE)
+  self.toggleButton:SetVariant(enabled and "danger" or "primary")
   self:UpdatePending()
   local tab = self.tabs[self.selected]
   if tab and tab.refresh then

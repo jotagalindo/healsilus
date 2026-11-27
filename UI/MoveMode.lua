@@ -120,7 +120,8 @@ function MoveMode:Build()
   toolbar:SetSize(TOOLBAR_WIDTH, TOOLBAR_HEIGHT)
   toolbar:SetPoint("TOP", UIParent, "TOP", 0, -40)
   toolbar:SetFrameStrata("DIALOG")
-  toolbar:SetBackdrop(Widgets.DIALOG_BACKDROP)
+  Widgets.Surface(toolbar, Widgets.THEME.window, Widgets.THEME.border)
+  Widgets.AccentStrip(toolbar)
   toolbar:EnableMouse(true)
   toolbar:SetMovable(true)
   toolbar:SetClampedToScreen(true)
@@ -164,6 +165,7 @@ function MoveMode:Build()
     MoveMode:Stop()
   end)
   doneButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 522, -36)
+  doneButton:SetVariant("primary")
 
   self.controls = { gridCheckbox = gridCheckbox, snapCheckbox = snapCheckbox, sizeButton = sizeButton, fillButton = fillButton }
   self.built = true

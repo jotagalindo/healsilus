@@ -87,3 +87,11 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] "Terminar" quita la rejilla y los ejemplos y bloquea los marcos. Al entrar en combate el modo mover se cierra solo. `/hs move` hace lo mismo que el botón.
 - [ ] Clic derecho en el botón del minimapa: "Healsilus desactivado", desaparecen los bloques, vuelven los marcos de Blizzard y el icono sale en gris. Tras `/reload` sigue desactivado en ese personaje (los demás no cambian).
 - [ ] Otro clic derecho (o "Activar Healsilus" en la ventana, o `/hs toggle`): vuelven los bloques y se ocultan otra vez los de Blizzard.
+
+## 14. Aspecto de la ventana de opciones
+- [ ] `/hs`: ventana oscura con una franja verde arriba, barra lateral con el logo, "BETA" y las ocho pestañas con su icono; la elegida lleva fondo verde suave y una raya verde a la izquierda.
+- [ ] Al pasar el ratón por botones, casillas, colores y pestañas se ilumina el borde o el fondo. "Mover marcos" va en verde; "Desactivar Healsilus" en rojo (y "Activar Healsilus" en verde cuando está apagado).
+- [ ] Casillas cuadradas con relleno verde al marcarlas; pulsar el texto de la casilla también la cambia.
+- [ ] Deslizadores: tramo verde hasta el tirador y el valor en verde a la derecha. Desplegables con el texto a la izquierda y una flecha hacia abajo.
+- [ ] Ninguna pestaña se sale de la tarjeta ni se pisa con el título de la pestaña. Si algún icono sale como un cuadrado verde, apunta cuál.
+- [ ] La barra del modo mover y la ventana de importar/exportar tienen el mismo estilo.

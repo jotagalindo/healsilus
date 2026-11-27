@@ -1,18 +1,67 @@
 -- Controles del panel hechos con piezas básicas (Button, CheckButton, Slider, EditBox) y MenuUtil para menús.
 -- Cada control expone :Refresh() para releer el valor del perfil activo.
+-- Todos comparten un tema plano y oscuro con un acento verde: superficies con borde de 1 px, botones
+-- que se iluminan al pasar el ratón, casillas cuadradas y deslizadores con la parte llena en color.
 local _, ns = ...
 local L = ns.L
 
 local Widgets = {}
 ns.Widgets = Widgets
 
-local DIALOG_BACKDROP = {
-  bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-  edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-  tile = true, tileSize = 32, edgeSize = 32,
-  insets = { left = 11, right = 12, top = 12, bottom = 11 },
+local THEME = {
+  window = { 0.055, 0.06, 0.075, 0.97 },
+  sidebar = { 0.075, 0.082, 0.1, 1 },
+  card = { 0.095, 0.103, 0.125, 0.96 },
+  control = { 0.13, 0.14, 0.17, 1 },
+  controlHover = { 0.17, 0.185, 0.22, 1 },
+  border = { 0.2, 0.22, 0.27, 1 },
+  accent = { 0.27, 0.84, 0.56, 1 },
+  accentSoft = { 0.27, 0.84, 0.56, 0.16 },
+  hover = { 1, 1, 1, 0.05 },
+  danger = { 0.92, 0.36, 0.36, 1 },
+  badge = { 1, 0.6, 0, 1 },
+  text = { 0.93, 0.94, 0.96, 1 },
+  heading = { 0.45, 0.9, 0.66, 1 },
+  muted = { 0.62, 0.66, 0.72, 1 },
+  dim = { 0.45, 0.48, 0.53, 1 },
 }
-Widgets.DIALOG_BACKDROP = DIALOG_BACKDROP
+Widgets.THEME = THEME
+
+local WHITE = "Interface\\Buttons\\WHITE8X8"
+local FLAT_BACKDROP = {
+  bgFile = WHITE, edgeFile = WHITE, edgeSize = 1,
+  insets = { left = 1, right = 1, top = 1, bottom = 1 },
+}
+Widgets.FLAT_BACKDROP = FLAT_BACKDROP
+
+-- Color del tema como cuatro números, para SetColorTexture, SetTextColor y compañía.
+function Widgets.ColorValues(color)
+  return color[1], color[2], color[3], color[4]
+end
+local ColorValues = Widgets.ColorValues
+
+-- Superficie plana: fondo y borde de 1 px. El marco debe heredar de BackdropTemplate.
+function Widgets.Surface(frame, fill, border)
+  frame:SetBackdrop(FLAT_BACKDROP)
+  frame:SetBackdropColor(ColorValues(fill or THEME.window))
+  frame:SetBackdropBorderColor(ColorValues(border or THEME.border))
+end
+
+-- Línea de color sólido (separadores y la franja de acento de las ventanas).
+function Widgets.Line(parent, color, layer)
+  local line = parent:CreateTexture(nil, layer or "BORDER")
+  line:SetColorTexture(ColorValues(color or THEME.border))
+  return line
+end
+
+-- Franja de acento de 2 px pegada al borde de arriba de una ventana.
+function Widgets.AccentStrip(frame)
+  local strip = Widgets.Line(frame, THEME.accent, "ARTWORK")
+  strip:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+  strip:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
+  strip:SetHeight(2)
+  return strip
+end
 
 Widgets.MAX_LIST_ROWS = 12
 
@@ -69,27 +118,110 @@ function Widgets.StyleSetter(...)
   end
 end
 
+-- Cada plantilla de texto tiene su papel en el tema: GameFontNormal son los títulos de sección (acento),
+-- las pequeñas son etiquetas y ayudas (gris), GameFontDisableSmall son notas (gris oscuro).
+local LABEL_COLORS = {
+  GameFontNormal = THEME.heading,
+  GameFontNormalSmall = THEME.muted,
+  GameFontHighlightSmall = THEME.muted,
+  GameFontDisableSmall = THEME.dim,
+  GameFontHighlight = THEME.text,
+  GameFontNormalLarge = THEME.text,
+}
+
 function Widgets.Label(parent, text, template)
-  local label = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
+  local chosen = template or "GameFontHighlight"
+  local label = parent:CreateFontString(nil, "OVERLAY", chosen)
   label:SetText(text)
   label:SetJustifyH("LEFT")
+  local color = LABEL_COLORS[chosen]
+  if color then
+    label:SetTextColor(ColorValues(color))
+  end
   return label
 end
 
+-- Variantes de botón: normal (gris), primary (verde, la acción principal) y danger (rojo).
+local BUTTON_VARIANTS = {
+  normal = { fill = THEME.control, hover = THEME.controlHover, border = THEME.border, hoverBorder = THEME.accent },
+  primary = {
+    fill = { 0.13, 0.38, 0.26, 1 }, hover = { 0.17, 0.48, 0.33, 1 },
+    border = THEME.accent, hoverBorder = { 0.6, 1, 0.78, 1 },
+  },
+  danger = {
+    fill = { 0.36, 0.12, 0.12, 1 }, hover = { 0.48, 0.16, 0.16, 1 },
+    border = THEME.danger, hoverBorder = { 1, 0.6, 0.6, 1 },
+  },
+}
+Widgets.BUTTON_VARIANTS = BUTTON_VARIANTS
+
+local function PaintButton(button)
+  local colors = BUTTON_VARIANTS[button.variant] or BUTTON_VARIANTS.normal
+  local lit = button.hovered == true
+  button:SetBackdropColor(ColorValues(lit and colors.hover or colors.fill))
+  button:SetBackdropBorderColor(ColorValues(lit and colors.hoverBorder or colors.border))
+end
+
+-- Pinta de nuevo el borde y el fondo cuando el ratón entra o sale.
+local function TrackHover(frame, paint)
+  frame:HookScript("OnEnter", function(self)
+    self.hovered = true
+    paint(self)
+  end)
+  frame:HookScript("OnLeave", function(self)
+    self.hovered = false
+    paint(self)
+  end)
+end
+
 function Widgets.Button(parent, text, width, onClick)
-  local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+  local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
   button:SetSize(width, 22)
+  button:SetBackdrop(FLAT_BACKDROP)
+  local caption = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  caption:SetPoint("LEFT", button, "LEFT", 6, 0)
+  caption:SetPoint("RIGHT", button, "RIGHT", -6, 0)
+  caption:SetWordWrap(false)
+  button:SetFontString(caption)
+  button:SetNormalFontObject("GameFontHighlightSmall")
+  button:SetHighlightFontObject("GameFontHighlightSmall")
+  button:SetDisabledFontObject("GameFontDisableSmall")
+  button:SetPushedTextOffset(0, -1)
   button:SetText(text)
+  button.caption = caption
+  button.variant = "normal"
+  function button:SetVariant(variant)
+    self.variant = variant
+    PaintButton(self)
+  end
+  TrackHover(button, PaintButton)
   button:SetScript("OnClick", onClick)
+  PaintButton(button)
   return button
 end
 
+local function PaintCheckbox(checkbox)
+  checkbox:SetBackdropBorderColor(ColorValues(checkbox.hovered and THEME.accent or THEME.border))
+end
+
+-- Casilla cuadrada con un relleno de acento cuando está marcada; pulsar el texto también la cambia.
 function Widgets.Checkbox(parent, text, getValue, setValue)
-  local checkbox = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-  checkbox:SetSize(24, 24)
+  local checkbox = CreateFrame("CheckButton", nil, parent, "BackdropTemplate")
+  checkbox:SetSize(18, 18)
+  Widgets.Surface(checkbox, THEME.control, THEME.border)
+  local mark = checkbox:CreateTexture(nil, "ARTWORK")
+  mark:SetPoint("TOPLEFT", checkbox, "TOPLEFT", 4, -4)
+  mark:SetPoint("BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -4, 4)
+  mark:SetColorTexture(ColorValues(THEME.accent))
+  checkbox:SetCheckedTexture(mark)
   local label = Widgets.Label(parent, text)
-  label:SetPoint("LEFT", checkbox, "RIGHT", 2, 0)
+  label:SetPoint("LEFT", checkbox, "RIGHT", 8, 0)
   checkbox.label = label
+  local labelWidth = label:GetStringWidth()
+  if type(labelWidth) == "number" then
+    checkbox:SetHitRectInsets(0, -(labelWidth + 8), 0, 0)
+  end
+  TrackHover(checkbox, PaintCheckbox)
   checkbox:SetScript("OnClick", function(self)
     setValue(self:GetChecked() == true)
   end)
@@ -97,6 +229,51 @@ function Widgets.Checkbox(parent, text, getValue, setValue)
     self:SetChecked(getValue() == true)
   end
   return checkbox
+end
+
+local function PaintSidebarTab(tab)
+  local background = THEME.hover
+  if tab.selected then
+    background = THEME.accentSoft
+  end
+  tab.background:SetColorTexture(ColorValues(background))
+  tab.background:SetShown(tab.selected == true or tab.hovered == true)
+  tab.marker:SetShown(tab.selected == true)
+  tab.text:SetTextColor(ColorValues((tab.selected or tab.hovered) and THEME.text or THEME.muted))
+  tab.icon:SetDesaturated(not (tab.selected or tab.hovered))
+  tab.icon:SetAlpha((tab.selected or tab.hovered) and 1 or 0.7)
+end
+
+-- Pestaña de la barra lateral: icono y nombre; la elegida lleva fondo verde suave y una raya de acento.
+function Widgets.SidebarTab(parent, text, icon, width, onClick)
+  local tab = CreateFrame("Button", nil, parent)
+  tab:SetSize(width, 32)
+  tab.background = tab:CreateTexture(nil, "BACKGROUND")
+  tab.background:SetAllPoints(tab)
+  tab.marker = Widgets.Line(tab, THEME.accent, "ARTWORK")
+  tab.marker:SetPoint("TOPLEFT", tab, "TOPLEFT", 0, 0)
+  tab.marker:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0)
+  tab.marker:SetWidth(3)
+  tab.icon = tab:CreateTexture(nil, "ARTWORK")
+  tab.icon:SetSize(18, 18)
+  tab.icon:SetPoint("LEFT", tab, "LEFT", 12, 0)
+  tab.icon:SetTexture(icon)
+  tab.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+  tab.text:SetPoint("LEFT", tab.icon, "RIGHT", 10, 0)
+  tab.text:SetPoint("RIGHT", tab, "RIGHT", -6, 0)
+  tab.text:SetJustifyH("LEFT")
+  tab.text:SetWordWrap(false)
+  tab.text:SetText(text)
+  tab.selected = false
+  function tab:SetSelected(selected)
+    self.selected = selected == true
+    PaintSidebarTab(self)
+  end
+  TrackHover(tab, PaintSidebarTab)
+  tab:SetScript("OnClick", onClick)
+  PaintSidebarTab(tab)
+  return tab
 end
 
 local function RoundToStep(value, step)
@@ -110,16 +287,26 @@ function Widgets.Slider(parent, text, minimum, maximum, step, getValue, setValue
   label:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
   local valueText = Widgets.Label(container, "", "GameFontHighlightSmall")
   valueText:SetPoint("TOPRIGHT", container, "TOPRIGHT", 0, 0)
+  valueText:SetTextColor(ColorValues(THEME.heading))
   local slider = CreateFrame("Slider", nil, container)
   slider:SetOrientation("HORIZONTAL")
   slider:SetSize(220, 16)
   slider:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+  -- Riel gris, tramo lleno en acento hasta el tirador y tirador claro.
   local track = slider:CreateTexture(nil, "BACKGROUND")
-  track:SetColorTexture(0.2, 0.2, 0.2, 0.9)
+  track:SetColorTexture(ColorValues(THEME.control))
   track:SetPoint("LEFT", slider, "LEFT", 0, 0)
   track:SetPoint("RIGHT", slider, "RIGHT", 0, 0)
   track:SetHeight(4)
-  slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+  local thumb = slider:CreateTexture(nil, "OVERLAY")
+  thumb:SetColorTexture(ColorValues(THEME.text))
+  thumb:SetSize(8, 14)
+  slider:SetThumbTexture(thumb)
+  local filled = slider:CreateTexture(nil, "ARTWORK")
+  filled:SetColorTexture(ColorValues(THEME.accent))
+  filled:SetPoint("LEFT", track, "LEFT", 0, 0)
+  filled:SetPoint("RIGHT", thumb, "CENTER", 0, 0)
+  filled:SetHeight(4)
   slider:SetMinMaxValues(minimum, maximum)
   slider:SetValueStep(step)
   slider:SetObeyStepOnDrag(true)
@@ -207,6 +394,17 @@ function Widgets.Dropdown(parent, text, width, getOptions, getValue, setValue)
     end
   end)
   button:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
+  -- Texto a la izquierda y una flecha hacia abajo a la derecha, como un desplegable.
+  button.caption:ClearAllPoints()
+  button.caption:SetPoint("LEFT", button, "LEFT", 8, 0)
+  button.caption:SetPoint("RIGHT", button, "RIGHT", -22, 0)
+  button.caption:SetJustifyH("LEFT")
+  local arrow = button:CreateTexture(nil, "OVERLAY")
+  arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
+  arrow:SetSize(12, 12)
+  arrow:SetPoint("RIGHT", button, "RIGHT", -6, 0)
+  arrow:SetRotation(-math.pi / 2)
+  arrow:SetVertexColor(ColorValues(THEME.muted))
   container.Refresh = function()
     local current = getValue()
     local shown = tostring(current)
@@ -324,8 +522,12 @@ end
 function Widgets.ColorSwatch(parent, getColor, setColor)
   local swatch = CreateFrame("Button", nil, parent, "BackdropTemplate")
   swatch:SetSize(22, 22)
-  swatch:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-  swatch:SetBackdropBorderColor(0.8, 0.8, 0.8, 1)
+  swatch:SetBackdrop({ edgeFile = WHITE, edgeSize = 1 })
+  local function PaintSwatch(self)
+    self:SetBackdropBorderColor(ColorValues(self.hovered and THEME.accent or THEME.muted))
+  end
+  PaintSwatch(swatch)
+  TrackHover(swatch, PaintSwatch)
   swatch.fill = swatch:CreateTexture(nil, "ARTWORK")
   swatch.fill:SetPoint("TOPLEFT", swatch, "TOPLEFT", 2, -2)
   swatch.fill:SetPoint("BOTTOMRIGHT", swatch, "BOTTOMRIGHT", -2, 2)
@@ -347,11 +549,16 @@ local function BuildTextDialog()
   dialog:SetSize(480, 320)
   dialog:SetPoint("CENTER")
   dialog:SetFrameStrata("FULLSCREEN_DIALOG")
-  dialog:SetBackdrop(DIALOG_BACKDROP)
+  Widgets.Surface(dialog, THEME.window, THEME.border)
+  Widgets.AccentStrip(dialog)
   dialog:EnableMouse(true)
   dialog:Hide()
   dialog.title = Widgets.Label(dialog, "", "GameFontNormal")
   dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 20, -18)
+  -- Fondo más claro detrás del texto: una textura del propio diálogo, siempre por debajo del cuadro de texto.
+  local field = Widgets.Line(dialog, THEME.card, "BORDER")
+  field:SetPoint("TOPLEFT", dialog, "TOPLEFT", 14, -36)
+  field:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -14, 46)
   local scroll = CreateFrame("ScrollFrame", nil, dialog, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", dialog, "TOPLEFT", 20, -42)
   scroll:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -38, 52)
@@ -372,11 +579,12 @@ local function BuildTextDialog()
       handler(editBox:GetText())
     end
   end)
-  dialog.accept:SetPoint("BOTTOMRIGHT", dialog, "BOTTOM", -4, 18)
+  dialog.accept:SetPoint("BOTTOMRIGHT", dialog, "BOTTOM", -4, 14)
+  dialog.accept:SetVariant("primary")
   local close = Widgets.Button(dialog, L.CLOSE, 120, function()
     dialog:Hide()
   end)
-  close:SetPoint("BOTTOMLEFT", dialog, "BOTTOM", 4, 18)
+  close:SetPoint("BOTTOMLEFT", dialog, "BOTTOM", 4, 14)
   table.insert(UISpecialFrames, "HealsilusTextDialog")
   return dialog
 end
