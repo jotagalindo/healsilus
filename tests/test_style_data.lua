@@ -28,13 +28,13 @@ describe("StyleData defaults and presets", function()
     local saved = ns.StyleData.DefaultStyle()
     saved.role = nil
     saved.aggro = nil
-    saved.auras.hotsPoint = "BELOW"
+    saved.auras.hots.position = "BELOW"
     assertTrue(ns.StyleData.ValidateStyle(saved))
     local normalized = ns.StyleData.NormalizeStyle(saved, {})
     assertEquals(normalized.role, { show = false, showDamager = true, size = 12, point = "LEFT", x = 3, y = 0 })
-    assertEquals(normalized.aggro, { border = true, dots = true, size = 8, point = "RIGHT", x = -3, y = 0 })
-    assertEquals(normalized.auras.hotsPoint, "BELOW")
-    saved.auras.hotsPoint = "SOMEWHERE"
+    assertEquals(normalized.aggro, { border = true, dots = true, blink = false, size = 8, point = "RIGHT", x = -3, y = 0 })
+    assertEquals(normalized.auras.hots.position, "BELOW")
+    saved.auras.hots.position = "SOMEWHERE"
     assertFalse(ns.StyleData.ValidateStyle(saved))
   end)
 
@@ -154,7 +154,8 @@ describe("Database version 2", function()
     assertEquals(migrated.bar.texture, "RAID")
     assertEquals(migrated.bar.outOfRangeAlpha, 0.5)
     assertEquals(migrated.text.health.mode, "PERCENT")
-    assertEquals(migrated.auras.iconSize, 18)
+    assertEquals(migrated.auras.hots.iconSize, 18)
+    assertEquals(migrated.auras.debuffs.iconSize, 18)
     assertEquals(migrated.auras.dispelColors.Curse, { r = 1, g = 0, b = 0 })
     assertEquals(db.styles["My style 2"].layout.width, 70)
     local druid = db.classProfiles.DRUID
@@ -207,5 +208,31 @@ describe("Text positions", function()
     style.bar.fullHealthAlpha = 0
     ns.StyleData.NormalizeStyle(style, {})
     assertEquals(style.bar.fullHealthAlpha, 0.05)
+  end)
+end)
+
+describe("Aura groups", function()
+  it("turns the old corner and shared icon size into one group per kind", function()
+    local ns, environment = LoadStyleData()
+    local style = ns.StyleData.DefaultStyle()
+    style.auras.hots, style.auras.debuffs, style.auras.buffs = nil, nil, nil
+    style.auras.hotsPoint, style.auras.debuffsPoint, style.auras.iconSize = "BELOW", "TOPLEFT", 18
+    environment.HealsilusDB = { version = 5, styles = { Old = style } }
+    local db = ns.Database:Initialize()
+    local auras = db.styles.Old.auras
+    assertEquals(auras.hots, { position = "BELOW", x = 0, y = 0, iconSize = 18, grow = "RIGHT" })
+    assertEquals(auras.debuffs, { position = "TOPLEFT", x = 0, y = 0, iconSize = 18, grow = "RIGHT" })
+    assertEquals(auras.buffs, ns.StyleData.AuraGroup("TOPLEFT", 10))
+    assertEquals({ auras.hotsPoint, auras.debuffsPoint, auras.iconSize }, {})
+  end)
+
+  it("accepts styles exported before version 6", function()
+    local ns = LoadStyleData()
+    local style = ns.StyleData.DefaultStyle()
+    style.auras.hots, style.auras.debuffs = nil, nil
+    style.auras.hotsPoint, style.auras.iconSize = "TOPRIGHT", 12
+    ns.StyleData.UpgradeAuras(style)
+    assertTrue(ns.StyleData.ValidateStyle(style))
+    assertEquals({ style.auras.hots.position, style.auras.hots.grow, style.auras.hots.iconSize }, { "TOPRIGHT", "LEFT", 12 })
   end)
 end)

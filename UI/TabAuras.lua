@@ -14,9 +14,9 @@ TabAuras.CHECKBOXES = {
 }
 
 -- style = true: el valor vive en el estilo activo (auras.*); si no, en el perfil.
+-- Posición, tamaño y dirección de los iconos están en Aspecto → Auras.
 TabAuras.SLIDERS = {
   { key = "hotsMax", label = L.AURAS_HOTS_MAX },
-  { key = "iconSize", label = L.AURAS_ICON_SIZE, style = true },
 }
 
 local function Getter(spec)
@@ -32,18 +32,6 @@ local function Setter(spec)
   end
   return Widgets.SectionSetter("auras", spec.key)
 end
-
--- Dónde van los iconos de HoTs y debuffs: una esquina dentro de la barra o un lado por fuera.
-TabAuras.POSITION_OPTIONS = {
-  { value = "TOPLEFT", label = L.CORNER_TOPLEFT },
-  { value = "TOPRIGHT", label = L.CORNER_TOPRIGHT },
-  { value = "BOTTOMLEFT", label = L.CORNER_BOTTOMLEFT },
-  { value = "BOTTOMRIGHT", label = L.CORNER_BOTTOMRIGHT },
-  { value = "ABOVE", label = L.AURA_POSITION_ABOVE },
-  { value = "BELOW", label = L.AURA_POSITION_BELOW },
-  { value = "OUTSIDE_LEFT", label = L.AURA_POSITION_OUTSIDE_LEFT },
-  { value = "OUTSIDE_RIGHT", label = L.AURA_POSITION_OUTSIDE_RIGHT },
-}
 
 local function HotSpellIDs()
   return ns.Profiles.active.auras.hotSpellIDs
@@ -78,9 +66,9 @@ function TabAuras.Build(panel)
     local range = ns.Database.RANGES[spec.key]
     stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1, Getter(spec), Setter(spec)), 48)
   end
-  stack:Add(Widgets.Dropdown(panel, L.AURAS_HOTS_CORNER, 200, function()
-    return TabAuras.POSITION_OPTIONS
-  end, Widgets.StyleGetter("auras", "hotsPoint"), Widgets.StyleSetter("auras", "hotsPoint")), 50)
+  stack:Add(Widgets.Button(panel, L.AURAS_PLACE_ICONS, 220, function()
+    ns.TabAppearance.OpenAuras("hots")
+  end), 32)
   TabAuras.stack = stack
 
   local title = Widgets.Label(panel, L.AURAS_HOT_LIST, "GameFontNormal")

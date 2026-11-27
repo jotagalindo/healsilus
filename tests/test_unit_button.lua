@@ -696,3 +696,34 @@ describe("UnitButton opacity at full health", function()
     assertEquals(button.healsilus.background.vertex, { 1, 1, 1, 1 })
   end)
 end)
+
+describe("UnitButton aggro border blink", function()
+  it("blinks the aggro border only when the style asks and the unit has aggro", function()
+    local ns = LoadUnitButton()
+    local button = FakeButton("party1")
+    local pulse = { playing = false }
+    function pulse:IsPlaying()
+      return self.playing
+    end
+    function pulse:Play()
+      self.playing = true
+    end
+    function pulse:Stop()
+      self.playing = false
+    end
+    local frame = button.healsilus.aggroFrame
+    frame.pulse = pulse
+    function frame:SetAlpha(alpha)
+      self.alpha = alpha
+    end
+    local style = ns.Styles.active
+    ns.UnitButton.ShowThreat(button.healsilus, 3, style)
+    assertFalse(pulse.playing)
+    style.aggro.blink = true
+    ns.UnitButton.ShowThreat(button.healsilus, 3, style)
+    assertTrue(pulse.playing)
+    ns.UnitButton.ShowThreat(button.healsilus, 1, style)
+    assertFalse(pulse.playing)
+    assertEquals(frame.alpha, 1)
+  end)
+end)

@@ -205,9 +205,9 @@ function TabDebuffs.Build(panel)
   appearance:Add(Widgets.Dropdown(panel, L.DISPEL_MODE, 200, function()
     return TabDebuffs.MODE_OPTIONS
   end, Widgets.StyleGetter("auras", "dispelMode"), Widgets.StyleSetter("auras", "dispelMode")), 50)
-  appearance:Add(Widgets.Dropdown(panel, L.AURAS_DEBUFFS_CORNER, 200, function()
-    return ns.TabAuras.POSITION_OPTIONS
-  end, Widgets.StyleGetter("auras", "debuffsPoint"), Widgets.StyleSetter("auras", "debuffsPoint")), 50)
+  appearance:Add(Widgets.Button(panel, L.AURAS_PLACE_ICONS, 200, function()
+    ns.TabAppearance.OpenAuras("debuffs")
+  end), 32)
   TabDebuffs.appearance = appearance
 
   local title = Widgets.Label(panel, L.DEBUFFS_COLORS_TITLE, "GameFontNormal")

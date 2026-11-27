@@ -38,6 +38,8 @@ local AGGRO_DOT_TEXTURE = "Interface\\COMMON\\Indicator-Red"
 local AGGRO_DOT_GAP = 1
 -- A partir de este nivel la unidad tiene el aggro: se pinta el borde rojo.
 local AGGRO_BORDER_LEVEL = 2
+-- Parpadeo del borde: de opaco a esta opacidad y vuelta, en este tiempo cada medio ciclo.
+local BLINK_MIN_ALPHA, BLINK_SECONDS = 0.15, 0.45
 
 -- Iconos de rol del buscador de grupo (los mismos que usa Blizzard en sus marcos, TextureUtil.lua).
 UnitButton.ROLE_ATLASES = {
@@ -99,6 +101,17 @@ local function BuildAggroFrame(frame)
   right:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", 0, 0)
   right:SetWidth(2)
   aggroFrame:Hide()
+  -- Parpadeo opcional (style.aggro.blink): la opacidad del borde va y viene.
+  local pulse = aggroFrame.CreateAnimationGroup and aggroFrame:CreateAnimationGroup()
+  if pulse then
+    pulse:SetLooping("BOUNCE")
+    local fade = pulse:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(BLINK_MIN_ALPHA)
+    fade:SetDuration(BLINK_SECONDS)
+    fade:SetSmoothing("IN_OUT")
+    aggroFrame.pulse = pulse
+  end
   return aggroFrame
 end
 
@@ -145,12 +158,16 @@ function UnitButton:BuildVisuals(frame)
   local statusText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   visual.statusText = statusText
 
-  local missingMark = textFrame:CreateTexture(nil, "OVERLAY")
-  missingMark:SetSize(7, 7)
-  missingMark:SetPoint("TOPLEFT", healthBar, "TOPLEFT", 0, 0)
-  missingMark:SetColorTexture(MISSING_COLOR[1], MISSING_COLOR[2], MISSING_COLOR[3], 1)
+  -- Aviso de buff que falta: el icono del buff con un marco naranja (o un cuadrado naranja si no se
+  -- conoce el icono). Posición y tamaño, del estilo (auras.buffs).
+  local missingBorder = textFrame:CreateTexture(nil, "OVERLAY", nil, 1)
+  missingBorder:SetColorTexture(MISSING_COLOR[1], MISSING_COLOR[2], MISSING_COLOR[3], 1)
+  missingBorder:Hide()
+  local missingMark = textFrame:CreateTexture(nil, "OVERLAY", nil, 2)
+  missingMark:SetPoint("TOPLEFT", missingBorder, "TOPLEFT", 1, -1)
+  missingMark:SetPoint("BOTTOMRIGHT", missingBorder, "BOTTOMRIGHT", -1, 1)
   missingMark:Hide()
-  visual.missingMark = missingMark
+  visual.missingMark, visual.missingBorder = missingMark, missingBorder
 
   local roleIcon = textFrame:CreateTexture(nil, "OVERLAY")
   roleIcon:Hide()
@@ -181,11 +198,36 @@ function UnitButton:ApplyStyle(frame)
   visual.nameText:SetWidth(math.max(10, style.layout.width - 12))
   PlaceText(visual.healthText, visual.healthBar, fontPath, style.text.health)
   PlaceText(visual.statusText, visual.healthBar, fontPath, style.text.status)
+  UnitButton.PlaceMissingMark(visual, style.auras.buffs)
   local role = style.role
   visual.roleIcon:ClearAllPoints()
   visual.roleIcon:SetSize(role.size, role.size)
   visual.roleIcon:SetPoint(role.point, visual.healthBar, role.point, role.x, role.y)
   UnitButton.PlaceAggroDots(visual, style.aggro)
+end
+
+-- Coloca el aviso de buff que falta como un grupo de un icono (ver StyleData.AuraAnchor).
+function UnitButton.PlaceMissingMark(visual, group)
+  local anchor = ns.StyleData.AuraAnchor(group)
+  local relative = anchor.relativeTo == "BUTTON" and visual.owner or visual.healthBar
+  visual.missingBorder:ClearAllPoints()
+  visual.missingBorder:SetSize(group.iconSize, group.iconSize)
+  visual.missingBorder:SetPoint(anchor.point, relative, anchor.relativePoint, anchor.x, anchor.y)
+end
+
+-- icon: textura del buff que falta (o nil: cuadrado naranja).
+function UnitButton.ShowMissing(visual, shown, icon)
+  visual.missingBorder:SetShown(shown)
+  visual.missingMark:SetShown(shown)
+  if not shown then
+    return
+  end
+  if icon then
+    visual.missingMark:SetTexture(icon)
+    visual.missingMark:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  else
+    visual.missingMark:SetColorTexture(MISSING_COLOR[1], MISSING_COLOR[2], MISSING_COLOR[3], 1)
+  end
 end
 
 -- El primer punto va en el punto elegido; los demás crecen hacia dentro de la barra.
@@ -299,10 +341,28 @@ function UnitButton.ShowRole(visual, role, style)
   visual.roleIcon:Show()
 end
 
+-- Arranca o para el parpadeo de un borde (si el cliente tiene animaciones).
+function UnitButton.SetBlinking(frame, blinking)
+  local pulse = frame.pulse
+  if not pulse then
+    return
+  end
+  if blinking then
+    if not pulse:IsPlaying() then
+      pulse:Play()
+    end
+  elseif pulse:IsPlaying() then
+    pulse:Stop()
+    frame:SetAlpha(1)
+  end
+end
+
 -- status: nivel de amenaza legible (0-3) o nil. Lo usan las barras reales y la vista previa.
 function UnitButton.ShowThreat(visual, status, style)
   local level = status or 0
-  visual.aggroFrame:SetShown(style.aggro.border and level >= AGGRO_BORDER_LEVEL)
+  local border = style.aggro.border and level >= AGGRO_BORDER_LEVEL
+  visual.aggroFrame:SetShown(border)
+  UnitButton.SetBlinking(visual.aggroFrame, border and style.aggro.blink)
   for position, dot in ipairs(visual.aggroDots) do
     dot:SetShown(style.aggro.dots and level >= position)
   end

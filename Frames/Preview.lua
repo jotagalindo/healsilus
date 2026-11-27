@@ -9,10 +9,11 @@ ns.Preview = Preview
 
 -- threat: nivel de amenaza falso (3 = tanquea, 1 = mucha amenaza) para ver el borde y los puntos.
 -- power: fracción de maná/ira/energía y powerToken, su tipo (decide el color de la barra).
+-- hots: cuántos HoTs tuyos lleva; debuff: tipo de un debuff que puedes quitar.
 local FAKE_MEMBERS = {
-  { name = "Gromash", class = "WARRIOR", role = "TANK", health = 0.62, threat = 3, power = 0.45, powerToken = "RAGE" },
+  { name = "Gromash", class = "WARRIOR", role = "TANK", health = 0.62, threat = 3, power = 0.45, powerToken = "RAGE", hots = 2 },
   { name = "Arsilus", class = "DRUID", role = "HEALER", health = 1, power = 0.82, powerToken = "MANA" },
-  { name = "Velenna", class = "PRIEST", role = "HEALER", health = 0.48, power = 0.31, powerToken = "MANA" },
+  { name = "Velenna", class = "PRIEST", role = "HEALER", health = 0.48, power = 0.31, powerToken = "MANA", hots = 1, debuff = "Magic" },
   { name = "Thrall", class = "SHAMAN", role = "DAMAGER", health = 0.85, missing = true, power = 0.9, powerToken = "MANA" },
   { name = "Lejana", class = "MAGE", role = "DAMAGER", health = 0.7, outOfRange = true, power = 0.6, powerToken = "MANA" },
   { name = "Korgan", class = "ROGUE", role = "DAMAGER", health = 0, dead = true, power = 0, powerToken = "ENERGY" },
@@ -29,10 +30,17 @@ local FAKE_PETS = {
 
 local FAKE_MAX_HEALTH = 8000
 
+-- Iconos de ejemplo: Rejuvenecimiento y Recrecimiento, Palabra de las Sombras: dolor y Marca de lo Salvaje.
+local FAKE_HOT_ICONS = { "Interface\\Icons\\Spell_Nature_Rejuvenation", "Interface\\Icons\\Spell_Nature_ResistNature" }
+local FAKE_DEBUFF_ICON = "Interface\\Icons\\Spell_Shadow_ShadowWordPain"
+local FAKE_BUFF_ICON = "Interface\\Icons\\Spell_Nature_Regeneration"
+local AURA_LEVEL = 8
+
 -- Miembros de ejemplo de los bloques secundarios: tanques, mascotas y un objetivo y un foco amistosos.
 local SAMPLE_TANKS = { FAKE_MEMBERS[1], FAKE_MEMBERS[9] }
--- Barras de la vista de ejemplo de la pestaña Aspecto: tanque con aggro, vida llena, herida y muerto.
-Preview.SAMPLE_MEMBERS = { FAKE_MEMBERS[1], FAKE_MEMBERS[2], FAKE_MEMBERS[3], FAKE_MEMBERS[6] }
+-- Barras de la vista de ejemplo de la pestaña Aspecto: tanque con aggro, vida llena, herida con un
+-- debuff, sin un buff y muerto.
+Preview.SAMPLE_MEMBERS = { FAKE_MEMBERS[1], FAKE_MEMBERS[2], FAKE_MEMBERS[3], FAKE_MEMBERS[4], FAKE_MEMBERS[6] }
 local SAMPLE_TARGET = { FAKE_MEMBERS[3] }
 local SAMPLE_FOCUS = { FAKE_MEMBERS[7] }
 
@@ -109,6 +117,68 @@ function Preview.HealthText(mode, fraction)
   return ""
 end
 
+-- Iconos falsos de un grupo (HoTs o debuffs) colocados como los pondría su contenedor real.
+-- border: color del marco del icono (tipo de dispel) o nil.
+function Preview.PaintAuraIcons(frame, key, group, icons, border)
+  local visual = frame.healsilus
+  visual.fakeAuras = visual.fakeAuras or {}
+  local pool = visual.fakeAuras[key]
+  if not pool then
+    pool = {}
+    visual.fakeAuras[key] = pool
+  end
+  if not visual.fakeAuraFrame then
+    visual.fakeAuraFrame = CreateFrame("Frame", nil, frame)
+    visual.fakeAuraFrame:SetAllPoints(frame)
+    visual.fakeAuraFrame:SetFrameLevel(frame:GetFrameLevel() + AURA_LEVEL)
+  end
+  local anchor = ns.StyleData.AuraAnchor(group)
+  local relative = anchor.relativeTo == "BUTTON" and frame or visual.healthBar
+  local step = (group.iconSize + 1) * (anchor.horizontal == "Left" and -1 or 1)
+  for position = 1, math.max(#icons, #pool) do
+    local entry = pool[position]
+    if not entry and icons[position] then
+      entry = { edge = visual.fakeAuraFrame:CreateTexture(nil, "ARTWORK", nil, 1) }
+      entry.icon = visual.fakeAuraFrame:CreateTexture(nil, "ARTWORK", nil, 2)
+      entry.icon:SetPoint("TOPLEFT", entry.edge, "TOPLEFT", 1, -1)
+      entry.icon:SetPoint("BOTTOMRIGHT", entry.edge, "BOTTOMRIGHT", -1, 1)
+      entry.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+      pool[position] = entry
+    end
+    if entry then
+      local shown = icons[position] ~= nil
+      entry.edge:SetShown(shown)
+      entry.icon:SetShown(shown)
+      if shown then
+        entry.edge:ClearAllPoints()
+        entry.edge:SetSize(group.iconSize, group.iconSize)
+        entry.edge:SetPoint(anchor.point, relative, anchor.relativePoint, anchor.x + (position - 1) * step, anchor.y)
+        local color = border or { r = 0, g = 0, b = 0 }
+        entry.edge:SetColorTexture(color.r, color.g, color.b, 1)
+        entry.icon:SetTexture(icons[position])
+      end
+    end
+  end
+end
+
+function Preview:PaintAuras(frame, member, style)
+  local auras = ns.Profiles.active.auras
+  local hots = {}
+  if auras.hotsEnabled and not member.dead then
+    for position = 1, math.min(member.hots or 0, auras.hotsMax) do
+      hots[position] = FAKE_HOT_ICONS[(position - 1) % #FAKE_HOT_ICONS + 1]
+    end
+  end
+  Preview.PaintAuraIcons(frame, "hots", style.auras.hots, hots)
+  local debuffs = {}
+  if auras.debuffsEnabled and auras.debuffsMax > 0 and member.debuff then
+    debuffs[1] = FAKE_DEBUFF_ICON
+  end
+  Preview.PaintAuraIcons(frame, "debuffs", style.auras.debuffs, debuffs,
+    member.debuff and style.auras.dispelColors[member.debuff] or nil)
+  ns.UnitButton.ShowMissing(frame.healsilus, member.missing == true, FAKE_BUFF_ICON)
+end
+
 function Preview:Paint(frame, member, style)
   local visual = frame.healsilus
   frame:SetSize(style.layout.width, style.layout.height)
@@ -135,7 +205,7 @@ function Preview:Paint(frame, member, style)
     visual.powerBar:SetMinMaxValues(0, 1)
     visual.powerBar:SetValue(member.power)
   end
-  visual.missingMark:SetShown(member.missing == true)
+  self:PaintAuras(frame, member, style)
   ns.UnitButton.ShowThreat(visual, member.threat, style)
   ns.UnitButton.ShowRole(visual, member.role, style)
   frame:SetAlpha(member.outOfRange and style.bar.outOfRangeAlpha or 1)

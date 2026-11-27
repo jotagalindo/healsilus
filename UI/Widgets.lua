@@ -527,12 +527,21 @@ function Widgets.Segmented(parent, options, width, getValue, setValue)
   return container
 end
 
--- Selector de posición: una barra en miniatura con nueve puntos (esquinas, lados y centro). Pulsar uno
--- lo elige; a la derecha se lee su nombre. options: { { value = "TOPLEFT", label = ... }, ... } en orden
--- de lectura (fila de arriba, centro y abajo).
+-- Selector de posición: una barra en miniatura con nueve puntos (esquinas, lados y centro) y, si las
+-- opciones lo incluyen, cuatro más por fuera (encima, debajo, a la izquierda y a la derecha). Pulsar uno
+-- lo elige; a la derecha se lee su nombre. options: { { value = "TOPLEFT", label = ... }, ... }.
 local PICKER_COLUMNS = { LEFT = 0, CENTER = 1, RIGHT = 2 }
 local PICKER_ROWS = { TOP = 0, CENTER = 1, BOTTOM = 2 }
 local PICKER_WIDTH, PICKER_HEIGHT, PICKER_CELL = 96, 42, 10
+-- Celdas de fuera: { ancho, alto, punto de la celda, punto del tablero, x, y }.
+local OUTSIDE_GAP = 4
+local OUTSIDE_CELLS = {
+  ABOVE = { 40, 7, "BOTTOM", "TOP", 0, OUTSIDE_GAP },
+  BELOW = { 40, 7, "TOP", "BOTTOM", 0, -OUTSIDE_GAP },
+  OUTSIDE_LEFT = { 7, 26, "RIGHT", "LEFT", -OUTSIDE_GAP, 0 },
+  OUTSIDE_RIGHT = { 7, 26, "LEFT", "RIGHT", OUTSIDE_GAP, 0 },
+}
+local OUTSIDE_MARGIN = 14
 
 local function PickerCell(point)
   local column = string.find(point, "LEFT") and "LEFT" or string.find(point, "RIGHT") and "RIGHT" or "CENTER"
@@ -552,25 +561,38 @@ local function PaintPickerCell(cell)
 end
 
 function Widgets.PointPicker(parent, text, options, getValue, setValue)
+  local hasOutside = false
+  for _, option in ipairs(options) do
+    hasOutside = hasOutside or OUTSIDE_CELLS[option.value] ~= nil
+  end
+  local margin = hasOutside and OUTSIDE_MARGIN or 0
   local container = CreateFrame("Frame", nil, parent)
-  container:SetSize(220, PICKER_HEIGHT + 18)
+  container:SetSize(220, PICKER_HEIGHT + 18 + 2 * margin)
   local label = Widgets.Label(container, text, "GameFontNormalSmall")
   label:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
   local board = CreateFrame("Frame", nil, container, "BackdropTemplate")
   board:SetSize(PICKER_WIDTH, PICKER_HEIGHT)
-  board:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+  board:SetPoint("TOPLEFT", label, "BOTTOMLEFT", margin, -4 - margin)
   Widgets.Surface(board, { 0.2, 0.42, 0.3, 0.55 }, THEME.border)
   local chosen = Widgets.Label(container, "", "GameFontHighlight")
-  chosen:SetPoint("LEFT", board, "RIGHT", 12, 0)
+  chosen:SetPoint("LEFT", board, "RIGHT", 12 + margin, 0)
+  chosen:SetPoint("RIGHT", container, "RIGHT", 0, 0)
+  chosen:SetWordWrap(true)
   container.cells = {}
   local stepX = (PICKER_WIDTH - PICKER_CELL - 8) / 2
   local stepY = (PICKER_HEIGHT - PICKER_CELL - 8) / 2
   for _, option in ipairs(options) do
-    local cell = CreateFrame("Button", nil, board, "BackdropTemplate")
-    cell:SetSize(PICKER_CELL, PICKER_CELL)
+    local outside = OUTSIDE_CELLS[option.value]
+    local cell = CreateFrame("Button", nil, outside and container or board, "BackdropTemplate")
     cell:SetBackdrop(FLAT_BACKDROP)
-    local column, row = PickerCell(option.value)
-    cell:SetPoint("TOPLEFT", board, "TOPLEFT", 4 + column * stepX, -(4 + row * stepY))
+    if outside then
+      cell:SetSize(outside[1], outside[2])
+      cell:SetPoint(outside[3], board, outside[4], outside[5], outside[6])
+    else
+      cell:SetSize(PICKER_CELL, PICKER_CELL)
+      local column, row = PickerCell(option.value)
+      cell:SetPoint("TOPLEFT", board, "TOPLEFT", 4 + column * stepX, -(4 + row * stepY))
+    end
     cell.value, cell.label = option.value, option.label
     TrackHover(cell, PaintPickerCell)
     cell:SetScript("OnClick", function()

@@ -23,16 +23,6 @@ local function LoadTabs()
 end
 
 describe("TabAuras", function()
-  it("offers every allowed icon position, inside corners and outside sides", function()
-    local ns = LoadTabs()
-    local values = {}
-    for _, option in ipairs(ns.TabAuras.POSITION_OPTIONS) do
-      values[option.value] = true
-    end
-    assertEquals(values, ns.Database.ENUMS.hotsPoint)
-    assertEquals(values, ns.Database.ENUMS.debuffsPoint)
-  end)
-
   it("lists tracked HoTs sorted by name, naming unknown IDs by number", function()
     local ns = LoadTabs()
     ns.Profiles.active.auras.hotSpellIDs[99] = true

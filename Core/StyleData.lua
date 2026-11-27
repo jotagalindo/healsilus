@@ -17,6 +17,38 @@ local function TextElement(size, point, x, y)
   return { size = size, outline = "NONE", point = point, x = x, y = y }
 end
 
+-- Dirección de crecimiento por defecto: hacia el centro de la barra (desde la derecha, a la izquierda).
+function StyleData.DefaultGrow(position)
+  if string.find(position, "RIGHT") then
+    return "LEFT"
+  end
+  return "RIGHT"
+end
+
+function StyleData.AuraGroup(position, iconSize)
+  return { position = position, x = 0, y = 0, iconSize = iconSize, grow = StyleData.DefaultGrow(position) }
+end
+
+-- Estilos guardados o exportados antes de la versión 6: hotsPoint, debuffsPoint e iconSize sueltos.
+function StyleData.UpgradeAuras(style)
+  local auras = type(style) == "table" and style.auras
+  if type(auras) ~= "table" then
+    return
+  end
+  local size = type(auras.iconSize) == "number" and auras.iconSize or nil
+  local function Upgrade(key, oldKey, fallback)
+    if type(auras[key]) ~= "table" then
+      local position = type(auras[oldKey]) == "string" and auras[oldKey] or fallback
+      auras[key] = StyleData.AuraGroup(position, size or 14)
+    end
+  end
+  if auras.hotsPoint ~= nil or auras.debuffsPoint ~= nil or size then
+    Upgrade("hots", "hotsPoint", "BOTTOMRIGHT")
+    Upgrade("debuffs", "debuffsPoint", "TOPRIGHT")
+  end
+  auras.hotsPoint, auras.debuffsPoint, auras.iconSize = nil, nil, nil
+end
+
 function StyleData.DefaultStyle()
   local health = TextElement(10, "BOTTOMLEFT", 4, 3)
   health.mode = "DEFICIT"
@@ -44,14 +76,16 @@ function StyleData.DefaultStyle()
     -- Icono del rol elegido en el grupo (tanque, sanador, DPS); showDamager también pinta el de DPS.
     role = { show = false, showDamager = true, size = 12, point = "LEFT", x = 3, y = 0 },
     -- Aggro: borde rojo alrededor de quien tanquea y/o puntos rojos, uno por nivel de amenaza (como HealBot).
-    aggro = { border = true, dots = true, size = 8, point = "RIGHT", x = -3, y = 0 },
+    aggro = { border = true, dots = true, blink = false, size = 8, point = "RIGHT", x = -3, y = 0 },
     -- Barra de maná, ira, energía… (el recurso que use cada unidad) debajo de la de vida.
     -- healersOnly la deja solo en quien tiene el rol de sanador; thickness es su alto en píxeles.
     power = { show = true, healersOnly = false, thickness = 4 },
+    -- Grupos de iconos sobre la barra: posición (dentro o fuera), desplazamiento, tamaño y hacia dónde
+    -- crecen. buffs es el aviso de buff tuyo que falta (un icono).
     auras = {
-      iconSize = 14,
-      hotsPoint = "BOTTOMRIGHT",
-      debuffsPoint = "TOPRIGHT",
+      hots = StyleData.AuraGroup("BOTTOMRIGHT", 14),
+      debuffs = StyleData.AuraGroup("TOPRIGHT", 14),
+      buffs = StyleData.AuraGroup("TOPLEFT", 10),
       dispelMode = "RING",
       dispelColors = Database.DefaultDispelColors(),
     },
@@ -65,7 +99,7 @@ local function CompactRaid()
   style.text.name = TextElement(9, "TOP", 0, -3)
   style.text.health.mode = "NONE"
   style.text.status = TextElement(9, "BOTTOM", 0, 3)
-  style.auras.iconSize = 10
+  style.auras.hots.iconSize, style.auras.debuffs.iconSize, style.auras.buffs.iconSize = 10, 10, 8
   return style
 end
 
@@ -76,7 +110,7 @@ local function LargeParty()
   style.text.name = TextElement(13, "TOPLEFT", 6, -4)
   style.text.health.size, style.text.health.x, style.text.health.y = 12, 6, 4
   style.text.status = TextElement(12, "BOTTOMRIGHT", -6, 4)
-  style.auras.iconSize = 18
+  style.auras.hots.iconSize, style.auras.debuffs.iconSize, style.auras.buffs.iconSize = 18, 18, 12
   return style
 end
 
@@ -87,7 +121,7 @@ local function Classic()
   style.text.name = TextElement(10, "LEFT", 4, 0)
   style.text.health.point, style.text.health.x, style.text.health.y = "RIGHT", -4, 0
   style.text.status = TextElement(10, "CENTER", 0, 0)
-  style.auras.iconSize = 12
+  style.auras.hots.iconSize, style.auras.debuffs.iconSize = 12, 12
   style.auras.dispelMode = "BAR"
   return style
 end
@@ -134,6 +168,50 @@ function StyleData.RecenterLeftovers(element)
   end
 end
 
+-- Lados por fuera de la barra: se anclan al botón entero (con su borde) y crecen alejándose de él.
+-- Encima y debajo crecen hacia la izquierda o la derecha según el grupo; a los lados, siempre hacia fuera.
+local OUTSIDE_GAP = 3
+local OUTSIDE = {
+  ABOVE = { vertical = "Up" },
+  BELOW = { vertical = "Down" },
+  OUTSIDE_LEFT = { point = "TOPRIGHT", relativePoint = "TOPLEFT", x = -OUTSIDE_GAP, y = 0, horizontal = "Left", vertical = "Down" },
+  OUTSIDE_RIGHT = { point = "TOPLEFT", relativePoint = "TOPRIGHT", x = OUTSIDE_GAP, y = 0, horizontal = "Right", vertical = "Down" },
+}
+
+-- Cómo anclar un grupo de iconos ({ position, x, y, grow } del estilo): uno de los nueve puntos dentro
+-- de la barra de vida (1 px hacia dentro desde los bordes) o un lado por fuera del botón, más el
+-- desplazamiento del usuario. relativeTo: "BAR" (barra de vida) o "BUTTON" (botón entero).
+function StyleData.AuraAnchor(group)
+  local position = group.position
+  local towardsLeft = group.grow == "LEFT"
+  local horizontal = towardsLeft and "Left" or "Right"
+  local x, y = group.x or 0, group.y or 0
+  local outside = OUTSIDE[position]
+  if outside and outside.point then
+    return {
+      relativeTo = "BUTTON", point = outside.point, relativePoint = outside.relativePoint,
+      x = outside.x + x, y = outside.y + y, horizontal = outside.horizontal, vertical = outside.vertical,
+    }
+  end
+  if outside then
+    -- Encima o debajo: empieza en la esquina del lado desde el que crece.
+    local above = position == "ABOVE"
+    local side = towardsLeft and "RIGHT" or "LEFT"
+    return {
+      relativeTo = "BUTTON",
+      point = (above and "BOTTOM" or "TOP") .. side, relativePoint = (above and "TOP" or "BOTTOM") .. side,
+      x = x, y = (above and OUTSIDE_GAP or -OUTSIDE_GAP) + y, horizontal = horizontal, vertical = outside.vertical,
+    }
+  end
+  local insetX = string.find(position, "LEFT") and 1 or string.find(position, "RIGHT") and -1 or 0
+  local insetY = string.find(position, "TOP") and -1 or string.find(position, "BOTTOM") and 1 or 0
+  return {
+    relativeTo = "BAR", point = position, relativePoint = position,
+    x = insetX + x, y = insetY + y,
+    horizontal = horizontal, vertical = string.find(position, "BOTTOM") and "Up" or "Down",
+  }
+end
+
 function StyleData.IsValidName(name)
   if type(name) ~= "string" then
     return false
@@ -158,6 +236,7 @@ end
 
 function StyleData.NormalizeStyle(style, fixes)
   fixes = fixes or Database.fixes
+  StyleData.UpgradeAuras(style)
   local defaults = StyleData.DefaultStyle()
   -- Las texturas y fuentes pueden venir de LibSharedMedia: cualquier nombre de texto vale.
   RemoveUnknown(style, defaults, "style", fixes)
@@ -239,8 +318,8 @@ function StyleData.ExtractVersion1Style(profile)
     style.text.health.mode = frames.healthText
   end
   frames.healthText = nil
-  if auras.iconSize ~= nil then
-    style.auras.iconSize = auras.iconSize
+  if type(auras.iconSize) == "number" then
+    style.auras.hots.iconSize, style.auras.debuffs.iconSize = auras.iconSize, auras.iconSize
   end
   auras.iconSize = nil
   if type(auras.dispelColors) == "table" then

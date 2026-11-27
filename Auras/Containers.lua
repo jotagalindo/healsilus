@@ -135,37 +135,15 @@ local function MakeBarTintInitializer(unitButton)
   end
 end
 
--- Lados por fuera de la barra: se anclan al botón entero (con su borde) y crecen alejándose de él.
-local OUTSIDE_GAP = 3
-local OUTSIDE = {
-  ABOVE = { point = "BOTTOMLEFT", relativePoint = "TOPLEFT", x = 0, y = OUTSIDE_GAP, horizontal = "Right", vertical = "Up" },
-  BELOW = { point = "TOPLEFT", relativePoint = "BOTTOMLEFT", x = 0, y = -OUTSIDE_GAP, horizontal = "Right", vertical = "Down" },
-  OUTSIDE_LEFT = { point = "TOPRIGHT", relativePoint = "TOPLEFT", x = -OUTSIDE_GAP, y = 0, horizontal = "Left", vertical = "Down" },
-  OUTSIDE_RIGHT = { point = "TOPLEFT", relativePoint = "TOPRIGHT", x = OUTSIDE_GAP, y = 0, horizontal = "Right", vertical = "Down" },
-}
+-- El anclaje de cada grupo (posición, desplazamiento, dirección) se calcula en Core/StyleData.lua, que
+-- también usan el aviso de buff que falta y la vista previa.
+Containers.Anchor = ns.StyleData.AuraAnchor
 
--- Cómo anclar un contenedor según la posición del estilo: una esquina dentro de la barra de vida
--- (1 px hacia dentro, crece hacia el centro) o un lado por fuera del botón.
--- relativeTo: "BAR" (barra de vida) o "BUTTON" (botón entero).
-function Containers.Anchor(position)
-  local outside = OUTSIDE[position]
-  if outside then
-    return {
-      relativeTo = "BUTTON", point = outside.point, relativePoint = outside.relativePoint,
-      x = outside.x, y = outside.y, horizontal = outside.horizontal, vertical = outside.vertical,
-    }
-  end
-  local right = string.find(position, "RIGHT") ~= nil
-  local top = string.find(position, "TOP") ~= nil
-  return {
-    relativeTo = "BAR", point = position, relativePoint = position,
-    x = right and -1 or 1, y = top and -1 or 1,
-    horizontal = right and "Left" or "Right", vertical = top and "Down" or "Up",
-  }
-end
+-- Anillo y tinte de dispel: un único elemento de 1 × 1 en la esquina (su textura cubre la barra).
+local TOPLEFT_GROUP = { position = "TOPLEFT", x = 0, y = 0, grow = "RIGHT" }
 
 local function BuildContainer(unitButton, spec)
-  local anchor = Containers.Anchor(spec.position)
+  local anchor = Containers.Anchor(spec.group)
   local relativeFrame = anchor.relativeTo == "BUTTON" and unitButton or unitButton.healsilus.healthBar
   local container = CreateFrame("AuraContainer", nil, unitButton, "CustomAuraContainerTemplate")
   container:Hide()
@@ -251,8 +229,8 @@ function Containers:Attach(button)
       local spellIDs = ns.Spells:ExpandRanks(auras.hotSpellIDs)
       if next(spellIDs) then
         built.hots = BuildContainer(button, {
-          key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = look.iconSize,
-          initializer = MakeIconInitializer(look.iconSize, false), position = look.hotsPoint,
+          key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = look.hots.iconSize,
+          initializer = MakeIconInitializer(look.hots.iconSize, false), group = look.hots,
           levelOffset = 8, candidateFilters = { includeSpellIDs = spellIDs },
         })
       end
@@ -260,20 +238,20 @@ function Containers:Attach(button)
     if auras.debuffsEnabled and auras.debuffsMax > 0 then
       built.debuffs = BuildContainer(button, {
         key = "healsilusDebuffs", filter = auras.debuffsDispellableOnly and "HARMFUL|RAID" or "HARMFUL",
-        maxCount = auras.debuffsMax, size = look.iconSize, initializer = MakeIconInitializer(look.iconSize, true),
-        position = look.debuffsPoint, levelOffset = 8, sortMethod = sortMethod,
+        maxCount = auras.debuffsMax, size = look.debuffs.iconSize, initializer = MakeIconInitializer(look.debuffs.iconSize, true),
+        group = look.debuffs, levelOffset = 8, sortMethod = sortMethod,
       })
       if look.dispelMode ~= "BAR" then
         built.highlight = BuildContainer(button, {
           key = "healsilusDispel", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
-          initializer = MakeHighlightInitializer(button), position = "TOPLEFT",
+          initializer = MakeHighlightInitializer(button), group = TOPLEFT_GROUP,
           levelOffset = 1, sortMethod = sortMethod,
         })
       end
       if look.dispelMode ~= "RING" then
         built.tint = BuildContainer(button, {
           key = "healsilusDispelTint", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
-          initializer = MakeBarTintInitializer(button), position = "TOPLEFT",
+          initializer = MakeBarTintInitializer(button), group = TOPLEFT_GROUP,
           levelOffset = 3, sortMethod = sortMethod,
         })
       end

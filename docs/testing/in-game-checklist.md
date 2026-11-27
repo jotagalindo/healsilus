@@ -125,3 +125,13 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] La barra lateral muestra el logo nuevo (cruz blanca con una hoja sobre un cuadrado verde) y ocho iconos de línea: ratón, barras, paleta, hoja, gota tachada, escudo, capas y persona. Grises; claros al pasar el ratón; verdes en la pestaña elegida.
 - [ ] El botón del minimapa y la lista de addons (pantalla de personajes) usan el mismo logo; con Healsilus desactivado, el del minimapa sale en gris.
 - [ ] Si algún icono sale como un cuadrado verde o negro, la carpeta `Media` no está dentro de `AddOns\Healsilus`: dímelo.
+
+## 21. Colocar HoTs, debuffs y buffs
+- [ ] Aspecto → Auras: elige HoTs, pulsa otro punto del selector (dentro o uno de los 4 de fuera) y los HoTs reales y los de la vista de ejemplo se mueven ahí. Lo mismo con Debuffs y Buff que falta.
+- [ ] "Crecen hacia" Izquierda/Derecha cambia el lado hacia el que se añaden los iconos cuando hay varios.
+- [ ] Tamaño y desplazamientos mueven cada grupo por separado. Los iconos de fuera no pisan el borde de aggro.
+- [ ] El aviso de buff que falta enseña el icono del buff (Marca, Espinas…) con un marco naranja.
+- [ ] Auras y Debuffs tienen un botón "Colocar iconos en la barra…" que abre esa página.
+
+## 22. Parpadeo del borde de aggro
+- [ ] Aspecto → Rol y aggro → "Parpadear el borde": el borde rojo de quien tanquea late suave; al perder el aggro se apaga y deja de parpadear.

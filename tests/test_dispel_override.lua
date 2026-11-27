@@ -61,7 +61,10 @@ local function LoadOverride()
   -- Los clics de buff y de dispel vienen activados de serie; cada prueba enciende el que necesita.
   ns.Profiles.active.clicks.buffOverride = false
   ns.Profiles.active.clicks.dispelOverride = false
-  ns.UnitButton = { buttons = {} }
+  ns.UnitButton = { buttons = {}, ShowMissing = function(visual, shown, icon)
+    visual.missingMark:SetShown(shown)
+    visual.missingMark.icon = icon
+  end }
   ns.Headers = { list = {} }
   -- Solo vigila Marca de lo Salvaje (con Don de lo Salvaje como versión de grupo) para todos.
   ns.Profiles.active.buffs.watched = { { spellID = 1126, groupSpellID = 21849, targets = "ALL" } }

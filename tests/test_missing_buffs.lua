@@ -50,7 +50,10 @@ local function LoadMissingBuffs()
   end
   local ns = Loader.Load(environment, FILES)
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
-  ns.UnitButton = { buttons = {} }
+  ns.UnitButton = { buttons = {}, ShowMissing = function(visual, shown, icon)
+    visual.missingMark:SetShown(shown)
+    visual.missingMark.icon = icon
+  end }
   ns.MissingBuffs:Resolve()
   return ns, environment, units
 end
@@ -97,8 +100,8 @@ describe("MissingBuffs", function()
   it("resolves watched spells to localized names, including the group version", function()
     local ns = LoadMissingBuffs()
     assertEquals(ns.MissingBuffs.resolved, {
-      { label = "Marca de lo Salvaje", names = { "Marca de lo Salvaje", "Don de lo Salvaje" }, targets = "ALL" },
-      { label = "Espinas", names = { "Espinas" }, targets = "TANKS" },
+      { label = "Marca de lo Salvaje", names = { "Marca de lo Salvaje", "Don de lo Salvaje" }, targets = "ALL", icon = 136041 },
+      { label = "Espinas", names = { "Espinas" }, targets = "TANKS", icon = 136041 },
     })
   end)
 

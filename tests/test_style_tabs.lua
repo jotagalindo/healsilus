@@ -76,13 +76,30 @@ describe("TabAppearance positions", function()
     assertEquals({ ns.Styles.active.role.x, ns.Styles.active.role.y }, { 4, -3 })
   end)
 
-  it("splits the tab into bar, text and icon pages", function()
+  it("splits the tab into bar, text, icon and aura pages", function()
     local ns = LoadTabs()
     local pages = {}
     for _, page in ipairs(ns.TabAppearance.PAGES) do
       pages[#pages + 1] = page.value
     end
-    assertEquals(pages, { "bar", "text", "icons" })
+    assertEquals(pages, { "bar", "text", "icons", "auras" })
+  end)
+
+  it("offers every aura position and edits the chosen group only", function()
+    local ns = LoadTabs()
+    assertEquals(Values(ns.TabAppearance.AURA_POSITION_OPTIONS), ns.Database.ENUMS.position)
+    assertEquals(Values(ns.TabAppearance.GROW_OPTIONS), ns.Database.ENUMS.grow)
+    ns.TabAppearance.auraGroup = "debuffs"
+    ns.TabAppearance.AuraSetter("x")(7)
+    ns.TabAppearance.AuraPositionSetter("BOTTOMRIGHT")
+    local debuffs = ns.Styles.active.auras.debuffs
+    assertEquals({ debuffs.position, debuffs.x, debuffs.y, debuffs.grow }, { "BOTTOMRIGHT", 0, 0, "LEFT" })
+    ns.TabAppearance.AuraSetter("iconSize")(20)
+    assertEquals(ns.Styles.active.auras.debuffs.iconSize, 20)
+    assertEquals(ns.Styles.active.auras.hots.iconSize, 14)
+    for _, group in ipairs(ns.TabAppearance.AURA_GROUPS) do
+      assertTrue(ns.Styles.active.auras[group.value] ~= nil, group.value)
+    end
   end)
 end)
 

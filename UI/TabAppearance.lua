@@ -60,6 +60,7 @@ TabAppearance.INDICATORS = {
     key = "aggro", title = L.APPEARANCE_AGGRO_TITLE, pointLabel = L.APPEARANCE_AGGRO_POINT, sizeLabel = L.APPEARANCE_AGGRO_SIZE,
     checks = {
       { key = "border", label = L.APPEARANCE_AGGRO_BORDER },
+      { key = "blink", label = L.APPEARANCE_AGGRO_BLINK },
       { key = "dots", label = L.APPEARANCE_AGGRO_DOTS },
     },
   },
@@ -70,6 +71,34 @@ TabAppearance.PAGES = {
   { value = "bar", label = L.APPEARANCE_PAGE_BAR },
   { value = "text", label = L.APPEARANCE_PAGE_TEXT },
   { value = "icons", label = L.APPEARANCE_PAGE_ICONS },
+  { value = "auras", label = L.APPEARANCE_PAGE_AURAS },
+}
+
+-- Grupos de iconos que se colocan en la página Auras (style.auras.<key>).
+TabAppearance.AURA_GROUPS = {
+  { value = "hots", label = L.APPEARANCE_AURA_HOTS },
+  { value = "debuffs", label = L.APPEARANCE_AURA_DEBUFFS },
+  { value = "buffs", label = L.APPEARANCE_AURA_BUFFS },
+}
+TabAppearance.auraGroup = "hots"
+
+-- Los nueve puntos de dentro de la barra y los cuatro lados de fuera.
+TabAppearance.AURA_POSITION_OPTIONS = {}
+for _, option in ipairs(TabAppearance.POINT_OPTIONS) do
+  TabAppearance.AURA_POSITION_OPTIONS[#TabAppearance.AURA_POSITION_OPTIONS + 1] = option
+end
+for _, option in ipairs({
+  { value = "ABOVE", label = L.AURA_POSITION_ABOVE },
+  { value = "BELOW", label = L.AURA_POSITION_BELOW },
+  { value = "OUTSIDE_LEFT", label = L.AURA_POSITION_OUTSIDE_LEFT },
+  { value = "OUTSIDE_RIGHT", label = L.AURA_POSITION_OUTSIDE_RIGHT },
+}) do
+  TabAppearance.AURA_POSITION_OPTIONS[#TabAppearance.AURA_POSITION_OPTIONS + 1] = option
+end
+
+TabAppearance.GROW_OPTIONS = {
+  { value = "LEFT", label = L.GROW_LEFT },
+  { value = "RIGHT", label = L.GROW_RIGHT },
 }
 TabAppearance.page = "bar"
 
@@ -113,6 +142,28 @@ function TabAppearance.PointSetter(target)
     element.x, element.y = ns.StyleData.DefaultOffset(point)
     ns.Config:Changed("style")
   end
+end
+
+-- Controles de la página Auras: editan el grupo elegido (HoTs, debuffs o buff que falta).
+function TabAppearance.AuraGetter(key)
+  return function()
+    return Style().auras[TabAppearance.auraGroup][key]
+  end
+end
+
+function TabAppearance.AuraSetter(key)
+  return function(value)
+    Style().auras[TabAppearance.auraGroup][key] = value
+    ns.Config:Changed("style")
+  end
+end
+
+-- Una posición nueva empieza sin desplazamiento y creciendo hacia el centro de la barra.
+function TabAppearance.AuraPositionSetter(value)
+  local group = Style().auras[TabAppearance.auraGroup]
+  group.position, group.x, group.y = value, 0, 0
+  group.grow = ns.StyleData.DefaultGrow(value)
+  ns.Config:Changed("style")
 end
 
 local function BarColorSetter(key)
@@ -249,6 +300,34 @@ local function BuildIconsPage(page)
   return columns
 end
 
+-- Página "Auras": dónde van los HoTs, los debuffs y el aviso de buff que falta, y cómo crecen.
+local function BuildAurasPage(page)
+  local left, right = Widgets.Column(page, COLUMN_X[1], 0), Widgets.Column(page, COLUMN_X[2], 0)
+  local place = left:Next(Widgets.Section(page, L.APPEARANCE_AURA_PLACE, SECTION_WIDTH))
+  place:Add(Widgets.Segmented(place.frame, TabAppearance.AURA_GROUPS, 220, function()
+    return TabAppearance.auraGroup
+  end, function(key)
+    TabAppearance.auraGroup = key
+    ns.Config:Refresh()
+  end), 34)
+  place:Add(Widgets.PointPicker(place.frame, L.APPEARANCE_POINT, TabAppearance.AURA_POSITION_OPTIONS,
+    TabAppearance.AuraGetter("position"), TabAppearance.AuraPositionSetter), 96)
+  local grow = Widgets.Label(place.frame, L.APPEARANCE_AURA_GROW, "GameFontNormalSmall")
+  place:Add(grow, 16)
+  place:Add(Widgets.Segmented(place.frame, TabAppearance.GROW_OPTIONS, 220, TabAppearance.AuraGetter("grow"),
+    TabAppearance.AuraSetter("grow")), 32)
+
+  local adjust = right:Next(Widgets.Section(page, L.APPEARANCE_AURA_ADJUST, SECTION_WIDTH))
+  Slider(adjust, L.AURAS_ICON_SIZE, "iconSize", TabAppearance.AuraGetter("iconSize"), TabAppearance.AuraSetter("iconSize"), 1)
+  Slider(adjust, L.APPEARANCE_OFFSET_X, "x", TabAppearance.AuraGetter("x"), TabAppearance.AuraSetter("x"), 1)
+  Slider(adjust, L.APPEARANCE_OFFSET_Y, "y", TabAppearance.AuraGetter("y"), TabAppearance.AuraSetter("y"), 1)
+  local note = Widgets.Label(adjust.frame, L.APPEARANCE_AURA_NOTE, "GameFontDisableSmall")
+  note:SetWidth(220)
+  note:SetWordWrap(true)
+  adjust:Add(note, 44)
+  return { left, right }
+end
+
 -- Vista de ejemplo a la derecha: unas barras falsas pintadas con el estilo activo, que cambian al momento.
 local function BuildSample(panel)
   local section = Widgets.Section(panel, L.APPEARANCE_SAMPLE, SAMPLE_WIDTH)
@@ -304,12 +383,20 @@ function TabAppearance.SelectPage(key)
   TabAppearance.Refresh()
 end
 
+-- Abre esta pestaña en la página Auras con un grupo elegido (desde las pestañas Auras y Debuffs).
+function TabAppearance.OpenAuras(group)
+  TabAppearance.auraGroup = group or TabAppearance.auraGroup
+  TabAppearance.page = "auras"
+  ns.Config:SelectTab("appearance")
+  TabAppearance.SelectPage("auras")
+end
+
 function TabAppearance.Build(panel)
   TabAppearance.pageSelector = Widgets.Segmented(panel, TabAppearance.PAGES, 492, function()
     return TabAppearance.page
   end, TabAppearance.SelectPage)
   TabAppearance.pageSelector:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
-  local builders = { bar = BuildBarPage, text = BuildTextPage, icons = BuildIconsPage }
+  local builders = { bar = BuildBarPage, text = BuildTextPage, icons = BuildIconsPage, auras = BuildAurasPage }
   TabAppearance.pages, TabAppearance.stacks = {}, {}
   for _, entry in ipairs(TabAppearance.PAGES) do
     local page = CreateFrame("Frame", nil, panel)

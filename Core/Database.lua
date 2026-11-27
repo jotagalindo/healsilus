@@ -2,7 +2,7 @@
 -- Sin APIs de WoW: todo se prueba fuera del juego.
 local _, ns = ...
 
-local Database = { CURRENT_VERSION = 5, MIGRATIONS = {}, fixes = {} }
+local Database = { CURRENT_VERSION = 6, MIGRATIONS = {}, fixes = {} }
 ns.Database = Database
 
 -- Colecciones cuyo contenido decide el usuario: nunca se mezclan con los valores por defecto.
@@ -12,11 +12,13 @@ local ANCHOR_POINTS = {
   TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
   RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true,
 }
--- Iconos de auras: una esquina dentro de la barra o un lado por fuera de ella (ver Auras/Containers.lua).
+-- Iconos de auras: uno de los nueve puntos dentro de la barra o un lado por fuera (Auras/Containers.lua).
 local AURA_POSITIONS = {
-  TOPLEFT = true, TOPRIGHT = true, BOTTOMLEFT = true, BOTTOMRIGHT = true,
+  TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true, RIGHT = true,
+  BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true,
   ABOVE = true, BELOW = true, OUTSIDE_LEFT = true, OUTSIDE_RIGHT = true,
 }
+Database.AURA_POSITIONS = AURA_POSITIONS
 
 -- Valores permitidos por nombre de campo (perfil y estilos, ver Core/StyleData.lua).
 Database.ENUMS = {
@@ -26,8 +28,8 @@ Database.ENUMS = {
   mode = { NONE = true, DEFICIT = true, PERCENT = true, CURRENT = true, CURRENT_MAX = true, CURRENT_PERCENT = true },
   outline = { NONE = true, OUTLINE = true, THICKOUTLINE = true },
   point = ANCHOR_POINTS,
-  hotsPoint = AURA_POSITIONS,
-  debuffsPoint = AURA_POSITIONS,
+  position = AURA_POSITIONS,
+  grow = { LEFT = true, RIGHT = true },
   dispelMode = { RING = true, BAR = true, BOTH = true },
 }
 
@@ -461,6 +463,16 @@ Database.MIGRATIONS[4] = function(db)
       for _, key in ipairs({ "name", "health", "status" }) do
         ns.StyleData.RecenterLeftovers(style.text[key])
       end
+    end
+  end
+end
+
+-- Versión 5 → 6: HoTs y debuffs pasan de una esquina y un tamaño común a su propio grupo (posición,
+-- desplazamiento, tamaño y dirección); el aviso de buff que falta también se puede colocar.
+Database.MIGRATIONS[5] = function(db)
+  for _, style in pairs(type(db.styles) == "table" and db.styles or {}) do
+    if type(style) == "table" then
+      ns.StyleData.UpgradeAuras(style)
     end
   end
 end

@@ -47,7 +47,7 @@ function MissingBuffs:Resolve()
         if groupName then
           names[#names + 1] = groupName
         end
-        resolved[#resolved + 1] = { label = name, names = names, targets = entry.targets }
+        resolved[#resolved + 1] = { label = name, names = names, targets = entry.targets, icon = ns.Spells:GetIcon(entry.spellID) }
       end
     end
   end
@@ -107,13 +107,24 @@ end
 
 function MissingBuffs:Render(button)
   local missing = button.healsilusMissing
-  button.healsilus.missingMark:SetShown(missing ~= nil and #missing > 0 and not MissingBuffs.InCombat())
+  local shown = missing ~= nil and #missing > 0 and not MissingBuffs.InCombat()
+  ns.UnitButton.ShowMissing(button.healsilus, shown, shown and MissingBuffs:IconOf(missing[1]) or nil)
   if ns.ClickCast and ns.ClickCast.SetBuffMacro then
     ns.ClickCast:SetBuffMacro(button, MissingBuffs.BuffMacro(missing))
   end
   if ns.UnitButton and ns.UnitButton.UpdateColor and button.unit then
     ns.UnitButton:UpdateColor(button)
   end
+end
+
+-- Icono del buff vigilado con ese nombre (el primero que falta se muestra en la barra).
+function MissingBuffs:IconOf(label)
+  for _, entry in ipairs(self.resolved) do
+    if entry.label == label then
+      return entry.icon
+    end
+  end
+  return nil
 end
 
 function MissingBuffs:Clear(button)
@@ -220,7 +231,7 @@ function MissingBuffs:HideAllMarks()
   end
   for button in pairs(ns.UnitButton.buttons) do
     if button.healsilus then
-      button.healsilus.missingMark:SetShown(false)
+      ns.UnitButton.ShowMissing(button.healsilus, false)
     end
   end
 end

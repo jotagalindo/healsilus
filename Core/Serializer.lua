@@ -250,6 +250,8 @@ function Serializer.ImportStyle(text)
   if style == nil then
     return nil, failure
   end
+  -- Estilos exportados por versiones anteriores: se pasan al formato actual antes de validar.
+  ns.StyleData.UpgradeAuras(style)
   local valid, field = ns.StyleData.ValidateStyle(style)
   if not valid then
     return nil, "invalid field: " .. field
