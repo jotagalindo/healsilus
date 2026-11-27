@@ -107,6 +107,9 @@ local function FakeRegion()
   function region:SetAtlas(atlas)
     self.atlas = atlas
   end
+  function region:SetTextColor(red, green, blue, alpha)
+    self.textColor = { red, green, blue, alpha }
+  end
   return region
 end
 
@@ -342,6 +345,47 @@ describe("UnitButton health text", function()
     assertEquals(party.healsilus.healthText.text, "75%")
     assertEquals(party.healsilusTextMode, "PERCENT")
     assertEquals(ns.Diagnostics.errors[1].context, "UnitButton:HealthNumberText")
+  end)
+
+  it("lets the client hide a secret deficit at full health with a color curve", function()
+    local ns, environment, world = LoadUnitButton()
+    InstallCurves(environment)
+    -- La curva de visibilidad devuelve un color con el alfa que tocaría a esa vida (aquí, llena).
+    environment.UnitHealthPercent = function(_, usePredicted, curve)
+      if curve == ns.Curves.deficitVisibility then
+        assertEquals(usePredicted, false)
+        return { GetRGBA = function()
+          return 1, 1, 1, 0
+        end }
+      end
+      return 100
+    end
+    environment.AbbreviateLargeNumbers = function()
+      return "0"
+    end
+    world.missing = Stubs.MakeSecret()
+    local party = FakeButton("party1")
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.text, "-0")
+    assertEquals(party.healsilus.healthText.textColor, { 1, 1, 1, 0 })
+    ns.Styles.active.text.health.mode = "PERCENT"
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.textColor, { 1, 1, 1, 1 })
+  end)
+
+  it("records once and keeps the text visible if the client refuses the fade", function()
+    local ns, environment, world = LoadUnitButton()
+    InstallCurves(environment)
+    environment.AbbreviateLargeNumbers = function()
+      return "0"
+    end
+    world.missing = Stubs.MakeSecret()
+    local party = FakeButton("party1")
+    ns.UnitButton:UpdateHealthText(party)
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.textColor, { 1, 1, 1, 1 })
+    assertEquals(#ns.Diagnostics.errors, 1)
+    assertEquals(ns.Diagnostics.errors[1].context, "UnitButton:DeficitFade")
   end)
 
   it("hides percent text when curves are unavailable", function()

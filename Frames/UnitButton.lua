@@ -305,6 +305,8 @@ function UnitButton:UpdateHealthText(button)
     text:SetText("")
     return
   end
+  -- Solo el déficit secreto se vuelve transparente a vida llena; el resto de textos, siempre opacos.
+  text:SetTextColor(1, 1, 1, 1)
   local unit = button.unit
   local percentText
   if mode == "PERCENT" or mode == "CURRENT_PERCENT" then
@@ -326,6 +328,9 @@ function UnitButton:UpdateHealthText(button)
       return
     end
     text:SetText("-" .. abbreviated)
+    if ns.IsSecret(missing) then
+      self:FadeDeficitWhenFull(button)
+    end
     return
   end
   -- Abreviar y unir textos secretos va protegido: si el cliente lo rechaza, la barra pasa a porcentaje.
@@ -335,6 +340,23 @@ function UnitButton:UpdateHealthText(button)
     return
   end
   text:SetText(result)
+end
+
+-- Con la vida secreta no se sabe si falta algo: el color del texto sale de una curva que el cliente
+-- evalúa con la vida (sin curación entrante) y lo deja transparente cuando la unidad está a tope.
+-- Si el cliente no lo permite, se anota una vez en /hs diag y se deja de intentar.
+function UnitButton:FadeDeficitWhenFull(button)
+  if self.deficitFadeFailed or not ns.Curves.IsSupported() then
+    return
+  end
+  local ok, failure = pcall(function()
+    local color = UnitHealthPercent(button.unit, false, ns.Curves:DeficitVisibility())
+    button.healsilus.healthText:SetTextColor(color:GetRGBA())
+  end)
+  if not ok then
+    self.deficitFadeFailed = true
+    ns.RecordError("UnitButton:DeficitFade", failure)
+  end
 end
 
 -- Texto de los modos con número de vida (CURRENT, CURRENT_MAX, CURRENT_PERCENT).

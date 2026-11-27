@@ -40,6 +40,23 @@ function Curves:HealthColor(bar)
   return curve
 end
 
+-- Visibilidad del texto de déficit: blanco opaco por debajo del 100 % de vida y transparente al 100 %.
+-- La vida en Forever suele ser secreta (también fuera de combate) y no se puede comparar con "llena":
+-- con esta curva es el propio cliente quien oculta el "-0" de una unidad a tope.
+local FULL_HEALTH_START = 0.999
+
+function Curves:DeficitVisibility()
+  if not self.deficitVisibility then
+    local curve = C_CurveUtil.CreateColorCurve()
+    curve:SetType(Enum.LuaCurveType.Linear)
+    curve:AddPoint(0, CreateColor(1, 1, 1, 1))
+    curve:AddPoint(FULL_HEALTH_START, CreateColor(1, 1, 1, 1))
+    curve:AddPoint(1, CreateColor(1, 1, 1, 0))
+    self.deficitVisibility = curve
+  end
+  return self.deficitVisibility
+end
+
 function Curves:Percent()
   if not self.percent then
     local curve = C_CurveUtil.CreateCurve()
