@@ -4,7 +4,7 @@ local addonName, ns = ...
 
 ns.name = addonName
 -- Debe coincidir con "## Version" de Healsilus.toc (lo comprueba tests/test_init.lua).
-ns.version = "0.0.1"
+ns.version = "0.0.2"
 -- Carpeta de las texturas propias (logo e iconos de la ventana), con el nombre real de la carpeta.
 ns.MEDIA_PATH = "Interface\\AddOns\\" .. tostring(addonName) .. "\\Media\\"
 

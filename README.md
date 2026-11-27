@@ -2,22 +2,27 @@
 
 Marcos de curación con click-casting (estilo HealBot) para **World of Warcraft: Forever**, hechos desde cero para las restricciones de addons de la arquitectura Midnight (valores secretos).
 
-> **Estado: beta (v0.0.1).** Las pruebas offline pasan, pero falta la verificación en el juego ([checklist](docs/testing/in-game-checklist.md)). Si algo falla, abre un issue con la salida de `/hs diag`.
+> **Estado: beta (v0.0.2).** Las pruebas offline pasan, pero falta la verificación en el juego ([checklist](docs/testing/in-game-checklist.md)). Si algo falla, abre un issue con la salida de `/hs diag`.
 
 ![Boceto de los marcos](docs/images/frames-mockup.svg)
 
 ## Instalación
 
-1. Descarga `Healsilus-0.0.1.zip` de la [release v0.0.1](https://github.com/jotagalindo/healsilus/releases/tag/v0.0.1).
+1. Descarga `Healsilus-0.0.2.zip` de la [release v0.0.2](https://github.com/jotagalindo/healsilus/releases/tag/v0.0.2).
 2. Descomprímelo en `World of Warcraft\_forever_\Interface\AddOns` (debe quedar la carpeta `AddOns\Healsilus`).
 3. Desactiva HealBot para que no compitan por los clics y entra al juego: `/hs`.
+
+Si actualizas desde otra versión, **cierra y abre el juego** (no basta `/reload`): las texturas nuevas de `Media` solo se cargan al arrancar.
 
 ## Qué hace
 
 - Click-casting: botón del ratón + Alt/Ctrl/Shift → hechizo (con rango opcional), macro, objetivo o menú.
 - Barras de grupo y banda (10/20/40), bloque de tanques, mascotas, objetivo y foco amistosos.
 - Curación entrante y escudos, rango, aggro, muerto y desconectado.
-- Tus HoTs con cuenta atrás, debuffs con el color del tipo de dispel y buffs tuyos que faltan.
+- Tus HoTs con cuenta atrás, debuffs con el color del tipo de dispel y buffs tuyos que faltan (con su icono). HoTs, debuffs y buff que falta se colocan donde quieras: dentro o fuera de la barra, con desplazamiento, tamaño y dirección.
+- Barra de maná, ira o energía, eligiendo qué recursos se ven. Opacidad fuera de alcance y con la vida llena.
+- Plantillas de disposición de la barra: dos propuestas sin solapes ("Sanador" y "Banda compacta") y las tuyas guardadas.
+- Modo mover: arrastras cada bloque entero y se pega a los demás con guías de alineación (imán), con rejilla opcional.
 - Perfiles por clase, por personaje y por especialización. Exportar e importar.
 - **Estilos (skins)** compartidos por toda la cuenta: tamaño y disposición, textura (también de LibSharedMedia), fondo, colores de la curva de vida, fuente y posición de cada texto, esquinas de los iconos y forma del aviso de dispel. Cuatro de serie, y cambio automático según estés solo, en grupo o en banda de 10/20/40. Se exportan e importan aparte.
 - Perfil de serie para druida.
@@ -41,6 +46,8 @@ Luego, en el juego, `/reload` y `/hs`.
 | `/hs` | Abre la configuración |
 | `/hs diag` | Diagnóstico del cliente y del addon |
 | `/hs lock` | Bloquea o desbloquea los marcos para moverlos |
+| `/hs move` | Modo mover (bloques de ejemplo, imán y rejilla) |
+| `/hs toggle` | Activa o desactiva Healsilus en este personaje |
 | `/hs preview 5` (10, 20, 40) | Vista previa con miembros falsos; `/hs preview` la cierra |
 | `/hs debug` | Mensajes de depuración |
 | `/hs minimap` | Muestra u oculta el botón del minimapa (clic izquierdo: configuración; derecho: bloquear marcos) |

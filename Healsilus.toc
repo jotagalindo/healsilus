@@ -4,7 +4,7 @@
 ## Notes-esES: Marcos de curación con click-casting hechos para las restricciones de addons de WoW Forever.
 ## Notes-esMX: Marcos de curación con click-casting hechos para las restricciones de addons de WoW Forever.
 ## Author: jotagalindo
-## Version: 0.0.1
+## Version: 0.0.2
 ## SavedVariables: HealsilusDB
 ## IconTexture: Interface\AddOns\Healsilus\Media\Logo
 ## AddonCompartmentFunc: Healsilus_OnAddonCompartmentClick
