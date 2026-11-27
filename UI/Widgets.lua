@@ -242,11 +242,17 @@ local function PaintSidebarTab(tab)
   tab.background:SetShown(tab.selected == true or tab.hovered == true)
   tab.marker:SetShown(tab.selected == true)
   tab.text:SetTextColor(ColorValues((tab.selected or tab.hovered) and THEME.text or THEME.muted))
-  tab.icon:SetDesaturated(not (tab.selected or tab.hovered))
-  tab.icon:SetAlpha((tab.selected or tab.hovered) and 1 or 0.7)
+  local iconColor = THEME.muted
+  if tab.selected then
+    iconColor = THEME.accent
+  elseif tab.hovered then
+    iconColor = THEME.text
+  end
+  tab.icon:SetVertexColor(ColorValues(iconColor))
 end
 
--- Pestaña de la barra lateral: icono y nombre; la elegida lleva fondo verde suave y una raya de acento.
+-- Pestaña de la barra lateral: icono (blanco, de Media/Icons, que se tiñe) y nombre; la elegida lleva
+-- fondo verde suave, una raya de acento y el icono en verde.
 function Widgets.SidebarTab(parent, text, icon, width, onClick)
   local tab = CreateFrame("Button", nil, parent)
   tab:SetSize(width, 32)
@@ -260,7 +266,6 @@ function Widgets.SidebarTab(parent, text, icon, width, onClick)
   tab.icon:SetSize(18, 18)
   tab.icon:SetPoint("LEFT", tab, "LEFT", 12, 0)
   tab.icon:SetTexture(icon)
-  tab.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   tab.text:SetPoint("LEFT", tab.icon, "RIGHT", 10, 0)
   tab.text:SetPoint("RIGHT", tab, "RIGHT", -6, 0)

@@ -93,7 +93,7 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Al pasar el ratón por botones, casillas, colores y pestañas se ilumina el borde o el fondo. "Mover marcos" va en verde; "Desactivar Healsilus" en rojo (y "Activar Healsilus" en verde cuando está apagado).
 - [ ] Casillas cuadradas con relleno verde al marcarlas; pulsar el texto de la casilla también la cambia.
 - [ ] Deslizadores: tramo verde hasta el tirador y el valor en verde a la derecha. Desplegables con el texto a la izquierda y una flecha hacia abajo.
-- [ ] Ninguna pestaña se sale de la tarjeta ni se pisa con el título de la pestaña. Si algún icono sale como un cuadrado verde, apunta cuál.
+- [ ] Ninguna pestaña se sale de la tarjeta ni se pisa con el título de la pestaña.
 - [ ] La barra del modo mover y la ventana de importar/exportar tienen el mismo estilo.
 
 ## 15. Barra de maná / energía
@@ -119,3 +119,9 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] "Mover marcos": cada bloque tiene un recuadro verde con su nombre; se arrastra el bloque entero (ya no hay cuadrados azules).
 - [ ] Arrastra un bloque junto a otro: se pega mientras lo arrastras y una línea verde marca el borde o centro con el que se alinea. Con Mayús pulsada se mueve libre.
 - [ ] La barra de arriba: "Imán: 12 px" cambia la distancia (o lo apaga) y "Mover juntos" arrastra todos los bloques a la vez.
+
+## 20. Iconos propios
+- [ ] **Cierra y vuelve a abrir el juego** tras actualizar (las texturas nuevas no se cargan con `/reload`).
+- [ ] La barra lateral muestra el logo nuevo (cruz blanca con una hoja sobre un cuadrado verde) y ocho iconos de línea: ratón, barras, paleta, hoja, gota tachada, escudo, capas y persona. Grises; claros al pasar el ratón; verdes en la pestaña elegida.
+- [ ] El botón del minimapa y la lista de addons (pantalla de personajes) usan el mismo logo; con Healsilus desactivado, el del minimapa sale en gris.
+- [ ] Si algún icono sale como un cuadrado verde o negro, la carpeta `Media` no está dentro de `AddOns\Healsilus`: dímelo.

@@ -8,7 +8,7 @@ local L = ns.L
 local MinimapButton = {}
 ns.MinimapButton = MinimapButton
 
-local ICON = "Interface\\Icons\\Spell_Nature_HealingTouch"
+local ICON = ns.MEDIA_PATH .. "Logo"
 local EDGE_OFFSET = 10
 local SQUARE_FACTOR = math.sqrt(2)
 
@@ -94,7 +94,6 @@ function MinimapButton:Create()
   icon:SetTexture(ICON)
   icon:SetSize(17, 17)
   icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -6)
-  icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
   self.icon = icon
   local border = button:CreateTexture(nil, "OVERLAY")
   border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")

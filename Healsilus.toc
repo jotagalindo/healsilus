@@ -6,7 +6,7 @@
 ## Author: jotagalindo
 ## Version: 0.0.1
 ## SavedVariables: HealsilusDB
-## IconTexture: Interface\Icons\Spell_Nature_HealingTouch
+## IconTexture: Interface\AddOns\Healsilus\Media\Logo
 ## AddonCompartmentFunc: Healsilus_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: Healsilus_OnAddonCompartmentEnter
 ## AddonCompartmentFuncOnLeave: Healsilus_OnAddonCompartmentLeave

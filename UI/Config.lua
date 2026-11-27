@@ -22,18 +22,13 @@ local HEIGHT = HEADER_HEIGHT + CARD_HEIGHT + MARGIN
 local TAB_HEIGHT, TAB_GAP, TABS_TOP = 32, 4, -70
 Config.SIZE = { width = WIDTH, height = HEIGHT, content = { CONTENT_WIDTH, CONTENT_HEIGHT } }
 
-local LOGO = "Interface\\Icons\\Spell_Nature_HealingTouch"
--- Icono de cada pestaña en la barra lateral; una pestaña sin icono propio lleva el logo.
-Config.TAB_ICONS = {
-  clicks = "Interface\\Icons\\Spell_Holy_FlashHeal",
-  frames = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02",
-  appearance = "Interface\\Icons\\INV_Misc_Gem_Variety_01",
-  auras = "Interface\\Icons\\Spell_Nature_Rejuvenation",
-  debuffs = "Interface\\Icons\\Spell_Nature_NullifyPoison",
-  buffs = "Interface\\Icons\\Spell_Nature_Regeneration",
-  styles = "Interface\\Icons\\INV_Scroll_03",
-  profiles = "Interface\\Icons\\INV_Misc_Head_Human_01",
-}
+-- Logo e iconos propios (Media/, generados desde tools/icons con build.py). Los de las pestañas son
+-- blancos y la barra lateral los tiñe: gris, claro al pasar el ratón y verde la pestaña elegida.
+local LOGO = ns.MEDIA_PATH .. "Logo"
+Config.TAB_ICONS = {}
+for _, key in ipairs({ "clicks", "frames", "appearance", "auras", "debuffs", "buffs", "styles", "profiles" }) do
+  Config.TAB_ICONS[key] = ns.MEDIA_PATH .. "Icons\\" .. key
+end
 
 local function ClassName(classToken)
   return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classToken]) or tostring(classToken)
@@ -79,13 +74,9 @@ local function BuildSidebar(frame)
   edge:SetWidth(1)
 
   local logo = sidebar:CreateTexture(nil, "ARTWORK")
-  logo:SetSize(30, 30)
-  logo:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 14, -16)
+  logo:SetSize(34, 34)
+  logo:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 12, -14)
   logo:SetTexture(LOGO)
-  logo:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-  local logoBorder = Widgets.Line(sidebar, THEME.accent, "BORDER")
-  logoBorder:SetPoint("TOPLEFT", logo, "TOPLEFT", -1, 1)
-  logoBorder:SetPoint("BOTTOMRIGHT", logo, "BOTTOMRIGHT", 1, -1)
   local title = Widgets.Label(sidebar, L.CONFIG_TITLE, "GameFontNormalLarge")
   title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, -1)
   local badge = Widgets.Label(sidebar, "BETA", "GameFontHighlightSmall")
@@ -169,7 +160,7 @@ function Config:Build()
   local content = self:BuildCard(frame)
   for position, key in ipairs(self.tabOrder) do
     local tab = self.tabs[key]
-    tab.button = Widgets.SidebarTab(sidebar, tab.label, self.TAB_ICONS[key] or LOGO, SIDEBAR_WIDTH - 16, function()
+    tab.button = Widgets.SidebarTab(sidebar, tab.label, self.TAB_ICONS[key] or ns.MEDIA_PATH .. "Icons\\frames", SIDEBAR_WIDTH - 16, function()
       Config:SelectTab(key)
     end)
     tab.button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 8, TABS_TOP - (position - 1) * (TAB_HEIGHT + TAB_GAP))
