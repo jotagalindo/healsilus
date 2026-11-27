@@ -9,7 +9,23 @@ ns.UnitButton = UnitButton
 local UNIT_EVENTS = {
   "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_CONNECTION", "UNIT_FLAGS",
   "UNIT_THREAT_SITUATION_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_IN_RANGE_UPDATE", "UNIT_HEAL_PREDICTION",
-  "UNIT_ABSORB_AMOUNT_CHANGED", "UNIT_AURA",
+  "UNIT_ABSORB_AMOUNT_CHANGED", "UNIT_AURA", "UNIT_POWER_UPDATE", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER",
+}
+
+-- Margen de las barras dentro del botón y hueco entre la barra de vida y la de maná/energía.
+local BAR_INSET = 2
+local POWER_GAP = 1
+-- Opacidad del fondo de la barra de maná/energía (su mismo color, apagado).
+local POWER_BACKGROUND_ALPHA = 0.25
+
+-- Colores por tipo de recurso si el cliente no trae PowerBarColor (los mismos que usa Blizzard).
+UnitButton.POWER_COLORS = {
+  MANA = { r = 0, g = 0, b = 1 },
+  RAGE = { r = 1, g = 0, b = 0 },
+  FOCUS = { r = 1, g = 0.5, b = 0.25 },
+  ENERGY = { r = 1, g = 1, b = 0 },
+  RUNIC_POWER = { r = 0, g = 0.82, b = 1 },
+  LUNAR_POWER = { r = 0.3, g = 0.52, b = 0.9 },
 }
 
 local AGGRO_COLOR = { 0.89, 0.29, 0.29 }
@@ -95,12 +111,23 @@ function UnitButton:BuildVisuals(frame)
   visual.background = background
 
   local healthBar = CreateFrame("StatusBar", nil, frame)
-  healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 2, -2)
-  healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
   healthBar:SetFrameLevel(frame:GetFrameLevel() + 2)
   healthBar:SetMinMaxValues(0, 1)
   healthBar:SetValue(1)
   visual.healthBar = healthBar
+  visual.owner = frame
+
+  -- Barra de maná/energía pegada abajo; ShowPowerBar decide si se ve y sube la de vida para dejarle sitio.
+  local powerBar = CreateFrame("StatusBar", nil, frame)
+  powerBar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", BAR_INSET, BAR_INSET)
+  powerBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -BAR_INSET, BAR_INSET)
+  powerBar:SetFrameLevel(frame:GetFrameLevel() + 2)
+  powerBar:SetMinMaxValues(0, 1)
+  powerBar:SetValue(1)
+  local powerBackground = powerBar:CreateTexture(nil, "BACKGROUND")
+  powerBackground:SetAllPoints(powerBar)
+  visual.powerBar, visual.powerBackground = powerBar, powerBackground
+  UnitButton.ShowPowerBar(visual, false, 0)
 
   local textFrame = CreateFrame("Frame", nil, frame)
   textFrame:SetAllPoints(healthBar)
@@ -146,6 +173,7 @@ function UnitButton:ApplyStyle(frame)
   local style = Style()
   local visual = frame.healsilus
   visual.healthBar:SetStatusBarTexture(ns.Media.Texture(style.bar.texture))
+  visual.powerBar:SetStatusBarTexture(ns.Media.Texture(style.bar.texture))
   local background = style.bar.background
   visual.background:SetColorTexture(background.r, background.g, background.b, background.a)
   local fontPath = ns.Media.Font(style.text.font)
@@ -169,6 +197,48 @@ function UnitButton.PlaceAggroDots(visual, aggro)
     dot:SetSize(aggro.size, aggro.size)
     dot:SetPoint(aggro.point, visual.healthBar, aggro.point, aggro.x + (position - 1) * step, aggro.y)
   end
+end
+
+-- Coloca la barra de vida y la de maná/energía: con la de maná visible, la de vida termina
+-- thickness + 1 px más arriba. Solo se recolocan si cambia algo.
+function UnitButton.ShowPowerBar(visual, shown, thickness)
+  if visual.powerShown == shown and visual.powerThickness == thickness then
+    return
+  end
+  visual.powerShown, visual.powerThickness = shown, thickness
+  local bottom = BAR_INSET
+  if shown then
+    bottom = BAR_INSET + thickness + POWER_GAP
+    visual.powerBar:SetHeight(thickness)
+  end
+  visual.healthBar:ClearAllPoints()
+  visual.healthBar:SetPoint("TOPLEFT", visual.owner, "TOPLEFT", BAR_INSET, -BAR_INSET)
+  visual.healthBar:SetPoint("BOTTOMRIGHT", visual.owner, "BOTTOMRIGHT", -BAR_INSET, bottom)
+  visual.powerBar:SetShown(shown)
+end
+
+-- Con "solo sanadores" la barra sale únicamente con el rol de sanador (un rol secreto llega como nil).
+function UnitButton.WantsPower(style, role)
+  local power = style.power
+  if not power.show then
+    return false
+  end
+  if power.healersOnly then
+    return role == "HEALER"
+  end
+  return true
+end
+
+-- token: "MANA", "RAGE", "ENERGY"… o nil si no se sabe (entonces, color de maná).
+function UnitButton.PowerColor(token)
+  local color = token and ((PowerBarColor and PowerBarColor[token]) or UnitButton.POWER_COLORS[token])
+  return color or UnitButton.POWER_COLORS.MANA
+end
+
+function UnitButton.PaintPower(visual, token)
+  local color = UnitButton.PowerColor(token)
+  visual.powerBar:GetStatusBarTexture():SetVertexColor(color.r, color.g, color.b)
+  visual.powerBackground:SetColorTexture(color.r, color.g, color.b, POWER_BACKGROUND_ALPHA)
 end
 
 -- role: "TANK", "HEALER", "DAMAGER" o nil. Lo usan las barras reales y la vista previa.
@@ -260,6 +330,7 @@ function UnitButton:UpdateAll(button)
   self:UpdateRange(button)
   self:UpdateThreat(button)
   self:UpdateRole(button)
+  self:UpdatePower(button)
   ns.Prediction:Update(button)
   ns.MissingBuffs:Evaluate(button)
 end
@@ -456,13 +527,44 @@ function UnitButton:UpdateThreat(button)
   UnitButton.ShowThreat(button.healsilus, status, Style())
 end
 
--- El rol también puede ser secreto (identidad restringida): entonces no se muestra.
-function UnitButton:UpdateRole(button)
-  local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(button.unit)
+-- El rol también puede ser secreto (identidad restringida): entonces cuenta como desconocido (nil).
+local function ReadableRole(unit)
+  local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
   if ns.IsSecret(role) then
-    role = nil
+    return nil
   end
-  UnitButton.ShowRole(button.healsilus, role, Style())
+  return role
+end
+
+function UnitButton:UpdateRole(button)
+  UnitButton.ShowRole(button.healsilus, ReadableRole(button.unit), Style())
+end
+
+-- Maná, ira, energía…: el tipo decide el color (si es secreto, color de maná) y los valores, que pueden
+-- ser secretos en combate, van directos a la barra sin compararlos.
+function UnitButton:UpdatePower(button)
+  local visual = button.healsilus
+  local style = Style()
+  local wanted = UnitButton.WantsPower(style, ReadableRole(button.unit))
+  UnitButton.ShowPowerBar(visual, wanted, style.power.thickness)
+  if not wanted then
+    return
+  end
+  local _, token = UnitPowerType(button.unit)
+  if ns.IsSecret(token) then
+    token = nil
+  end
+  UnitButton.PaintPower(visual, token)
+  self:UpdatePowerValue(button)
+end
+
+function UnitButton:UpdatePowerValue(button)
+  local visual = button.healsilus
+  if not visual.powerShown then
+    return
+  end
+  visual.powerBar:SetMinMaxValues(0, UnitPowerMax(button.unit))
+  visual.powerBar:SetValue(UnitPower(button.unit))
 end
 
 -- Comprueba en un marco de prueba que SetAlphaFromBoolean existe y aplica los dos valores.
@@ -537,6 +639,16 @@ local HANDLERS = {
     ns.MissingBuffs:MarkDirty(button)
     ns.DispelOverride:MarkDirty(button)
   end,
+  UNIT_POWER_UPDATE = function(button)
+    UnitButton:UpdatePowerValue(button)
+  end,
+  UNIT_MAXPOWER = function(button)
+    UnitButton:UpdatePowerValue(button)
+  end,
+  -- Cambia el tipo de recurso (un druida que pasa a felino usa energía; a oso, ira).
+  UNIT_DISPLAYPOWER = function(button)
+    UnitButton:UpdatePower(button)
+  end,
 }
 
 function UnitButton:OnUnitEvent(button, event)
@@ -585,10 +697,12 @@ function UnitButton:Initialize()
   ns.Events:RegisterGameEvent("PLAYER_FOCUS_CHANGED", function()
     UnitButton:UpdateUnitToken("focus")
   end)
+  -- El rol decide el icono y, con "solo sanadores", si se ve la barra de maná.
   ns.Events:RegisterGameEvent("PLAYER_ROLES_ASSIGNED", function()
     for button in pairs(UnitButton.buttons) do
       if button.unit then
         UnitButton:UpdateRole(button)
+        UnitButton:UpdatePower(button)
       end
     end
   end)

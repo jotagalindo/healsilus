@@ -1,6 +1,6 @@
--- Pestaña Aspecto: fuente, fondo y colores de vida de la barra; tamaño, contorno y posición de cada
--- texto (nombre, vida, estado); icono de rol y aviso de aggro. Edita el estilo activo, que la cabecera
--- de la ventana indica.
+-- Pestaña Aspecto: fuente, fondo y colores de vida de la barra y la barra de maná/energía; tamaño,
+-- contorno y posición de cada texto (nombre, vida, estado); icono de rol y aviso de aggro. Edita el
+-- estilo activo, que la cabecera de la ventana indica.
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
@@ -126,6 +126,14 @@ function TabAppearance.Build(panel)
     Widgets.StyleGetter("bar", "injuredAt"), Widgets.StyleSetter("bar", "injuredAt"), 0.05, "%.2f"), 48)
   bar:Add(RangeSlider(panel, L.APPEARANCE_CRITICAL_AT, "criticalAt",
     Widgets.StyleGetter("bar", "criticalAt"), Widgets.StyleSetter("bar", "criticalAt"), 0.05, "%.2f"), 48)
+  -- Barra de maná, ira o energía debajo de la de vida.
+  bar:Add(Widgets.Label(panel, L.APPEARANCE_POWER_TITLE, "GameFontNormal"), 22)
+  bar:Add(Widgets.Checkbox(panel, L.APPEARANCE_POWER_SHOW, Widgets.StyleGetter("power", "show"),
+    Widgets.StyleSetter("power", "show")), 28)
+  bar:Add(Widgets.Checkbox(panel, L.APPEARANCE_POWER_HEALERS, Widgets.StyleGetter("power", "healersOnly"),
+    Widgets.StyleSetter("power", "healersOnly")), 28)
+  bar:Add(RangeSlider(panel, L.APPEARANCE_POWER_THICKNESS, "thickness", Widgets.StyleGetter("power", "thickness"),
+    Widgets.StyleSetter("power", "thickness"), 1), 48)
 
   local texts = Widgets.Stack(panel, 320, 0)
   -- Lo primero de la columna: qué número de vida se ve en la barra (lo más buscado).

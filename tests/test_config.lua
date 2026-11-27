@@ -93,8 +93,8 @@ describe("Config", function()
     enabled = false
     ns.Config:Refresh()
     assertEquals(ns.Config.toggleButton.variant, "primary")
-    -- Las pestañas siguen teniendo el área de 780 × 444 para la que se maquetaron.
-    assertEquals(ns.Config.SIZE.content, { 780, 444 })
+    -- Área de las pestañas: cabe la columna de la barra en Aspecto (unos 455 px de alto).
+    assertEquals(ns.Config.SIZE.content, { 780, 480 })
   end)
 
   it("registers a confirmation dialog that runs the accepted action", function()

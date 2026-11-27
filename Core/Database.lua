@@ -56,6 +56,8 @@ Database.RANGES = {
   size = { 6, 24 },
   x = { -60, 60 },
   y = { -60, 60 },
+  -- Alto (px) de la barra de maná/energía de los estilos.
+  thickness = { 2, 12 },
   -- Umbrales de la curva de vida (fracción de vida).
   injuredAt = { 0.02, 1 },
   criticalAt = { 0, 0.98 },

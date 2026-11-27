@@ -447,3 +447,136 @@ describe("UnitButton status", function()
     assertNil(party.healsilusState)
   end)
 end)
+
+describe("UnitButton power bar", function()
+  local function FakeBar()
+    local bar = FakeRegion()
+    bar.texture = {}
+    function bar.texture:SetVertexColor(red, green, blue)
+      self.color = { red, green, blue }
+    end
+    function bar:GetStatusBarTexture()
+      return self.texture
+    end
+    function bar:SetMinMaxValues(minimum, maximum)
+      self.range = { minimum, maximum }
+    end
+    function bar:SetValue(value)
+      self.value = value
+    end
+    function bar:SetHeight(height)
+      self.height = height
+    end
+    function bar:ClearAllPoints()
+      self.points = {}
+    end
+    function bar:SetPoint(point, relativeTo, relativePoint, x, y)
+      self.points[point] = { x, y }
+    end
+    return bar
+  end
+
+  local function PowerButton(unit)
+    local button = FakeButton(unit)
+    local visual = button.healsilus
+    visual.owner = button
+    visual.healthBar, visual.powerBar = FakeBar(), FakeBar()
+    visual.powerBackground = {}
+    function visual.powerBackground:SetColorTexture(red, green, blue, alpha)
+      self.color = { red, green, blue, alpha }
+    end
+    return button
+  end
+
+  local function LoadPower()
+    local ns, environment, world = LoadUnitButton()
+    world.powerToken, world.power, world.powerMax, world.role = "RAGE", 40, 100, "DAMAGER"
+    environment.UnitPowerType = function()
+      return 1, world.powerToken
+    end
+    environment.UnitPower = function()
+      return world.power
+    end
+    environment.UnitPowerMax = function()
+      return world.powerMax
+    end
+    environment.UnitGroupRolesAssigned = function()
+      return world.role
+    end
+    return ns, environment, world
+  end
+
+  it("shows the unit's resource in its color below a shorter health bar", function()
+    local ns = LoadPower()
+    local party = PowerButton("party1")
+    ns.UnitButton:UpdatePower(party)
+    local visual = party.healsilus
+    assertTrue(visual.powerBar.shown)
+    assertEquals(visual.powerBar.range, { 0, 100 })
+    assertEquals(visual.powerBar.value, 40)
+    assertEquals(visual.powerBar.height, 4)
+    assertEquals(visual.powerBar.texture.color, { 1, 0, 0 })
+    assertEquals(visual.powerBackground.color, { 1, 0, 0, 0.25 })
+    -- La barra de vida acaba 2 + 4 + 1 px por encima del borde de abajo.
+    assertEquals(visual.healthBar.points.BOTTOMRIGHT, { -2, 7 })
+    assertEquals(visual.healthBar.points.TOPLEFT, { 2, -2 })
+  end)
+
+  it("hands secret values straight to the bar and uses the mana color for a secret type", function()
+    local ns, _, world = LoadPower()
+    local party = PowerButton("party1")
+    world.power, world.powerMax, world.powerToken = Stubs.MakeSecret(), Stubs.MakeSecret(), Stubs.MakeSecret()
+    ns.UnitButton:UpdatePower(party)
+    local visual = party.healsilus
+    assertTrue(Stubs.IsSecret(visual.powerBar.value))
+    assertTrue(Stubs.IsSecret(visual.powerBar.range[2]))
+    assertEquals(visual.powerBar.texture.color, { 0, 0, 1 })
+  end)
+
+  it("keeps the bar to healers when the style asks and gives the room back otherwise", function()
+    local ns, _, world = LoadPower()
+    local party = PowerButton("party1")
+    ns.Styles.active.power.healersOnly = true
+    ns.UnitButton:UpdatePower(party)
+    local visual = party.healsilus
+    assertFalse(visual.powerBar.shown)
+    assertEquals(visual.healthBar.points.BOTTOMRIGHT, { -2, 2 })
+    world.role = "HEALER"
+    ns.UnitButton:UpdatePower(party)
+    assertTrue(visual.powerBar.shown)
+    world.role = Stubs.MakeSecret()
+    ns.UnitButton:UpdatePower(party)
+    assertFalse(visual.powerBar.shown)
+    ns.Styles.active.power.healersOnly = false
+    ns.Styles.active.power.show = false
+    world.role = "HEALER"
+    ns.UnitButton:UpdatePower(party)
+    assertFalse(visual.powerBar.shown)
+    visual.powerBar.value = nil
+    ns.UnitButton:OnUnitEvent(party, "UNIT_POWER_UPDATE")
+    assertNil(visual.powerBar.value)
+  end)
+
+  it("follows power changes and a druid changing form", function()
+    local ns, _, world = LoadPower()
+    local party = PowerButton("party1")
+    world.powerToken = "MANA"
+    ns.UnitButton:UpdatePower(party)
+    world.power = 75
+    ns.UnitButton:OnUnitEvent(party, "UNIT_POWER_UPDATE")
+    assertEquals(party.healsilus.powerBar.value, 75)
+    world.powerToken, world.power = "ENERGY", 100
+    ns.UnitButton:OnUnitEvent(party, "UNIT_DISPLAYPOWER")
+    assertEquals(party.healsilus.powerBar.texture.color, { 1, 1, 0 })
+    assertEquals(party.healsilus.powerBar.value, 100)
+  end)
+
+  it("lets a thicker bar push the health bar further up", function()
+    local ns = LoadPower()
+    local party = PowerButton("party1")
+    ns.Styles.active.power.thickness = 8
+    ns.UnitButton:UpdatePower(party)
+    assertEquals(party.healsilus.powerBar.height, 8)
+    assertEquals(party.healsilus.healthBar.points.BOTTOMRIGHT, { -2, 11 })
+  end)
+end)

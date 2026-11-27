@@ -57,7 +57,7 @@ Bloques principales:
 | Barra entera teñida por el tipo de dispel (además del anillo) | parcial (anillo) | sí, misma técnica que HealBot | **alta** |
 | Resaltado al pasar el ratón y del objetivo actual | no | sí | **alta** |
 | Iconos de aura: ancla en 8+ posiciones, dentro/fuera, separación, crecimiento, zoom | parcial (tamaño, máximo y 8 posiciones: 4 esquinas dentro y encima/debajo/izquierda/derecha fuera) | sí (geometría del contenedor) | **alta** |
-| Barra de maná o poder (solo sanadores) | no | sí: StatusBar con UnitPower | **alta** |
+| Barra de maná o poder (solo sanadores) | sí (maná, ira, energía… con el color de cada recurso; opción «solo en los sanadores» y alto ajustable) | sí: StatusBar con UnitPower | hecho |
 | Estilos incluidos ("presets") | no | sí | **alta** |
 | Color de vida por rol, personalizado o mezcla clase+vida | no | sí *(mezcla con una curva por clase, inferido)* | media |
 | Color del nombre (clase, personalizado) | no | sí | media |

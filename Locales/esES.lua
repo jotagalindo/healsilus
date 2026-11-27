@@ -309,6 +309,10 @@ L.APPEARANCE_AGGRO_BORDER = "Borde rojo a quien tanquea"
 L.APPEARANCE_AGGRO_DOTS = "Puntos rojos (nivel de amenaza)"
 L.APPEARANCE_AGGRO_POINT = "Posición de los puntos"
 L.APPEARANCE_AGGRO_SIZE = "Tamaño de los puntos"
+L.APPEARANCE_POWER_TITLE = "Barra de maná / energía"
+L.APPEARANCE_POWER_SHOW = "Mostrar maná, ira o energía"
+L.APPEARANCE_POWER_HEALERS = "Solo en los sanadores"
+L.APPEARANCE_POWER_THICKNESS = "Alto de la barra"
 L.DIAG_THREAT = "Amenaza legible ahora: %s"
 
 -- Modo mover y activar/desactivar

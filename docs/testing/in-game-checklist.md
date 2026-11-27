@@ -95,3 +95,10 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Deslizadores: tramo verde hasta el tirador y el valor en verde a la derecha. Desplegables con el texto a la izquierda y una flecha hacia abajo.
 - [ ] Ninguna pestaña se sale de la tarjeta ni se pisa con el título de la pestaña. Si algún icono sale como un cuadrado verde, apunta cuál.
 - [ ] La barra del modo mover y la ventana de importar/exportar tienen el mismo estilo.
+
+## 15. Barra de maná / energía
+- [ ] Cada barra tiene debajo una franja fina con el recurso de esa persona: maná en azul, ira en rojo, energía en amarillo, foco en naranja (mascotas de cazador). La barra de vida queda justo encima, sin pisarse.
+- [ ] Gasta maná o ira: la franja baja y sube en tiempo real, también en combate. Si en combate se queda quieta o sale un error, pásame `/hs diag`.
+- [ ] Druida: al pasar a felino la franja se vuelve amarilla (energía), en oso roja (ira) y al volver a forma normal, azul.
+- [ ] Aspecto → "Barra de maná / energía": desmarca "Mostrar maná, ira o energía" y la franja desaparece y la vida vuelve a ocupar todo el alto. "Solo en los sanadores" la deja solo en quien tiene rol de sanador. "Alto de la barra" la hace más gruesa o fina.
+- [ ] La vista previa y el modo mover también muestran la franja en los miembros de ejemplo.

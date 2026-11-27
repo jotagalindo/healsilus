@@ -10,8 +10,9 @@ local ColorValues = Widgets.ColorValues
 local Config = { tabs = {}, tabOrder = {}, built = false, selected = nil }
 ns.Config = Config
 
--- Las pestañas se diseñaron para un área de 780 × 444; la tarjeta la rodea con su margen interior.
-local CONTENT_WIDTH, CONTENT_HEIGHT = 780, 444
+-- Área de contenido de cada pestaña (780 × 480: la columna más alta, la de la barra en Aspecto, mide
+-- unos 455 px); la tarjeta la rodea con su margen interior.
+local CONTENT_WIDTH, CONTENT_HEIGHT = 780, 480
 local SIDEBAR_WIDTH, HEADER_HEIGHT, MARGIN = 168, 60, 14
 local CARD_PADDING, CARD_TITLE_HEIGHT = 16, 34
 local CARD_WIDTH = CONTENT_WIDTH + 2 * CARD_PADDING

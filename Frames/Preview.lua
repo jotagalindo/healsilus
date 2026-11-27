@@ -8,22 +8,23 @@ local Preview = { frames = {}, count = 0, byKind = {} }
 ns.Preview = Preview
 
 -- threat: nivel de amenaza falso (3 = tanquea, 1 = mucha amenaza) para ver el borde y los puntos.
+-- power: fracción de maná/ira/energía y powerToken, su tipo (decide el color de la barra).
 local FAKE_MEMBERS = {
-  { name = "Gromash", class = "WARRIOR", role = "TANK", health = 0.62, threat = 3 },
-  { name = "Arsilus", class = "DRUID", role = "HEALER", health = 1 },
-  { name = "Velenna", class = "PRIEST", role = "HEALER", health = 0.48 },
-  { name = "Thrall", class = "SHAMAN", role = "DAMAGER", health = 0.85, missing = true },
-  { name = "Lejana", class = "MAGE", role = "DAMAGER", health = 0.7, outOfRange = true },
-  { name = "Korgan", class = "ROGUE", role = "DAMAGER", health = 0, dead = true },
-  { name = "Sylvara", class = "HUNTER", role = "DAMAGER", health = 0.93, threat = 1 },
-  { name = "Morvath", class = "WARLOCK", role = "DAMAGER", health = 0.35 },
-  { name = "Brannoc", class = "PALADIN", role = "TANK", health = 0.77 },
+  { name = "Gromash", class = "WARRIOR", role = "TANK", health = 0.62, threat = 3, power = 0.45, powerToken = "RAGE" },
+  { name = "Arsilus", class = "DRUID", role = "HEALER", health = 1, power = 0.82, powerToken = "MANA" },
+  { name = "Velenna", class = "PRIEST", role = "HEALER", health = 0.48, power = 0.31, powerToken = "MANA" },
+  { name = "Thrall", class = "SHAMAN", role = "DAMAGER", health = 0.85, missing = true, power = 0.9, powerToken = "MANA" },
+  { name = "Lejana", class = "MAGE", role = "DAMAGER", health = 0.7, outOfRange = true, power = 0.6, powerToken = "MANA" },
+  { name = "Korgan", class = "ROGUE", role = "DAMAGER", health = 0, dead = true, power = 0, powerToken = "ENERGY" },
+  { name = "Sylvara", class = "HUNTER", role = "DAMAGER", health = 0.93, threat = 1, power = 0.74, powerToken = "MANA" },
+  { name = "Morvath", class = "WARLOCK", role = "DAMAGER", health = 0.35, power = 0.55, powerToken = "MANA" },
+  { name = "Brannoc", class = "PALADIN", role = "TANK", health = 0.77, power = 0.66, powerToken = "MANA" },
 }
 
 local FAKE_PETS = {
-  { name = "Lobo", pet = true, health = 0.8 },
-  { name = "Diablillo", pet = true, health = 0.55 },
-  { name = "Tigre", pet = true, health = 1 },
+  { name = "Lobo", pet = true, health = 0.8, power = 0.7, powerToken = "FOCUS" },
+  { name = "Diablillo", pet = true, health = 0.55, power = 0.9, powerToken = "ENERGY" },
+  { name = "Tigre", pet = true, health = 1, power = 0.4, powerToken = "FOCUS" },
 }
 
 local FAKE_MAX_HEALTH = 8000
@@ -123,6 +124,13 @@ function Preview:Paint(frame, member, style)
     texture:SetVertexColor(Preview.HealthColor(member.health))
   else
     texture:SetVertexColor(ns.Media.ClassColor(member.class))
+  end
+  local showPower = ns.UnitButton.WantsPower(style, member.role)
+  ns.UnitButton.ShowPowerBar(visual, showPower, style.power.thickness)
+  if showPower then
+    ns.UnitButton.PaintPower(visual, member.powerToken)
+    visual.powerBar:SetMinMaxValues(0, 1)
+    visual.powerBar:SetValue(member.power)
   end
   visual.missingMark:SetShown(member.missing == true)
   ns.UnitButton.ShowThreat(visual, member.threat, style)

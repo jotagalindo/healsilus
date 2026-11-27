@@ -43,6 +43,9 @@ function StyleData.DefaultStyle()
     role = { show = false, showDamager = true, size = 12, point = "LEFT", x = 3, y = 0 },
     -- Aggro: borde rojo alrededor de quien tanquea y/o puntos rojos, uno por nivel de amenaza (como HealBot).
     aggro = { border = true, dots = true, size = 8, point = "RIGHT", x = -3, y = 0 },
+    -- Barra de maná, ira, energía… (el recurso que use cada unidad) debajo de la de vida.
+    -- healersOnly la deja solo en quien tiene el rol de sanador; thickness es su alto en píxeles.
+    power = { show = true, healersOnly = false, thickness = 4 },
     auras = {
       iconSize = 14,
       hotsPoint = "BOTTOMRIGHT",

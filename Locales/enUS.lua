@@ -303,6 +303,10 @@ L.APPEARANCE_AGGRO_BORDER = "Red border on whoever tanks"
 L.APPEARANCE_AGGRO_DOTS = "Red dots (threat level)"
 L.APPEARANCE_AGGRO_POINT = "Dots position"
 L.APPEARANCE_AGGRO_SIZE = "Dots size"
+L.APPEARANCE_POWER_TITLE = "Mana / energy bar"
+L.APPEARANCE_POWER_SHOW = "Show mana, rage or energy"
+L.APPEARANCE_POWER_HEALERS = "Only on healers"
+L.APPEARANCE_POWER_THICKNESS = "Bar height"
 L.DIAG_THREAT = "Threat readable now: %s"
 
 -- Modo mover y activar/desactivar
