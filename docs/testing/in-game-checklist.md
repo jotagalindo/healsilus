@@ -73,7 +73,7 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 
 ## 12. Texto de vida, rol, aggro y posición de auras
 - [ ] Con "Déficit", una barra con la vida llena no muestra nada (antes salía "-0"); al perder vida sale "-1,2 mil". Si sigue saliendo "-0", `/hs diag` anota `UnitButton:DeficitFade`.
-- [ ] Aspecto → "Texto de vida": prueba Vida actual (7,5 mil), Actual / máxima (7,5 mil / 10 mil) y Actual y porcentaje. En combate siguen cambiando sin errores (si no, `/hs diag` anota `UnitButton:HealthNumberText` y esa barra pasa a porcentaje).
+- [ ] Aspecto → "Texto de vida" (arriba de la columna del medio): prueba Vida actual (7,5 mil), Actual / máxima (7,5 mil / 10 mil) y Actual y porcentaje. En combate siguen cambiando sin errores (si no, `/hs diag` anota `UnitButton:HealthNumberText` y esa barra pasa a porcentaje).
 - [ ] Aspecto → "Mostrar icono de tanque / sanador / DPS": en grupo con roles elegidos sale el icono; sin "Incluir el de DPS" solo tanques y sanadores. Cambia de rol y el icono se actualiza.
 - [ ] Aggro: contra un muñeco o un mob, quien tiene el aggro lleva borde rojo y 3 puntos rojos; con mucha amenaza sin tanquear, 1 punto. Desmarca "Borde rojo" o "Puntos rojos" y comprueba que cada uno se quita por separado.
 - [ ] `/hs diag` en combate: `Amenaza legible ahora: sí`. Si sale `no`, el juego oculta la amenaza en esa zona y no se puede mostrar (HealBot tampoco).

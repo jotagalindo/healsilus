@@ -128,6 +128,10 @@ function TabAppearance.Build(panel)
     Widgets.StyleGetter("bar", "criticalAt"), Widgets.StyleSetter("bar", "criticalAt"), 0.05, "%.2f"), 48)
 
   local texts = Widgets.Stack(panel, 320, 0)
+  -- Lo primero de la columna: qué número de vida se ve en la barra (lo más buscado).
+  texts:Add(Widgets.Dropdown(panel, L.FRAMES_HEALTH_TEXT, 220, function()
+    return TabAppearance.HEALTH_MODE_OPTIONS
+  end, Widgets.StyleGetter("text", "health", "mode"), Widgets.StyleSetter("text", "health", "mode")), 50)
   local elementOptions = {}
   for _, element in ipairs(TabAppearance.TEXT_ELEMENTS) do
     elementOptions[#elementOptions + 1] = { value = element.key, label = element.label }
@@ -149,9 +153,6 @@ function TabAppearance.Build(panel)
   end, TabAppearance.TextGetter("point"), TabAppearance.TextSetter("point")), 50)
   texts:Add(RangeSlider(panel, L.APPEARANCE_OFFSET_X, "x", TabAppearance.TextGetter("x"), TabAppearance.TextSetter("x"), 1), 48)
   texts:Add(RangeSlider(panel, L.APPEARANCE_OFFSET_Y, "y", TabAppearance.TextGetter("y"), TabAppearance.TextSetter("y"), 1), 48)
-  texts:Add(Widgets.Dropdown(panel, L.FRAMES_HEALTH_TEXT, 220, function()
-    return TabAppearance.HEALTH_MODE_OPTIONS
-  end, Widgets.StyleGetter("text", "health", "mode"), Widgets.StyleSetter("text", "health", "mode")), 50)
 
   -- Tercera columna: icono de rol y aggro (borde y puntos rojos).
   local indicators = Widgets.Stack(panel, 560, 0)
