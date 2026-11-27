@@ -469,7 +469,7 @@ function UnitButton:ShowTooltip(button)
   GameTooltip_SetDefaultAnchor(GameTooltip, button)
   GameTooltip:SetUnit(button.unit)
   local missing = button.healsilusMissing
-  if missing and #missing > 0 then
+  if missing and #missing > 0 and not UnitButton.inCombat and not InCombatLockdown() then
     GameTooltip:AddLine(string.format(L.TOOLTIP_MISSING_BUFFS, table.concat(missing, ", ")),
       MISSING_COLOR[1], MISSING_COLOR[2], MISSING_COLOR[3])
   end

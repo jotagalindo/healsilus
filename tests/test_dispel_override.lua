@@ -56,6 +56,8 @@ local function LoadOverride()
   local ns = Loader.Load(environment, FILES)
   ns.Spells:Scan()
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
+  -- El clic de buff viene activado de serie; cada prueba lo enciende cuando lo necesita.
+  ns.Profiles.active.clicks.buffOverride = false
   ns.UnitButton = { buttons = {} }
   ns.Headers = { list = {} }
   -- Solo vigila Marca de lo Salvaje (con Don de lo Salvaje como versión de grupo) para todos.
@@ -197,6 +199,12 @@ describe("Buff override", function()
     assertEquals(button.healsilusMissing, {})
     assertNil(button.healsilusOverride)
     assertEquals(button.attributes.spell1, "Toque de sanación")
+  end)
+
+  it("is on by default in new profiles", function()
+    local ns = LoadOverride()
+    assertTrue(ns.Database.DefaultProfile().clicks.buffOverride)
+    assertTrue(ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}).clicks.buffOverride)
   end)
 
   it("does nothing while the option is off", function()

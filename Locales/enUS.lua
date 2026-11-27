@@ -270,7 +270,7 @@ L.TARGETS_SELF = "Only me"
 L.BUFFS_COLOR_BAR = "Color the bar of whoever misses a buff (out of combat)"
 L.BUFFS_BAR_COLOR = "Bar color when a buff is missing"
 L.BUFFS_REFRESH_BELOW = "Also warn when less than this many minutes remain (0 = off)"
-L.BUFFS_HELP = "Out of combat, the bar of whoever misses one of your buffs gets the color you pick and a mark in its corner. To recast it, tick the option below (any click casts it) or assign \"Cast the missing buff\" to one click in the Clicks tab. In combat the bars only show health and the clicks do their usual thing."
+L.BUFFS_HELP = "Out of combat, the bar of whoever misses one of your buffs gets the color you pick and a mark in its corner. To recast it just click the bar (option below, on by default) or assign \"Cast the missing buff\" to one click in the Clicks tab. In combat the bars only show health and the clicks do their usual thing."
 L.BINDING_BUFF = "Cast the missing buff"
 
 -- Bloques: imán, mover juntos, bloque principal

@@ -100,9 +100,14 @@ function MissingBuffs.BuffMacro(missing)
   return ""
 end
 
+-- Los buffs solo se vigilan fuera de combate: en combate no hay marca, ni color, ni línea en el tooltip.
+function MissingBuffs.InCombat()
+  return (ns.UnitButton ~= nil and ns.UnitButton.inCombat == true) or InCombatLockdown()
+end
+
 function MissingBuffs:Render(button)
   local missing = button.healsilusMissing
-  button.healsilus.missingMark:SetShown(missing ~= nil and #missing > 0)
+  button.healsilus.missingMark:SetShown(missing ~= nil and #missing > 0 and not MissingBuffs.InCombat())
   if ns.ClickCast and ns.ClickCast.SetBuffMacro then
     ns.ClickCast:SetBuffMacro(button, MissingBuffs.BuffMacro(missing))
   end
@@ -207,6 +212,21 @@ end
 local function RefreshAll()
   MissingBuffs:RefreshAll()
 end
+
+-- PLAYER_REGEN_DISABLED llega antes del bloqueo: se quitan las marcas; al salir, RefreshAll las repone.
+function MissingBuffs:HideAllMarks()
+  if not ns.UnitButton then
+    return
+  end
+  for button in pairs(ns.UnitButton.buttons) do
+    if button.healsilus then
+      button.healsilus.missingMark:SetShown(false)
+    end
+  end
+end
+ns.Events:Register("COMBAT_STARTED", function()
+  MissingBuffs:HideAllMarks()
+end)
 ns.Events:Register("PROFILE_CHANGED", RefreshAll)
 ns.Events:Register("SPELLBOOK_UPDATED", RefreshAll)
 ns.Events:Register("COMBAT_ENDED", RefreshAll)

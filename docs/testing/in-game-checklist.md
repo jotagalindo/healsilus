@@ -56,8 +56,8 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 ## 9. Buffs
 - [ ] Fuera de combate, la barra de quien no tiene Marca se pinta del color elegido; al entrar en combate vuelve a su color.
 - [ ] Asigna "Poner el buff que falta" a un clic: sobre esa barra lanza el buff que le falta.
-- [ ] Marca "Fuera de combate, cualquier clic pone el buff que le falta a la barra" (pestaña Buffs o Clics): cualquier clic sobre una barra sin Marca lanza Marca de lo Salvaje; cuando ya la tiene, cada clic vuelve a hacer lo suyo.
-- [ ] En combate esa barra vuelve a su color de vida y los clics hacen lo normal (no pone buffs).
+- [ ] "Fuera de combate, cualquier clic pone el buff que le falta a la barra" viene marcada (pestaña Buffs o Clics): cualquier clic sobre una barra sin Marca lanza Marca de lo Salvaje; cuando ya la tiene, cada clic vuelve a hacer lo suyo.
+- [ ] En combate esa barra vuelve a su color de vida, sin marca naranja ni aviso en el tooltip, y los clics hacen lo normal (no pone buffs). Al salir de combate vuelve el aviso.
 - [ ] Con los dos overrides marcados, una barra con maldición y sin Marca: el clic quita primero la maldición.
 - [ ] Con "Avisar si quedan menos de 5 minutos", un buff a punto de acabar cuenta como que falta.
 

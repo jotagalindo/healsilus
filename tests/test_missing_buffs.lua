@@ -198,6 +198,22 @@ describe("MissingBuffs", function()
     assertEquals(damager.healsilusMissing, {})
   end)
 
+  it("only shows the mark out of combat and brings it back afterwards", function()
+    local ns, environment = LoadMissingBuffs()
+    local tank = FakeButton("party1")
+    ns.UnitButton.buttons[tank] = true
+    ns.MissingBuffs:Evaluate(tank)
+    assertTrue(tank.healsilus.missingMark.shown)
+    environment.__fireEvent("PLAYER_REGEN_DISABLED")
+    assertFalse(tank.healsilus.missingMark.shown)
+    environment.__state.inCombat = true
+    ns.MissingBuffs:Render(tank)
+    assertFalse(tank.healsilus.missingMark.shown)
+    environment.__state.inCombat = false
+    environment.__fireEvent("PLAYER_REGEN_ENABLED")
+    assertTrue(tank.healsilus.missingMark.shown)
+  end)
+
   it("clears the mark for dead units and when the feature is off", function()
     local ns, _, units = LoadMissingBuffs()
     local tank = FakeButton("party1")

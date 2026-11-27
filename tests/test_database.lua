@@ -80,7 +80,7 @@ describe("Database.NormalizeProfile", function()
 
   it("defaults click options to plain casting", function()
     local ns = LoadDatabase()
-    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false, buffOverride = false })
+    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false, buffOverride = true })
     local valid, field = ns.Database.ValidateProfile({ clicks = { targetOnClick = "yes" } })
     assertFalse(valid)
     assertEquals(field, "clicks.targetOnClick")
@@ -168,7 +168,7 @@ describe("Database:Initialize", function()
     local ns, environment = LoadDatabase()
     local db = ns.Database:Initialize()
     assertTrue(environment.HealsilusDB == db)
-    assertEquals(db.version, 2)
+    assertEquals(db.version, 3)
     assertEquals(db.classProfiles, {})
     assertEquals(db.characters, {})
     assertEquals(db.framePositions, {})
@@ -207,6 +207,23 @@ describe("Database:Initialize", function()
     assertEquals(character.specs[2].styleRules.solo, "Healsilus")
     assertEquals(character.specs.x, nil)
     assertEquals(db.characters["Bad-Realm"], nil)
+  end)
+
+  it("turns the missing-buff click on in profiles saved by version 2", function()
+    local ns, environment = LoadDatabase()
+    environment.HealsilusDB = {
+      version = 2,
+      classProfiles = { DRUID = { clicks = { buffOverride = false, dispelOverride = true } } },
+      characters = {
+        ["Arsilus-Bah"] = { class = "DRUID", own = { clicks = { buffOverride = false } }, specs = { [1] = { clicks = {} } } },
+      },
+    }
+    local db = ns.Database:Initialize()
+    assertEquals(db.version, 3)
+    assertTrue(db.classProfiles.DRUID.clicks.buffOverride)
+    assertTrue(db.classProfiles.DRUID.clicks.dispelOverride)
+    assertTrue(db.characters["Arsilus-Bah"].own.clicks.buffOverride)
+    assertTrue(db.characters["Arsilus-Bah"].specs[1].clicks.buffOverride)
   end)
 
   it("runs migrations in order and refuses missing ones", function()

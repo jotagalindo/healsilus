@@ -276,7 +276,7 @@ L.TARGETS_SELF = "Solo yo"
 L.BUFFS_COLOR_BAR = "Colorear la barra de quien no tenga un buff (fuera de combate)"
 L.BUFFS_BAR_COLOR = "Color de la barra si falta un buff"
 L.BUFFS_REFRESH_BELOW = "Avisar también si quedan menos de estos minutos (0 = no)"
-L.BUFFS_HELP = "Fuera de combate, la barra de quien no tenga uno de tus buffs toma el color que elijas y una marca en la esquina. Para ponérselo, marca la opción de abajo (cualquier clic se lo pone) o asigna \"Poner el buff que falta\" a un clic en la pestaña Clics. En combate las barras solo muestran la vida y los clics hacen lo de siempre."
+L.BUFFS_HELP = "Fuera de combate, la barra de quien no tenga uno de tus buffs toma el color que elijas y una marca en la esquina. Para ponérselo basta con hacer clic en la barra (opción de abajo, activada de serie) o asigna \"Poner el buff que falta\" a un clic en la pestaña Clics. En combate las barras solo muestran la vida y los clics hacen lo de siempre."
 L.BINDING_BUFF = "Poner el buff que falta"
 
 -- Bloques: imán, mover juntos, bloque principal

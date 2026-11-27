@@ -109,7 +109,7 @@ describe("Database version 2", function()
   it("starts new saved data with the four presets and default style rules", function()
     local ns = LoadStyleData()
     local db = ns.Database:Initialize()
-    assertEquals(db.version, 2)
+    assertEquals(db.version, ns.Database.CURRENT_VERSION)
     assertTrue(db.styles["Healsilus"] ~= nil and db.styles["Compact raid"] ~= nil)
     assertTrue(db.styles["Large party"] ~= nil and db.styles["Classic"] ~= nil)
     assertEquals(ns.Database.DefaultProfile().styleRules, {
@@ -148,7 +148,7 @@ describe("Database version 2", function()
       },
     }
     local db = ns.Database:Initialize()
-    assertEquals(db.version, 2)
+    assertEquals(db.version, ns.Database.CURRENT_VERSION)
     local migrated = db.styles["My style"]
     assertEquals(migrated.layout.width, 90)
     assertEquals(migrated.bar.texture, "RAID")
