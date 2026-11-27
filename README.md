@@ -90,24 +90,19 @@ TOC (el juego no lo cargaría). En Windows sin Docker, `tools/package.ps1` hace 
 
 ### Publicar una release
 
-1. Cambia `## Version:` en `Healsilus.toc` y `ns.version` en `Core/Init.lua` (por ejemplo a `0.0.3`), escribe las
-   notas en `docs/releases/v0.0.3.md` y haz commit en `main`.
-2. Crea y sube la etiqueta con la misma versión:
+1. Cambia `## Version:` en `Healsilus.toc` y `ns.version` en `Core/Init.lua` (por ejemplo a `0.0.3`) y escribe las
+   notas en `docs/releases/v0.0.3.md`.
+2. Llévalo a `main` (merge de la pull request). No hace falta crear la etiqueta.
 
-   ```powershell
-   git tag v0.0.3
-   ```
-
-   ```powershell
-   git push origin v0.0.3
-   ```
-
-[`.github/workflows/release.yml`](.github/workflows/release.yml) pasa las comprobaciones y las pruebas, comprueba que
-la etiqueta coincide con la versión del TOC, empaqueta el addon y publica la release con `Healsilus-0.0.3.zip` y las
-notas de `docs/releases/` (o, si no hay, las generadas a partir de los commits). Mientras la versión sea 0.x (fase
+[`.github/workflows/release.yml`](.github/workflows/release.yml) se ejecuta en cada push a `main`: si la versión del
+TOC aún no tiene release, pasa las comprobaciones y las pruebas, empaqueta el addon, crea la etiqueta `v0.0.3` sobre
+ese commit y publica la release con `Healsilus-0.0.3.zip` y las notas de `docs/releases/` (o, si no hay, las
+generadas a partir de los commits). Si la versión ya tiene release, no hace nada. Mientras la versión sea 0.x (fase
 beta, pendiente de probar en el juego) la release se publica como *prerelease*; lo mismo ocurre con cualquier
-etiqueta con guion (`v1.1.0-beta1`). Si creas la release a mano desde la web con una etiqueta nueva, el workflow
-solo le adjunta el zip.
+etiqueta con guion (`v1.1.0-beta1`).
+
+También se puede publicar subiendo la etiqueta a mano (`git tag v0.0.3` y `git push origin v0.0.3`; debe coincidir
+con el TOC). Si creas la release desde la web con una etiqueta nueva, el workflow solo le adjunta el zip.
 
 La verificación en el juego está en [docs/testing/in-game-checklist.md](docs/testing/in-game-checklist.md).
 
