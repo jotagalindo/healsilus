@@ -1,5 +1,8 @@
 # Healsilus
 
+[![CI](https://github.com/jotagalindo/healsilus/actions/workflows/ci.yml/badge.svg)](https://github.com/jotagalindo/healsilus/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/jotagalindo/healsilus?include_prereleases)](https://github.com/jotagalindo/healsilus/releases)
+
 Marcos de curación con click-casting (estilo HealBot) para **World of Warcraft: Forever**, hechos desde cero para las restricciones de addons de la arquitectura Midnight (valores secretos).
 
 > **Estado: beta (v0.0.2).** Las pruebas offline pasan, pero falta la verificación en el juego ([checklist](docs/testing/in-game-checklist.md)). Si algo falla, abre un issue con la salida de `/hs diag`.
@@ -8,7 +11,7 @@ Marcos de curación con click-casting (estilo HealBot) para **World of Warcraft:
 
 ## Instalación
 
-1. Descarga `Healsilus-0.0.2.zip` de la [release v0.0.2](https://github.com/jotagalindo/healsilus/releases/tag/v0.0.2).
+1. Descarga `Healsilus-X.Y.Z.zip` de la última [release](https://github.com/jotagalindo/healsilus/releases).
 2. Descomprímelo en `World of Warcraft\_forever_\Interface\AddOns` (debe quedar la carpeta `AddOns\Healsilus`).
 3. Desactiva HealBot para que no compitan por los clics y entra al juego: `/hs`.
 
@@ -52,16 +55,67 @@ Luego, en el juego, `/reload` y `/hs`.
 | `/hs debug` | Mensajes de depuración |
 | `/hs minimap` | Muestra u oculta el botón del minimapa (clic izquierdo: configuración; derecho: bloquear marcos) |
 
-## Pruebas
+## Desarrollo
 
-Necesitas LuaJIT (`scoop install luajit`). Desde la raíz del repositorio:
+Requisitos: Docker. El contenedor trae LuaJIT (Lua 5.1, la versión del cliente), git, shellcheck y zip.
 
 ```powershell
-luajit tests/run.lua
+docker build -t healsilus-dev tools
 ```
 
 ```powershell
-luajit tools/check.lua
+docker run --rm -v "${PWD}:/addon" healsilus-dev
 ```
+
+El segundo comando ejecuta `luajit tools/check.lua` (TOC y ficheros, sintaxis, globales, patrones prohibidos,
+traducciones) y `luajit tests/run.lua` (pruebas offline sobre un cliente simulado, `tests/lib/wow_stubs.lua`).
+Sin Docker también funcionan con LuaJIT instalado (`scoop install luajit`): `luajit tools/check.lua` y
+`luajit tests/run.lua`.
+
+Para generar el zip en local (queda en `dist/`):
+
+```powershell
+docker run --rm -v "${PWD}:/addon" healsilus-dev sh tools/package.sh
+```
+
+El script comprueba que existen todos los ficheros que lista el TOC y que no hay ningún `.lua` del addon fuera del
+TOC (el juego no lo cargaría). En Windows sin Docker, `tools/package.ps1` hace el mismo zip.
+
+### Integración continua
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) se ejecuta en cada push a `main` y en cada pull request:
+
+- **Lint**: `tools/check.lua`, shellcheck de `tools/package.sh` y actionlint de los workflows.
+- **Tests**: `tests/run.lua` y empaquetado; el zip queda como artefacto de la ejecución.
+
+### Publicar una release
+
+1. Cambia `## Version:` en `Healsilus.toc` y `ns.version` en `Core/Init.lua` (por ejemplo a `0.0.3`), escribe las
+   notas en `docs/releases/v0.0.3.md` y haz commit en `main`.
+2. Crea y sube la etiqueta con la misma versión:
+
+   ```powershell
+   git tag v0.0.3
+   ```
+
+   ```powershell
+   git push origin v0.0.3
+   ```
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) pasa las comprobaciones y las pruebas, comprueba que
+la etiqueta coincide con la versión del TOC, empaqueta el addon y publica la release con `Healsilus-0.0.3.zip` y las
+notas de `docs/releases/` (o, si no hay, las generadas a partir de los commits). Mientras la versión sea 0.x (fase
+beta, pendiente de probar en el juego) la release se publica como *prerelease*; lo mismo ocurre con cualquier
+etiqueta con guion (`v1.1.0-beta1`). Si creas la release a mano desde la web con una etiqueta nueva, el workflow
+solo le adjunta el zip.
 
 La verificación en el juego está en [docs/testing/in-game-checklist.md](docs/testing/in-game-checklist.md).
+
+| Fichero | Responsabilidad |
+|---|---|
+| `tools/check.lua` | Comprobaciones estáticas |
+| `tests/run.lua` | Pruebas offline (lista de ficheros de prueba) |
+| `tools/package.sh` | Zip de la release (`tools/package.ps1`: lo mismo en PowerShell) |
+| `tools/Dockerfile` | Entorno de desarrollo y CI |
+| `tools/icons/` | Logo e iconos (SVG) y `build.py`, que genera los `.tga` de `Media/` |
+| `.github/workflows/` | CI y release |

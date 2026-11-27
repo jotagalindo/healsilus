@@ -6,3 +6,7 @@
 *.tga binary
 *.svg text eol=lf
 *.py text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf
+*.zip binary

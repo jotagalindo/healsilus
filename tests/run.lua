@@ -36,6 +36,7 @@ local TEST_FILES = {
   "tests/test_dispel_override.lua",
   "tests/test_move_mode.lua",
   "tests/test_bar_layouts.lua",
+  "tests/test_package.lua",
 }
 
 for _, path in ipairs(TEST_FILES) do

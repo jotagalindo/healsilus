@@ -1,0 +1,58 @@
+# Integración continua: comprobaciones estáticas y pruebas en cada push a main y en cada pull request.
+# Usa la misma imagen que el desarrollo local (tools/Dockerfile: LuaJIT, git, shellcheck, zip).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (check.lua, shellcheck, actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the development image
+        run: docker build -t healsilus-dev tools
+
+      - name: check.lua (TOC, syntax, globals, translations)
+        run: docker run --rm -v "$PWD:/addon" healsilus-dev luajit tools/check.lua
+
+      - name: shellcheck
+        run: docker run --rm -v "$PWD:/addon" healsilus-dev shellcheck tools/package.sh
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+
+  test:
+    name: Tests and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the development image
+        run: docker build -t healsilus-dev tools
+
+      - name: Tests
+        run: docker run --rm -v "$PWD:/addon" healsilus-dev luajit tests/run.lua
+
+      - name: Package the addon
+        run: docker run --rm -v "$PWD:/addon" healsilus-dev sh tools/package.sh
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: Healsilus
+          path: dist/*.zip
+          if-no-files-found: error
