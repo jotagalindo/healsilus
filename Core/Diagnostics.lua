@@ -79,6 +79,13 @@ function Diagnostics.AurasLine()
   return string.format(L.DIAG_AURAS, readable, #ns.MissingBuffs.resolved, bars)
 end
 
+-- Si la amenaza llega como secreto no se puede pintar el aggro (borde y puntos rojos).
+function Diagnostics.ThreatLine()
+  local readable = not (C_Secrets and C_Secrets.ShouldUnitThreatStateBeSecret
+    and C_Secrets.ShouldUnitThreatStateBeSecret("player") == true)
+  return string.format(L.DIAG_THREAT, readable and L.DIAG_YES or L.DIAG_NO)
+end
+
 function Diagnostics:Run()
   local version, build, _, interface = GetBuildInfo()
   ns.Print(string.format(L.DIAG_HEADER, ns.version, tostring(version), tostring(build), tostring(interface)))
@@ -93,6 +100,7 @@ function Diagnostics:Run()
   if ns.MissingBuffs then
     ns.Print(Diagnostics.AurasLine())
   end
+  ns.Print(Diagnostics.ThreatLine())
   local missing = Diagnostics.UnresolvedSpells(ns.Profiles.active)
   if #missing == 0 then
     ns.Print(L.DIAG_SPELLS_OK)

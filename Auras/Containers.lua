@@ -135,24 +135,48 @@ local function MakeBarTintInitializer(unitButton)
   end
 end
 
--- Desplazamiento de 1 px hacia dentro de la barra según la esquina elegida en el estilo.
-local function CornerOffset(point)
-  local x = string.find(point, "RIGHT") and -1 or 1
-  local y = string.find(point, "TOP") and -1 or 1
-  return x, y
+-- Lados por fuera de la barra: se anclan al botón entero (con su borde) y crecen alejándose de él.
+local OUTSIDE_GAP = 3
+local OUTSIDE = {
+  ABOVE = { point = "BOTTOMLEFT", relativePoint = "TOPLEFT", x = 0, y = OUTSIDE_GAP, horizontal = "Right", vertical = "Up" },
+  BELOW = { point = "TOPLEFT", relativePoint = "BOTTOMLEFT", x = 0, y = -OUTSIDE_GAP, horizontal = "Right", vertical = "Down" },
+  OUTSIDE_LEFT = { point = "TOPRIGHT", relativePoint = "TOPLEFT", x = -OUTSIDE_GAP, y = 0, horizontal = "Left", vertical = "Down" },
+  OUTSIDE_RIGHT = { point = "TOPLEFT", relativePoint = "TOPRIGHT", x = OUTSIDE_GAP, y = 0, horizontal = "Right", vertical = "Down" },
+}
+
+-- Cómo anclar un contenedor según la posición del estilo: una esquina dentro de la barra de vida
+-- (1 px hacia dentro, crece hacia el centro) o un lado por fuera del botón.
+-- relativeTo: "BAR" (barra de vida) o "BUTTON" (botón entero).
+function Containers.Anchor(position)
+  local outside = OUTSIDE[position]
+  if outside then
+    return {
+      relativeTo = "BUTTON", point = outside.point, relativePoint = outside.relativePoint,
+      x = outside.x, y = outside.y, horizontal = outside.horizontal, vertical = outside.vertical,
+    }
+  end
+  local right = string.find(position, "RIGHT") ~= nil
+  local top = string.find(position, "TOP") ~= nil
+  return {
+    relativeTo = "BAR", point = position, relativePoint = position,
+    x = right and -1 or 1, y = top and -1 or 1,
+    horizontal = right and "Left" or "Right", vertical = top and "Down" or "Up",
+  }
 end
 
 local function BuildContainer(unitButton, spec)
+  local anchor = Containers.Anchor(spec.position)
+  local relativeFrame = anchor.relativeTo == "BUTTON" and unitButton or unitButton.healsilus.healthBar
   local container = CreateFrame("AuraContainer", nil, unitButton, "CustomAuraContainerTemplate")
   container:Hide()
   container:ClearAllPoints()
-  container:SetPoint(spec.point, unitButton.healsilus.healthBar, spec.point, spec.x, spec.y)
+  container:SetPoint(anchor.point, relativeFrame, anchor.relativePoint, anchor.x, anchor.y)
   if container.SetFlowLayoutAnchorPoint then
-    container:SetFlowLayoutAnchorPoint(spec.point)
+    container:SetFlowLayoutAnchorPoint(anchor.point)
   end
   if container.SetFlowLayoutGrowthDirection and AnchorUtil and AnchorUtil.FlowDirection then
-    local horizontal = string.find(spec.point, "RIGHT") and AnchorUtil.FlowDirection.Left or AnchorUtil.FlowDirection.Right
-    local vertical = string.find(spec.point, "BOTTOM") and AnchorUtil.FlowDirection.Up or AnchorUtil.FlowDirection.Down
+    local horizontal = AnchorUtil.FlowDirection[anchor.horizontal]
+    local vertical = AnchorUtil.FlowDirection[anchor.vertical]
     if horizontal ~= nil and vertical ~= nil then
       container:SetFlowLayoutGrowthDirection(horizontal, vertical)
     end
@@ -226,32 +250,30 @@ function Containers:Attach(button)
     if auras.hotsEnabled and auras.hotsMax > 0 then
       local spellIDs = ns.Spells:ExpandRanks(auras.hotSpellIDs)
       if next(spellIDs) then
-        local x, y = CornerOffset(look.hotsPoint)
         built.hots = BuildContainer(button, {
           key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = look.iconSize,
-          initializer = MakeIconInitializer(look.iconSize, false), point = look.hotsPoint, x = x, y = y,
+          initializer = MakeIconInitializer(look.iconSize, false), position = look.hotsPoint,
           levelOffset = 8, candidateFilters = { includeSpellIDs = spellIDs },
         })
       end
     end
     if auras.debuffsEnabled and auras.debuffsMax > 0 then
-      local x, y = CornerOffset(look.debuffsPoint)
       built.debuffs = BuildContainer(button, {
         key = "healsilusDebuffs", filter = auras.debuffsDispellableOnly and "HARMFUL|RAID" or "HARMFUL",
         maxCount = auras.debuffsMax, size = look.iconSize, initializer = MakeIconInitializer(look.iconSize, true),
-        point = look.debuffsPoint, x = x, y = y, levelOffset = 8, sortMethod = sortMethod,
+        position = look.debuffsPoint, levelOffset = 8, sortMethod = sortMethod,
       })
       if look.dispelMode ~= "BAR" then
         built.highlight = BuildContainer(button, {
           key = "healsilusDispel", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
-          initializer = MakeHighlightInitializer(button), point = "TOPLEFT", x = 0, y = 0,
+          initializer = MakeHighlightInitializer(button), position = "TOPLEFT",
           levelOffset = 1, sortMethod = sortMethod,
         })
       end
       if look.dispelMode ~= "RING" then
         built.tint = BuildContainer(button, {
           key = "healsilusDispelTint", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
-          initializer = MakeBarTintInitializer(button), point = "TOPLEFT", x = 0, y = 0,
+          initializer = MakeBarTintInitializer(button), position = "TOPLEFT",
           levelOffset = 3, sortMethod = sortMethod,
         })
       end

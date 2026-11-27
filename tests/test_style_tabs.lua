@@ -33,6 +33,20 @@ describe("TabAppearance controls", function()
     assertEquals(Values(ns.TabAppearance.HEALTH_MODE_OPTIONS), ns.Database.ENUMS.mode)
   end)
 
+  it("offers role icon and aggro options that exist in every style", function()
+    local ns = LoadTabs()
+    local defaults = ns.StyleData.DefaultStyle()
+    for _, section in ipairs(ns.TabAppearance.INDICATORS) do
+      local values = defaults[section.key]
+      assertTrue(values ~= nil, section.key)
+      assertTrue(ns.Database.ENUMS.point[values.point] == true, section.key)
+      assertTrue(type(values.size) == "number", section.key)
+      for _, check in ipairs(section.checks) do
+        assertEquals(type(values[check.key]), "boolean", section.key .. "." .. check.key)
+      end
+    end
+  end)
+
   it("edits name, health and status texts of the active style", function()
     local ns = LoadTabs()
     local keys = {}

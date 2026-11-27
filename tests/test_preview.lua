@@ -36,6 +36,20 @@ describe("Preview", function()
     assertEquals({ ns.Preview.HealthColor(1) }, { 0, 1, 0 })
   end)
 
+  it("writes the fake health text in every mode", function()
+    local ns, environment = LoadPreview()
+    environment.AbbreviateLargeNumbers = function(value)
+      return tostring(value)
+    end
+    assertEquals(ns.Preview.HealthText("NONE", 0.5), "")
+    assertEquals(ns.Preview.HealthText("PERCENT", 0.5), "50%")
+    assertEquals(ns.Preview.HealthText("DEFICIT", 0.5), "-4000")
+    assertEquals(ns.Preview.HealthText("DEFICIT", 1), "")
+    assertEquals(ns.Preview.HealthText("CURRENT", 0.5), "4000")
+    assertEquals(ns.Preview.HealthText("CURRENT_MAX", 0.5), "4000 / 8000")
+    assertEquals(ns.Preview.HealthText("CURRENT_PERCENT", 0.5), "4000 · 50%")
+  end)
+
   it("refuses to open in combat", function()
     local ns, environment = LoadPreview()
     environment.__state.inCombat = true

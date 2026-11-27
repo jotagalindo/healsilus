@@ -33,11 +33,16 @@ local function Setter(spec)
   return Widgets.SectionSetter("auras", spec.key)
 end
 
-TabAuras.CORNER_OPTIONS = {
+-- Dónde van los iconos de HoTs y debuffs: una esquina dentro de la barra o un lado por fuera.
+TabAuras.POSITION_OPTIONS = {
   { value = "TOPLEFT", label = L.CORNER_TOPLEFT },
   { value = "TOPRIGHT", label = L.CORNER_TOPRIGHT },
   { value = "BOTTOMLEFT", label = L.CORNER_BOTTOMLEFT },
   { value = "BOTTOMRIGHT", label = L.CORNER_BOTTOMRIGHT },
+  { value = "ABOVE", label = L.AURA_POSITION_ABOVE },
+  { value = "BELOW", label = L.AURA_POSITION_BELOW },
+  { value = "OUTSIDE_LEFT", label = L.AURA_POSITION_OUTSIDE_LEFT },
+  { value = "OUTSIDE_RIGHT", label = L.AURA_POSITION_OUTSIDE_RIGHT },
 }
 
 local function HotSpellIDs()
@@ -74,7 +79,7 @@ function TabAuras.Build(panel)
     stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1, Getter(spec), Setter(spec)), 48)
   end
   stack:Add(Widgets.Dropdown(panel, L.AURAS_HOTS_CORNER, 200, function()
-    return TabAuras.CORNER_OPTIONS
+    return TabAuras.POSITION_OPTIONS
   end, Widgets.StyleGetter("auras", "hotsPoint"), Widgets.StyleSetter("auras", "hotsPoint")), 50)
   TabAuras.stack = stack
 

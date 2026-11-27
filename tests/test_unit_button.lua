@@ -104,13 +104,29 @@ local function FakeRegion()
   function region:Show()
     self.shown = true
   end
+  function region:SetAtlas(atlas)
+    self.atlas = atlas
+  end
   return region
+end
+
+local function ShownDots(button)
+  local shown = 0
+  for _, dot in ipairs(button.healsilus.aggroDots) do
+    if dot.shown then
+      shown = shown + 1
+    end
+  end
+  return shown
 end
 
 local function FakeButton(unit)
   local button = {
     unit = unit,
-    healsilus = { healthText = FakeRegion(), statusText = FakeRegion(), aggroFrame = FakeRegion() },
+    healsilus = {
+      healthText = FakeRegion(), statusText = FakeRegion(), aggroFrame = FakeRegion(), roleIcon = FakeRegion(),
+      aggroDots = { FakeRegion(), FakeRegion(), FakeRegion() },
+    },
   }
   function button:SetAlpha(alpha)
     self.alpha = alpha
@@ -194,6 +210,67 @@ describe("UnitButton threat", function()
     ns.UnitButton:UpdateThreat(party)
     assertFalse(party.healsilus.aggroFrame.shown)
   end)
+
+  it("shows one red dot per threat level, like HealBot", function()
+    local ns, _, world = LoadUnitButton()
+    local party = FakeButton("party1")
+    for level = 0, 3 do
+      world.threat = level
+      ns.UnitButton:UpdateThreat(party)
+      assertEquals(ShownDots(party), level)
+    end
+    world.threat = Stubs.MakeSecret()
+    ns.UnitButton:UpdateThreat(party)
+    assertEquals(ShownDots(party), 0)
+  end)
+
+  it("lets the style turn the border and the dots off separately", function()
+    local ns, _, world = LoadUnitButton()
+    local party = FakeButton("party1")
+    world.threat = 3
+    ns.Styles.active.aggro.dots = false
+    ns.UnitButton:UpdateThreat(party)
+    assertTrue(party.healsilus.aggroFrame.shown)
+    assertEquals(ShownDots(party), 0)
+    ns.Styles.active.aggro.dots = true
+    ns.Styles.active.aggro.border = false
+    ns.UnitButton:UpdateThreat(party)
+    assertFalse(party.healsilus.aggroFrame.shown)
+    assertEquals(ShownDots(party), 3)
+  end)
+end)
+
+describe("UnitButton role icon", function()
+  it("shows the role the player picked only when the style asks for it", function()
+    local ns, environment = LoadUnitButton()
+    local role = "TANK"
+    environment.UnitGroupRolesAssigned = function()
+      return role
+    end
+    local party = FakeButton("party1")
+    ns.UnitButton:UpdateRole(party)
+    assertFalse(party.healsilus.roleIcon.shown)
+    ns.Styles.active.role.show = true
+    ns.UnitButton:UpdateRole(party)
+    assertTrue(party.healsilus.roleIcon.shown)
+    assertEquals(party.healsilus.roleIcon.atlas, "UI-LFG-RoleIcon-Tank-Micro-GroupFinder")
+    role = "HEALER"
+    ns.UnitButton:UpdateRole(party)
+    assertEquals(party.healsilus.roleIcon.atlas, "UI-LFG-RoleIcon-Healer-Micro-GroupFinder")
+    role = "DAMAGER"
+    ns.UnitButton:UpdateRole(party)
+    assertTrue(party.healsilus.roleIcon.shown)
+    ns.Styles.active.role.showDamager = false
+    ns.UnitButton:UpdateRole(party)
+    assertFalse(party.healsilus.roleIcon.shown)
+    role = "NONE"
+    ns.Styles.active.role.showDamager = true
+    ns.UnitButton:UpdateRole(party)
+    assertFalse(party.healsilus.roleIcon.shown)
+    role = Stubs.MakeSecret()
+    ns.UnitButton:UpdateRole(party)
+    assertFalse(party.healsilus.roleIcon.shown)
+  end)
 end)
 
 describe("UnitButton health text", function()
@@ -219,6 +296,52 @@ describe("UnitButton health text", function()
     assertEquals(party.healsilus.healthText.text, "75%")
     assertEquals(party.healsilusTextMode, "PERCENT")
     assertEquals(ns.Diagnostics.errors[1].context, "UnitButton:DeficitText")
+  end)
+
+  it("shows current health, current over maximum and current with percent", function()
+    local ns, environment = LoadUnitButton()
+    InstallCurves(environment)
+    environment.UnitHealth = function()
+      return 7500
+    end
+    environment.UnitHealthMax = function()
+      return 10000
+    end
+    local party = FakeButton("party1")
+    ns.Styles.active.text.health.mode = "CURRENT"
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.text, "7500")
+    ns.Styles.active.text.health.mode = "CURRENT_MAX"
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.text, "7500 / 10000")
+    ns.Styles.active.text.health.mode = "CURRENT_PERCENT"
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.text, "7500 · 75%")
+  end)
+
+  it("drops the percent part when curves are unavailable", function()
+    local ns, environment = LoadUnitButton()
+    environment.UnitHealth = function()
+      return 7500
+    end
+    ns.Styles.active.text.health.mode = "CURRENT_PERCENT"
+    local party = FakeButton("party1")
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.text, "7500")
+  end)
+
+  it("switches a button to percent when the health number cannot be abbreviated", function()
+    local ns, environment = LoadUnitButton()
+    InstallCurves(environment)
+    environment.UnitHealth = function()
+      return Stubs.MakeSecret()
+    end
+    ns.Styles.active.text.health.mode = "CURRENT_MAX"
+    local party = FakeButton("party1")
+    ns.UnitButton:UpdateHealthText(party)
+    assertEquals(party.healsilus.healthText.text, "75%")
+    assertEquals(party.healsilusTextMode, "PERCENT")
+    assertEquals(ns.Diagnostics.errors[1].context, "UnitButton:HealthNumberText")
   end)
 
   it("hides percent text when curves are unavailable", function()

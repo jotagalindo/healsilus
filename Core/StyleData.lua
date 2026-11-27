@@ -39,6 +39,10 @@ function StyleData.DefaultStyle()
       health = health,
       status = TextElement(10, "BOTTOMRIGHT", -4, 3),
     },
+    -- Icono del rol elegido en el grupo (tanque, sanador, DPS); showDamager también pinta el de DPS.
+    role = { show = false, showDamager = true, size = 12, point = "LEFT", x = 3, y = 0 },
+    -- Aggro: borde rojo alrededor de quien tanquea y/o puntos rojos, uno por nivel de amenaza (como HealBot).
+    aggro = { border = true, dots = true, size = 8, point = "RIGHT", x = -3, y = 0 },
     auras = {
       iconSize = 14,
       hotsPoint = "BOTTOMRIGHT",

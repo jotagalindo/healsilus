@@ -23,6 +23,21 @@ describe("StyleData defaults and presets", function()
     assertEquals(style.auras.dispelColors.Curse, { r = 0.6, g = 0, b = 1 })
   end)
 
+  it("gives styles saved before role icons and aggro dots the new defaults", function()
+    local ns = LoadStyleData()
+    local saved = ns.StyleData.DefaultStyle()
+    saved.role = nil
+    saved.aggro = nil
+    saved.auras.hotsPoint = "BELOW"
+    assertTrue(ns.StyleData.ValidateStyle(saved))
+    local normalized = ns.StyleData.NormalizeStyle(saved, {})
+    assertEquals(normalized.role, { show = false, showDamager = true, size = 12, point = "LEFT", x = 3, y = 0 })
+    assertEquals(normalized.aggro, { border = true, dots = true, size = 8, point = "RIGHT", x = -3, y = 0 })
+    assertEquals(normalized.auras.hotsPoint, "BELOW")
+    saved.auras.hotsPoint = "SOMEWHERE"
+    assertFalse(ns.StyleData.ValidateStyle(saved))
+  end)
+
   it("ships four presets that all pass strict validation", function()
     local ns = LoadStyleData()
     local names = {}

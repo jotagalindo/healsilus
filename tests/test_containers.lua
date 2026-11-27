@@ -136,6 +136,44 @@ describe("Containers", function()
     assertEquals(PointCall(button.healsilusAuras.debuffs), { "BOTTOMRIGHT", "BOTTOMRIGHT", -1, 1 })
   end)
 
+  it("places icons outside the bar, anchored to the whole button, when the style asks for a side", function()
+    local ns = LoadContainers()
+    ns.Styles.active.auras.hotsPoint = "BELOW"
+    ns.Styles.active.auras.debuffsPoint = "OUTSIDE_RIGHT"
+    local button = FakeButton("party1")
+    ns.Containers:Attach(button)
+    local function PointCall(container)
+      for _, call in ipairs(container.calls) do
+        if call[1] == "SetPoint" then
+          return call
+        end
+      end
+    end
+    local hots = PointCall(button.healsilusAuras.hots)
+    assertTrue(hots[3] == button)
+    assertEquals({ hots[2], hots[4], hots[5], hots[6] }, { "TOPLEFT", "BOTTOMLEFT", 0, -3 })
+    local debuffs = PointCall(button.healsilusAuras.debuffs)
+    assertTrue(debuffs[3] == button)
+    assertEquals({ debuffs[2], debuffs[4], debuffs[5], debuffs[6] }, { "TOPLEFT", "TOPRIGHT", 3, 0 })
+  end)
+
+  it("grows icons away from the bar on each side and towards the center in corners", function()
+    local ns = LoadContainers()
+    local function Growth(position)
+      local anchor = ns.Containers.Anchor(position)
+      return { anchor.relativeTo, anchor.horizontal, anchor.vertical }
+    end
+    assertEquals(Growth("ABOVE"), { "BUTTON", "Right", "Up" })
+    assertEquals(Growth("BELOW"), { "BUTTON", "Right", "Down" })
+    assertEquals(Growth("OUTSIDE_LEFT"), { "BUTTON", "Left", "Down" })
+    assertEquals(Growth("OUTSIDE_RIGHT"), { "BUTTON", "Right", "Down" })
+    assertEquals(Growth("TOPRIGHT"), { "BAR", "Left", "Down" })
+    assertEquals(Growth("BOTTOMLEFT"), { "BAR", "Right", "Up" })
+    for position in pairs(ns.Database.ENUMS.hotsPoint) do
+      assertTrue(ns.Containers.Anchor(position).point ~= nil, position)
+    end
+  end)
+
   it("uses the plain harmful filter when every debuff should be shown", function()
     local ns = LoadContainers()
     ns.Profiles.active.auras.debuffsDispellableOnly = false

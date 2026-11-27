@@ -56,7 +56,7 @@ Bloques principales:
 | Color y alfa del fondo de la barra | no | sí | **alta** |
 | Barra entera teñida por el tipo de dispel (además del anillo) | parcial (anillo) | sí, misma técnica que HealBot | **alta** |
 | Resaltado al pasar el ratón y del objetivo actual | no | sí | **alta** |
-| Iconos de aura: ancla en 8+ posiciones, dentro/fuera, separación, crecimiento, zoom | parcial (tamaño y máximo) | sí (geometría del contenedor) | **alta** |
+| Iconos de aura: ancla en 8+ posiciones, dentro/fuera, separación, crecimiento, zoom | parcial (tamaño, máximo y 8 posiciones: 4 esquinas dentro y encima/debajo/izquierda/derecha fuera) | sí (geometría del contenedor) | **alta** |
 | Barra de maná o poder (solo sanadores) | no | sí: StatusBar con UnitPower | **alta** |
 | Estilos incluidos ("presets") | no | sí | **alta** |
 | Color de vida por rol, personalizado o mezcla clase+vida | no | sí *(mezcla con una curva por clase, inferido)* | media |
@@ -64,7 +64,7 @@ Bloques principales:
 | Borde de unidad: color, grosor, alfa | no | sí | media |
 | Fondo, borde y padding del marco; escala; estrato | no | sí | media |
 | Colores y alfa de curación entrante y escudos; textura atlas de escudo | parcial (fijos) | sí | media |
-| Estilos de aggro (sólido, parpadeo, brillo) | parcial (sólido) | sí cuando es legible | media |
+| Estilos de aggro (sólido, parpadeo, brillo) | parcial (borde sólido y puntos rojos por nivel de amenaza) | sí cuando es legible | media |
 | Formatos del texto de vida (1K / 1.2K, corchetes) | parcial | parcial (depende de que el formateo acepte secretos) | media |
 | Indicador de maná bajo | no | parcial (curva de UnitPowerPercent, inferido) | media |
 | Barras verticales, llenado invertido, crecer desde 4 esquinas | parcial | sí | media |
@@ -72,7 +72,7 @@ Bloques principales:
 | Brillo en icono o barra al tener un debuff | no | sí *(inferido)* | media |
 | Debuffs personalizados (lista blanca/negra por ID) | no | sí (`includeSpellIDs`/`excludeSpellIDs`) | media |
 | Buffs vigilados con más destinos (roles, clases) | parcial (todos/tanques) | sí, fuera de combate | media |
-| Iconos de clase, rol, líder y marca de banda | no | sí | media |
+| Iconos de clase, rol, líder y marca de banda | parcial (icono de rol tanque/sanador/DPS) | sí | media |
 | Tooltip configurable con la lista de clics | parcial | sí | media |
 | Atajos de rueda o teclado sobre la barra | no | sí *(snippet seguro OnEnter/OnLeave, inferido)* | media |
 | Listas privadas (tus tanques o sanadores) | no | sí (nameList, fuera de combate) | media |

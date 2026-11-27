@@ -12,18 +12,22 @@ local ANCHOR_POINTS = {
   TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
   RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true,
 }
-local CORNERS = { TOPLEFT = true, TOPRIGHT = true, BOTTOMLEFT = true, BOTTOMRIGHT = true }
+-- Iconos de auras: una esquina dentro de la barra o un lado por fuera de ella (ver Auras/Containers.lua).
+local AURA_POSITIONS = {
+  TOPLEFT = true, TOPRIGHT = true, BOTTOMLEFT = true, BOTTOMRIGHT = true,
+  ABOVE = true, BELOW = true, OUTSIDE_LEFT = true, OUTSIDE_RIGHT = true,
+}
 
 -- Valores permitidos por nombre de campo (perfil y estilos, ver Core/StyleData.lua).
 Database.ENUMS = {
   sortBy = { GROUP = true, CLASS = true, ROLE = true },
   growth = { DOWN = true, RIGHT = true },
   colorMode = { CLASS = true, HEALTH = true },
-  mode = { NONE = true, DEFICIT = true, PERCENT = true },
+  mode = { NONE = true, DEFICIT = true, PERCENT = true, CURRENT = true, CURRENT_MAX = true, CURRENT_PERCENT = true },
   outline = { NONE = true, OUTLINE = true, THICKOUTLINE = true },
   point = ANCHOR_POINTS,
-  hotsPoint = CORNERS,
-  debuffsPoint = CORNERS,
+  hotsPoint = AURA_POSITIONS,
+  debuffsPoint = AURA_POSITIONS,
   dispelMode = { RING = true, BAR = true, BOTH = true },
 }
 

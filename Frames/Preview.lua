@@ -6,16 +6,17 @@ local L = ns.L
 local Preview = { frames = {}, count = 0 }
 ns.Preview = Preview
 
+-- threat: nivel de amenaza falso (3 = tanquea, 1 = mucha amenaza) para ver el borde y los puntos.
 local FAKE_MEMBERS = {
-  { name = "Gromash", class = "WARRIOR", health = 0.62, aggro = true },
-  { name = "Arsilus", class = "DRUID", health = 1 },
-  { name = "Velenna", class = "PRIEST", health = 0.48 },
-  { name = "Thrall", class = "SHAMAN", health = 0.85, missing = true },
-  { name = "Lejana", class = "MAGE", health = 0.7, outOfRange = true },
-  { name = "Korgan", class = "ROGUE", health = 0, dead = true },
-  { name = "Sylvara", class = "HUNTER", health = 0.93 },
-  { name = "Morvath", class = "WARLOCK", health = 0.35 },
-  { name = "Brannoc", class = "PALADIN", health = 0.77 },
+  { name = "Gromash", class = "WARRIOR", role = "TANK", health = 0.62, threat = 3 },
+  { name = "Arsilus", class = "DRUID", role = "HEALER", health = 1 },
+  { name = "Velenna", class = "PRIEST", role = "HEALER", health = 0.48 },
+  { name = "Thrall", class = "SHAMAN", role = "DAMAGER", health = 0.85, missing = true },
+  { name = "Lejana", class = "MAGE", role = "DAMAGER", health = 0.7, outOfRange = true },
+  { name = "Korgan", class = "ROGUE", role = "DAMAGER", health = 0, dead = true },
+  { name = "Sylvara", class = "HUNTER", role = "DAMAGER", health = 0.93, threat = 1 },
+  { name = "Morvath", class = "WARLOCK", role = "DAMAGER", health = 0.35 },
+  { name = "Brannoc", class = "PALADIN", role = "TANK", health = 0.77 },
 }
 
 local FAKE_MAX_HEALTH = 8000
@@ -38,12 +39,23 @@ function Preview.HealthColor(fraction)
   return (1 - fraction) * 2, 1, 0
 end
 
-local function HealthText(mode, fraction)
+function Preview.HealthText(mode, fraction)
+  local percent = string.format("%d%%", math.floor(fraction * 100 + 0.5))
+  local current = AbbreviateLargeNumbers(math.floor(fraction * FAKE_MAX_HEALTH))
   if mode == "PERCENT" then
-    return string.format("%d%%", math.floor(fraction * 100 + 0.5))
+    return percent
   end
   if mode == "DEFICIT" and fraction < 1 then
     return "-" .. AbbreviateLargeNumbers(math.floor((1 - fraction) * FAKE_MAX_HEALTH))
+  end
+  if mode == "CURRENT" then
+    return current
+  end
+  if mode == "CURRENT_MAX" then
+    return current .. " / " .. AbbreviateLargeNumbers(FAKE_MAX_HEALTH)
+  end
+  if mode == "CURRENT_PERCENT" then
+    return current .. " · " .. percent
   end
   return ""
 end
@@ -55,7 +67,7 @@ function Preview:Paint(frame, member, style)
   visual.healthBar:SetMinMaxValues(0, 1)
   visual.healthBar:SetValue(member.health)
   visual.nameText:SetText(member.name)
-  visual.healthText:SetText(member.dead and "" or HealthText(style.text.health.mode, member.health))
+  visual.healthText:SetText(member.dead and "" or Preview.HealthText(style.text.health.mode, member.health))
   visual.statusText:SetText(member.dead and L.STATUS_DEAD or "")
   local texture = visual.healthBar:GetStatusBarTexture()
   if style.bar.colorMode == "HEALTH" then
@@ -64,7 +76,8 @@ function Preview:Paint(frame, member, style)
     texture:SetVertexColor(ns.Media.ClassColor(member.class))
   end
   visual.missingMark:SetShown(member.missing == true)
-  visual.aggroFrame:SetShown(member.aggro == true)
+  ns.UnitButton.ShowThreat(visual, member.threat, style)
+  ns.UnitButton.ShowRole(visual, member.role, style)
   frame:SetAlpha(member.outOfRange and style.bar.outOfRangeAlpha or 1)
 end
 

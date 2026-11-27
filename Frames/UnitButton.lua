@@ -8,12 +8,27 @@ ns.UnitButton = UnitButton
 
 local UNIT_EVENTS = {
   "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_CONNECTION", "UNIT_FLAGS",
-  "UNIT_THREAT_SITUATION_UPDATE", "UNIT_IN_RANGE_UPDATE", "UNIT_HEAL_PREDICTION",
+  "UNIT_THREAT_SITUATION_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_IN_RANGE_UPDATE", "UNIT_HEAL_PREDICTION",
   "UNIT_ABSORB_AMOUNT_CHANGED", "UNIT_AURA",
 }
 
 local AGGRO_COLOR = { 0.89, 0.29, 0.29 }
 local MISSING_COLOR = { 0.94, 0.62, 0.15 }
+
+-- Puntos de aggro: tantos como el nivel de amenaza (1 = mucha amenaza, 2 = tanquea sin seguridad,
+-- 3 = tanquea). Textura redonda roja de Blizzard.
+local AGGRO_DOTS = 3
+local AGGRO_DOT_TEXTURE = "Interface\\COMMON\\Indicator-Red"
+local AGGRO_DOT_GAP = 1
+-- A partir de este nivel la unidad tiene el aggro: se pinta el borde rojo.
+local AGGRO_BORDER_LEVEL = 2
+
+-- Iconos de rol del buscador de grupo (los mismos que usa Blizzard en sus marcos, TextureUtil.lua).
+UnitButton.ROLE_ATLASES = {
+  TANK = "UI-LFG-RoleIcon-Tank-Micro-GroupFinder",
+  HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder",
+  DAMAGER = "UI-LFG-RoleIcon-DPS-Micro-GroupFinder",
+}
 
 local function Frames()
   return ns.Profiles.active.frames
@@ -110,7 +125,19 @@ function UnitButton:BuildVisuals(frame)
   missingMark:Hide()
   visual.missingMark = missingMark
 
+  local roleIcon = textFrame:CreateTexture(nil, "OVERLAY")
+  roleIcon:Hide()
+  visual.roleIcon = roleIcon
+
   visual.aggroFrame = BuildAggroFrame(frame)
+  local aggroDots = {}
+  for position = 1, AGGRO_DOTS do
+    local dot = textFrame:CreateTexture(nil, "OVERLAY")
+    dot:SetTexture(AGGRO_DOT_TEXTURE)
+    dot:Hide()
+    aggroDots[position] = dot
+  end
+  visual.aggroDots = aggroDots
   self:ApplyStyle(frame)
   return visual
 end
@@ -126,6 +153,42 @@ function UnitButton:ApplyStyle(frame)
   visual.nameText:SetWidth(math.max(10, style.layout.width - 12))
   PlaceText(visual.healthText, visual.healthBar, fontPath, style.text.health)
   PlaceText(visual.statusText, visual.healthBar, fontPath, style.text.status)
+  local role = style.role
+  visual.roleIcon:ClearAllPoints()
+  visual.roleIcon:SetSize(role.size, role.size)
+  visual.roleIcon:SetPoint(role.point, visual.healthBar, role.point, role.x, role.y)
+  UnitButton.PlaceAggroDots(visual, style.aggro)
+end
+
+-- El primer punto va en el punto elegido; los demás crecen hacia dentro de la barra.
+function UnitButton.PlaceAggroDots(visual, aggro)
+  local towardsLeft = string.find(aggro.point, "RIGHT") ~= nil
+  local step = (aggro.size + AGGRO_DOT_GAP) * (towardsLeft and -1 or 1)
+  for position, dot in ipairs(visual.aggroDots) do
+    dot:ClearAllPoints()
+    dot:SetSize(aggro.size, aggro.size)
+    dot:SetPoint(aggro.point, visual.healthBar, aggro.point, aggro.x + (position - 1) * step, aggro.y)
+  end
+end
+
+-- role: "TANK", "HEALER", "DAMAGER" o nil. Lo usan las barras reales y la vista previa.
+function UnitButton.ShowRole(visual, role, style)
+  local atlas = role and UnitButton.ROLE_ATLASES[role]
+  if not style.role.show or not atlas or (role == "DAMAGER" and not style.role.showDamager) then
+    visual.roleIcon:Hide()
+    return
+  end
+  visual.roleIcon:SetAtlas(atlas)
+  visual.roleIcon:Show()
+end
+
+-- status: nivel de amenaza legible (0-3) o nil. Lo usan las barras reales y la vista previa.
+function UnitButton.ShowThreat(visual, status, style)
+  local level = status or 0
+  visual.aggroFrame:SetShown(style.aggro.border and level >= AGGRO_BORDER_LEVEL)
+  for position, dot in ipairs(visual.aggroDots) do
+    dot:SetShown(style.aggro.dots and level >= position)
+  end
 end
 
 -- SecureActionButtonTemplate (SecureTemplates.lua:810-811 en Forever) solo actúa en el flanco que dice
@@ -196,6 +259,7 @@ function UnitButton:UpdateAll(button)
   self:UpdateColor(button)
   self:UpdateRange(button)
   self:UpdateThreat(button)
+  self:UpdateRole(button)
   ns.Prediction:Update(button)
   ns.MissingBuffs:Evaluate(button)
 end
@@ -213,13 +277,28 @@ function UnitButton:UpdateHealth(button)
   self:UpdateHealthText(button)
 end
 
+-- Si el cliente no deja escribir un número de vida (secreto que AbbreviateLargeNumbers rechaza), esa
+-- barra pasa a porcentaje hasta el próximo cambio de estilo y el error queda en /hs diag.
+function UnitButton:FallBackToPercent(button, context, message)
+  button.healsilusTextMode = "PERCENT"
+  ns.RecordError(context, message)
+  self:UpdateHealthText(button)
+end
+
+-- Modos: NONE, DEFICIT (-2,5 mil; vacío con la vida llena), PERCENT (75%), CURRENT (7,5 mil),
+-- CURRENT_MAX (7,5 mil / 10 mil) y CURRENT_PERCENT (7,5 mil · 75%). Los números pueden ser secretos
+-- en combate: solo se abrevian y se unen en texto, nunca se comparan ni se opera con ellos.
 function UnitButton:UpdateHealthText(button)
   local text = button.healsilus.healthText
   local mode = button.healsilusTextMode or Style().text.health.mode
+  local curvesSupported = ns.Curves.IsSupported()
   if mode == "DEFICIT" and not UnitHealthMissing then
     mode = "PERCENT"
   end
-  if mode == "PERCENT" and not ns.Curves.IsSupported() then
+  if mode == "CURRENT_PERCENT" and not curvesSupported then
+    mode = "CURRENT"
+  end
+  if mode == "PERCENT" and not curvesSupported then
     mode = "NONE"
   end
   if mode == "NONE" then
@@ -227,23 +306,47 @@ function UnitButton:UpdateHealthText(button)
     return
   end
   local unit = button.unit
+  local percentText
+  if mode == "PERCENT" or mode == "CURRENT_PERCENT" then
+    percentText = string.format("%.0f%%", UnitHealthPercent(unit, true, ns.Curves:Percent()))
+  end
   if mode == "PERCENT" then
-    text:SetText(string.format("%.0f%%", UnitHealthPercent(unit, true, ns.Curves:Percent())))
+    text:SetText(percentText)
     return
   end
-  local missing = UnitHealthMissing(unit)
-  if not ns.IsSecret(missing) and missing <= 0 then
-    text:SetText("")
+  if mode == "DEFICIT" then
+    local missing = UnitHealthMissing(unit)
+    if not ns.IsSecret(missing) and missing <= 0 then
+      text:SetText("")
+      return
+    end
+    local ok, abbreviated = pcall(AbbreviateLargeNumbers, missing)
+    if not ok then
+      self:FallBackToPercent(button, "UnitButton:DeficitText", abbreviated)
+      return
+    end
+    text:SetText("-" .. abbreviated)
     return
   end
-  local ok, abbreviated = pcall(AbbreviateLargeNumbers, missing)
+  -- Abreviar y unir textos secretos va protegido: si el cliente lo rechaza, la barra pasa a porcentaje.
+  local ok, result = pcall(UnitButton.HealthNumberText, mode, unit, percentText)
   if not ok then
-    button.healsilusTextMode = "PERCENT"
-    ns.RecordError("UnitButton:DeficitText", abbreviated)
-    self:UpdateHealthText(button)
+    self:FallBackToPercent(button, "UnitButton:HealthNumberText", result)
     return
   end
-  text:SetText("-" .. abbreviated)
+  text:SetText(result)
+end
+
+-- Texto de los modos con número de vida (CURRENT, CURRENT_MAX, CURRENT_PERCENT).
+function UnitButton.HealthNumberText(mode, unit, percentText)
+  local current = AbbreviateLargeNumbers(UnitHealth(unit))
+  if mode == "CURRENT_MAX" then
+    return current .. " / " .. AbbreviateLargeNumbers(UnitHealthMax(unit))
+  end
+  if mode == "CURRENT_PERCENT" then
+    return current .. " · " .. percentText
+  end
+  return current
 end
 
 function UnitButton:UpdateStatus(button)
@@ -321,14 +424,23 @@ function UnitButton:UpdateRange(button)
   button:SetAlpha(inRange and 1 or fadedAlpha)
 end
 
+-- En zonas o combates restringidos la amenaza llega como secreto: no se puede comparar ni convertir
+-- en puntos, así que se oculta (lo mismo hace HealBot en Forever). /hs diag dice si se puede leer.
 function UnitButton:UpdateThreat(button)
   local status = UnitThreatSituation(button.unit)
-  local aggroFrame = button.healsilus.aggroFrame
   if ns.IsSecret(status) then
-    aggroFrame:Hide()
-    return
+    status = nil
   end
-  aggroFrame:SetShown(status ~= nil and status >= 2)
+  UnitButton.ShowThreat(button.healsilus, status, Style())
+end
+
+-- El rol también puede ser secreto (identidad restringida): entonces no se muestra.
+function UnitButton:UpdateRole(button)
+  local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(button.unit)
+  if ns.IsSecret(role) then
+    role = nil
+  end
+  UnitButton.ShowRole(button.healsilus, role, Style())
 end
 
 -- Comprueba en un marco de prueba que SetAlphaFromBoolean existe y aplica los dos valores.
@@ -385,6 +497,9 @@ local HANDLERS = {
   UNIT_CONNECTION = UpdateStatusEvent,
   UNIT_FLAGS = UpdateStatusEvent,
   UNIT_THREAT_SITUATION_UPDATE = function(button)
+    UnitButton:UpdateThreat(button)
+  end,
+  UNIT_THREAT_LIST_UPDATE = function(button)
     UnitButton:UpdateThreat(button)
   end,
   UNIT_IN_RANGE_UPDATE = function(button)
@@ -447,6 +562,13 @@ function UnitButton:Initialize()
   end)
   ns.Events:RegisterGameEvent("PLAYER_FOCUS_CHANGED", function()
     UnitButton:UpdateUnitToken("focus")
+  end)
+  ns.Events:RegisterGameEvent("PLAYER_ROLES_ASSIGNED", function()
+    for button in pairs(UnitButton.buttons) do
+      if button.unit then
+        UnitButton:UpdateRole(button)
+      end
+    end
   end)
 end
 

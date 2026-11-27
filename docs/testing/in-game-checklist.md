@@ -70,3 +70,10 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Marca "Fuera de combate, cualquier clic quita el debuff que puedas quitar" (pestaña Clics o Debuffs).
 - [ ] Fuera de combate, a un compañero con una maldición: clic izquierdo (o cualquier otro) lanza Quitar maldición. Sin debuff, cada clic vuelve a hacer lo suyo.
 - [ ] En combate los clics hacen lo normal (Toque de sanación con el izquierdo), aunque tenga una maldición.
+
+## 12. Texto de vida, rol, aggro y posición de auras
+- [ ] Aspecto → "Texto de vida": prueba Vida actual (7,5 mil), Actual / máxima (7,5 mil / 10 mil) y Actual y porcentaje. En combate siguen cambiando sin errores (si no, `/hs diag` anota `UnitButton:HealthNumberText` y esa barra pasa a porcentaje).
+- [ ] Aspecto → "Mostrar icono de tanque / sanador / DPS": en grupo con roles elegidos sale el icono; sin "Incluir el de DPS" solo tanques y sanadores. Cambia de rol y el icono se actualiza.
+- [ ] Aggro: contra un muñeco o un mob, quien tiene el aggro lleva borde rojo y 3 puntos rojos; con mucha amenaza sin tanquear, 1 punto. Desmarca "Borde rojo" o "Puntos rojos" y comprueba que cada uno se quita por separado.
+- [ ] `/hs diag` en combate: `Amenaza legible ahora: sí`. Si sale `no`, el juego oculta la amenaza en esa zona y no se puede mostrar (HealBot tampoco).
+- [ ] Auras y Debuffs → "Posición de los iconos": Encima, Debajo, A la izquierda y A la derecha de la barra colocan los iconos fuera de la barra; las esquinas, dentro.

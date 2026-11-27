@@ -1,5 +1,6 @@
--- Pestaña Aspecto: fuente, fondo y colores de vida de la barra, y tamaño, contorno y posición de cada
--- texto (nombre, vida, estado). Edita el estilo activo, que la cabecera de la ventana indica.
+-- Pestaña Aspecto: fuente, fondo y colores de vida de la barra; tamaño, contorno y posición de cada
+-- texto (nombre, vida, estado); icono de rol y aviso de aggro. Edita el estilo activo, que la cabecera
+-- de la ventana indica.
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
@@ -35,12 +36,33 @@ TabAppearance.HEALTH_MODE_OPTIONS = {
   { value = "NONE", label = L.TEXT_NONE },
   { value = "DEFICIT", label = L.TEXT_DEFICIT },
   { value = "PERCENT", label = L.TEXT_PERCENT },
+  { value = "CURRENT", label = L.TEXT_CURRENT },
+  { value = "CURRENT_MAX", label = L.TEXT_CURRENT_MAX },
+  { value = "CURRENT_PERCENT", label = L.TEXT_CURRENT_PERCENT },
 }
 
 local HEALTH_COLORS = {
   { key = "healthy", label = L.APPEARANCE_HEALTHY },
   { key = "injured", label = L.APPEARANCE_INJURED },
   { key = "critical", label = L.APPEARANCE_CRITICAL },
+}
+
+-- Icono de rol y aggro: casillas, posición y tamaño de cada uno (style.role y style.aggro).
+TabAppearance.INDICATORS = {
+  {
+    key = "role", title = L.APPEARANCE_ROLE_TITLE, pointLabel = L.APPEARANCE_ROLE_POINT, sizeLabel = L.APPEARANCE_ROLE_SIZE,
+    checks = {
+      { key = "show", label = L.APPEARANCE_ROLE_SHOW },
+      { key = "showDamager", label = L.APPEARANCE_ROLE_DAMAGER },
+    },
+  },
+  {
+    key = "aggro", title = L.APPEARANCE_AGGRO_TITLE, pointLabel = L.APPEARANCE_AGGRO_POINT, sizeLabel = L.APPEARANCE_AGGRO_SIZE,
+    checks = {
+      { key = "border", label = L.APPEARANCE_AGGRO_BORDER },
+      { key = "dots", label = L.APPEARANCE_AGGRO_DOTS },
+    },
+  },
 }
 
 local function Style()
@@ -130,7 +152,22 @@ function TabAppearance.Build(panel)
   texts:Add(Widgets.Dropdown(panel, L.FRAMES_HEALTH_TEXT, 220, function()
     return TabAppearance.HEALTH_MODE_OPTIONS
   end, Widgets.StyleGetter("text", "health", "mode"), Widgets.StyleSetter("text", "health", "mode")), 50)
-  TabAppearance.stacks = { bar, texts }
+
+  -- Tercera columna: icono de rol y aggro (borde y puntos rojos).
+  local indicators = Widgets.Stack(panel, 560, 0)
+  for _, section in ipairs(TabAppearance.INDICATORS) do
+    indicators:Add(Widgets.Label(panel, section.title, "GameFontNormal"), 22)
+    for _, check in ipairs(section.checks) do
+      indicators:Add(Widgets.Checkbox(panel, check.label, Widgets.StyleGetter(section.key, check.key),
+        Widgets.StyleSetter(section.key, check.key)), 28)
+    end
+    indicators:Add(Widgets.Dropdown(panel, section.pointLabel, 200, function()
+      return TabAppearance.POINT_OPTIONS
+    end, Widgets.StyleGetter(section.key, "point"), Widgets.StyleSetter(section.key, "point")), 50)
+    indicators:Add(RangeSlider(panel, section.sizeLabel, "size", Widgets.StyleGetter(section.key, "size"),
+      Widgets.StyleSetter(section.key, "size"), 1), 48)
+  end
+  TabAppearance.stacks = { bar, texts, indicators }
 end
 
 function TabAppearance.Refresh()

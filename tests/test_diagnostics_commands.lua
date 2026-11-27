@@ -59,6 +59,17 @@ describe("Diagnostics", function()
     assertEquals(ns.Diagnostics.AurasLine(), "Auras readable now: no · watched buffs: 1 · bars missing a buff: 1")
   end)
 
+  it("says whether threat can be read now", function()
+    local ns, environment = LoadTools()
+    assertEquals(ns.Diagnostics.ThreatLine(), "Threat readable now: yes")
+    environment.C_Secrets = {
+      ShouldUnitThreatStateBeSecret = function(unit)
+        return unit == "player"
+      end,
+    }
+    assertEquals(ns.Diagnostics.ThreatLine(), "Threat readable now: no")
+  end)
+
   it("prints the client header first and the error summary last", function()
     local ns, environment = LoadTools()
     environment.GetBuildInfo = function()

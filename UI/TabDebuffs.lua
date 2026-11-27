@@ -206,7 +206,7 @@ function TabDebuffs.Build(panel)
     return TabDebuffs.MODE_OPTIONS
   end, Widgets.StyleGetter("auras", "dispelMode"), Widgets.StyleSetter("auras", "dispelMode")), 50)
   appearance:Add(Widgets.Dropdown(panel, L.AURAS_DEBUFFS_CORNER, 200, function()
-    return ns.TabAuras.CORNER_OPTIONS
+    return ns.TabAuras.POSITION_OPTIONS
   end, Widgets.StyleGetter("auras", "debuffsPoint"), Widgets.StyleSetter("auras", "debuffsPoint")), 50)
   TabDebuffs.appearance = appearance
 
