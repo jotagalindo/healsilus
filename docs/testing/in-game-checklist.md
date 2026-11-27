@@ -8,6 +8,7 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Todas las APIs salen `OK`. Anota las que salgan `FALTA`.
 - [ ] `Contenedores nativos de auras: OK`.
 - [ ] `SetAlphaFromBoolean: OK`. Si sale `FALTA`, el rango con secretos usa alfa fija (diseño §11).
+- [ ] Fuera de combate, `Auras legibles ahora: sí · buffs vigilados: 2 · barras sin algún buff: N`. Si sale `no`, el cliente devuelve las auras como secretos y no se puede avisar de buffs.
 - [ ] `Todos los IDs de hechizo del perfil existen.` Si no, corrige los IDs en `Data/Druid.lua`.
 - [ ] `Cabecera party: 40 botones`, `tanks: 8`, `pets: 20`. Si sale menos, la precreación no funciona (diseño §11) y los botones nuevos recibirán auras al salir de combate.
 
@@ -40,3 +41,110 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Activa "Perfil distinto por especialización", cambia de especialización y comprueba que el perfil cambia al salir de combate.
 - [ ] Exporta el perfil en un PJ e impórtalo en otro.
 - [ ] Copiar desde y Restablecer piden confirmación y funcionan.
+
+## 7. Estilos
+- [ ] Al entrar, tu configuración anterior aparece como estilo "Mi estilo" y se ve igual que antes.
+- [ ] Pestaña Estilos: crea uno desde "Clásico", renómbralo, duplícalo y bórralo. Al borrar el que está en uso, se pasa a Healsilus.
+- [ ] Reglas: pon "Compacto banda" para "Banda de 21 a 40"; al entrar en una banda grande cambia solo (si estás en combate, al salir).
+- [ ] Pestaña Aspecto: cambia fuente, tamaño y posición del nombre, color del fondo y colores de vida (con "Color de la barra: según la vida").
+- [ ] Exporta un estilo e impórtalo: aparece como "Estilo importado".
+
+## 8. Debuffs
+- [ ] En cada tipo salen tus hechizos que lo quitan; elige uno y un clic y pulsa Asignar. La pestaña Clics muestra la asignación.
+- [ ] "Teñir la barra entera" y "Ambos" colorean la barra con el color del tipo cuando alguien tiene un debuff que puedes quitar.
+
+## 9. Buffs
+- [ ] Fuera de combate, la barra de quien no tiene Marca se pinta del color elegido; al entrar en combate vuelve a su color.
+- [ ] Asigna "Poner el buff que falta" a un clic: sobre esa barra lanza el buff que le falta.
+- [ ] "Fuera de combate, cualquier clic pone el buff que le falta a la barra" viene marcada (pestaña Buffs o Clics): cualquier clic sobre una barra sin Marca lanza Marca de lo Salvaje; cuando ya la tiene, cada clic vuelve a hacer lo suyo.
+- [ ] En combate esa barra vuelve a su color de vida, sin marca naranja ni aviso en el tooltip, y los clics hacen lo normal (no pone buffs). Al salir de combate vuelve el aviso.
+- [ ] Con los dos overrides marcados, una barra con maldición y sin Marca: el clic quita primero la maldición.
+- [ ] Con "Avisar si quedan menos de 5 minutos", un buff a punto de acabar cuenta como que falta.
+
+## 10. Bloques
+- [ ] Desbloquea, arrastra un bloque cerca de otro: se pega a su borde o se alinea.
+- [ ] Con "Mover todos los bloques juntos", arrastrar uno mueve todos.
+- [ ] Desmarca "Bloque principal": desaparece el bloque de grupo/banda.
+
+## 11. Override de dispel
+- [ ] "Fuera de combate, cualquier clic quita el debuff que puedas quitar" viene marcada (pestaña Clics o Debuffs).
+- [ ] Fuera de combate, a alguien con veneno: un clic izquierdo normal lanza Curar envenenamiento (o Suprimir veneno si lo tienes).
+- [ ] Fuera de combate, a un compañero con una maldición: clic izquierdo (o cualquier otro) lanza Quitar maldición. Sin debuff, cada clic vuelve a hacer lo suyo.
+- [ ] En combate los clics hacen lo normal (Toque de sanación con el izquierdo), aunque tenga una maldición.
+
+## 12. Texto de vida, rol, aggro y posición de auras
+- [ ] Con "Déficit", una barra con la vida llena no muestra nada (antes salía "-0"); al perder vida sale "-1,2 mil". Si sigue saliendo "-0", `/hs diag` anota `UnitButton:DeficitFade`.
+- [ ] Aspecto → "Texto de vida" (arriba de la columna del medio): prueba Vida actual (7,5 mil), Actual / máxima (7,5 mil / 10 mil) y Actual y porcentaje. En combate siguen cambiando sin errores (si no, `/hs diag` anota `UnitButton:HealthNumberText` y esa barra pasa a porcentaje).
+- [ ] Aspecto → "Mostrar icono de tanque / sanador / DPS": en grupo con roles elegidos sale el icono; sin "Incluir el de DPS" solo tanques y sanadores. Cambia de rol y el icono se actualiza.
+- [ ] Aggro: contra un muñeco o un mob, quien tiene el aggro lleva borde rojo y 3 puntos rojos; con mucha amenaza sin tanquear, 1 punto. Desmarca "Borde rojo" o "Puntos rojos" y comprueba que cada uno se quita por separado.
+- [ ] `/hs diag` en combate: `Amenaza legible ahora: sí`. Si sale `no`, el juego oculta la amenaza en esa zona y no se puede mostrar (HealBot tampoco).
+- [ ] Auras y Debuffs → "Posición de los iconos": Encima, Debajo, A la izquierda y A la derecha de la barra colocan los iconos fuera de la barra; las esquinas, dentro.
+
+## 13. Modo mover y activar/desactivar
+- [ ] En la ventana de opciones, "Mover marcos": se cierra la ventana, sale la barra "Healsilus: mover marcos" arriba, la rejilla (líneas rojas en el centro) y todos los bloques activos rellenos con miembros de ejemplo (grupo, tanques, objetivo, foco y mascotas si están activadas).
+- [ ] Arrastra un cuadrado azul: al soltarlo, la esquina superior izquierda del bloque cae en una línea de la rejilla. Sin "Pegar a la rejilla" se queda donde lo sueltas (salvo el imán entre bloques).
+- [ ] "Rejilla: 32 px" cambia a 64 y 16; "Ejemplo: 5" cambia a 10, 20 y 40 miembros.
+- [ ] "Terminar" quita la rejilla y los ejemplos y bloquea los marcos. Al entrar en combate el modo mover se cierra solo. `/hs move` hace lo mismo que el botón.
+- [ ] Clic derecho en el botón del minimapa: "Healsilus desactivado", desaparecen los bloques, vuelven los marcos de Blizzard y el icono sale en gris. Tras `/reload` sigue desactivado en ese personaje (los demás no cambian).
+- [ ] Otro clic derecho (o "Activar Healsilus" en la ventana, o `/hs toggle`): vuelven los bloques y se ocultan otra vez los de Blizzard.
+
+## 14. Aspecto de la ventana de opciones
+- [ ] `/hs`: ventana oscura con una franja verde arriba, barra lateral con el logo, "BETA" y las ocho pestañas con su icono; la elegida lleva fondo verde suave y una raya verde a la izquierda.
+- [ ] Al pasar el ratón por botones, casillas, colores y pestañas se ilumina el borde o el fondo. "Mover marcos" va en verde; "Desactivar Healsilus" en rojo (y "Activar Healsilus" en verde cuando está apagado).
+- [ ] Casillas cuadradas con relleno verde al marcarlas; pulsar el texto de la casilla también la cambia.
+- [ ] Deslizadores: tramo verde hasta el tirador y el valor en verde a la derecha. Desplegables con el texto a la izquierda y una flecha hacia abajo.
+- [ ] Ninguna pestaña se sale de la tarjeta ni se pisa con el título de la pestaña.
+- [ ] La barra del modo mover y la ventana de importar/exportar tienen el mismo estilo.
+
+## 15. Barra de maná / energía
+- [ ] Cada barra tiene debajo una franja fina con el recurso de esa persona: maná en azul, ira en rojo, energía en amarillo, foco en naranja (mascotas de cazador). La barra de vida queda justo encima, sin pisarse.
+- [ ] Gasta maná o ira: la franja baja y sube en tiempo real, también en combate. Si en combate se queda quieta o sale un error, pásame `/hs diag`.
+- [ ] Druida: al pasar a felino la franja se vuelve amarilla (energía), en oso roja (ira) y al volver a forma normal, azul.
+- [ ] Aspecto → "Barra de maná / energía": desmarca "Mostrar maná, ira o energía" y la franja desaparece y la vida vuelve a ocupar todo el alto. "Solo en los sanadores" la deja solo en quien tiene rol de sanador. "Alto de la barra" la hace más gruesa o fina.
+- [ ] La vista previa y el modo mover también muestran la franja en los miembros de ejemplo.
+
+## 16. Opciones ordenadas en recuadros
+- [ ] Marcos: tres columnas de recuadros (Tamaño, Disposición · Bloques visibles, Cuándo mostrar · Mover y colocar, Otros). Nada se pisa ni se sale.
+- [ ] Aspecto: arriba los botones Barra / Textos / Rol y aggro cambian de página; a la derecha, "Vista de ejemplo" con cuatro barras que cambian al tocar cualquier opción.
+
+## 17. Nombres centrados
+- [ ] Aspecto → Textos → Nombre: pulsa el punto del centro del selector. El nombre queda en el centro exacto de la barra de vida y los dos desplazamientos pasan a 0.
+- [ ] Un estilo que ya tenías con el nombre en "Centro" (o Arriba/Abajo) aparece centrado tras actualizar, sin tocar nada.
+
+## 18. Opacidad
+- [ ] Aspecto → Barra → Opacidad: "Con la vida llena" a 0.3. Las barras a tope se atenúan (relleno, fondo, maná y textos); al recibir daño vuelven a ser opacas al momento, también en combate. El aggro, el rol y las auras no se atenúan.
+- [ ] "Fuera de alcance" sigue funcionando y se combina con la anterior. Si sale un error de "FullHealthFade" en `/hs diag`, pásamelo.
+
+## 19. Mover con imán
+- [ ] "Mover marcos": cada bloque tiene un recuadro verde con su nombre; se arrastra el bloque entero (ya no hay cuadrados azules).
+- [ ] Arrastra un bloque junto a otro: se pega mientras lo arrastras y una línea verde marca el borde o centro con el que se alinea. Con Mayús pulsada se mueve libre.
+- [ ] La barra de arriba: "Imán: 12 px" cambia la distancia (o lo apaga) y "Mover juntos" arrastra todos los bloques a la vez.
+
+## 20. Iconos propios
+- [ ] **Cierra y vuelve a abrir el juego** tras actualizar (las texturas nuevas no se cargan con `/reload`).
+- [ ] La barra lateral muestra el logo nuevo (cruz blanca con una hoja sobre un cuadrado verde) y ocho iconos de línea: ratón, barras, paleta, hoja, gota tachada, escudo, capas y persona. Grises; claros al pasar el ratón; verdes en la pestaña elegida.
+- [ ] El botón del minimapa y la lista de addons (pantalla de personajes) usan el mismo logo; con Healsilus desactivado, el del minimapa sale en gris.
+- [ ] Si algún icono sale como un cuadrado verde o negro, la carpeta `Media` no está dentro de `AddOns\Healsilus`: dímelo.
+
+## 21. Colocar HoTs, debuffs y buffs
+- [ ] Aspecto → Auras: elige HoTs, pulsa otro punto del selector (dentro o uno de los 4 de fuera) y los HoTs reales y los de la vista de ejemplo se mueven ahí. Lo mismo con Debuffs y Buff que falta.
+- [ ] "Crecen hacia" Izquierda/Derecha cambia el lado hacia el que se añaden los iconos cuando hay varios.
+- [ ] Tamaño y desplazamientos mueven cada grupo por separado. Los iconos de fuera no pisan el borde de aggro.
+- [ ] El aviso de buff que falta enseña el icono del buff (Marca, Espinas…) con un marco naranja.
+- [ ] Auras y Debuffs tienen un botón "Colocar iconos en la barra…" que abre esa página.
+
+## 22. Parpadeo del borde de aggro
+- [ ] Aspecto → Rol y aggro → "Parpadear el borde": el borde rojo de quien tanquea late suave; al perder el aggro se apaga y deja de parpadear.
+
+## 23. Barra de recurso por tipo
+- [ ] Aspecto → Barra → "Mostrar la barra de:": desmarca Ira y los guerreros se quedan sin franja (la vida ocupa todo el alto); el resto la mantiene.
+- [ ] Desmarca Energía y pasa a felino con un druida: la franja desaparece; al volver a forma normal (maná) vuelve.
+- [ ] Foco es el de las mascotas de cazador; "Otros" cubre cualquier recurso sin casilla propia.
+
+## 24. Plantillas de disposición
+- [ ] Aspecto → Plantillas → "Sanador" → Aplicar (confirma): las barras pasan a 140 × 52; arriba nombre y debuffs, en medio los puntos de aggro, abajo rol, vida, buff que falta y hasta 3 HoTs. Nada se pisa, ni con un tanque con 3 HoTs, 2 debuffs y aggro.
+- [ ] "Banda compacta": barras de 90 × 36, rol pequeño y nombre arriba, debuffs, buff y HoTs abajo, sin número de vida.
+- [ ] Los colores, la textura y la fuente del estilo no cambian al aplicar una plantilla.
+- [ ] Coloca algo a tu gusto, "Guardar la disposición actual…", ponle nombre: sale en "Tus plantillas" (en todos tus personajes). Aplicar y Borrar funcionan.
+- [ ] Muerto o desconectado: el texto de estado sale donde iba la vida y sin iconos de auras encima.
+- [ ] Aspecto → Textos → "Ancho máximo del nombre": un nombre largo se corta con "…" antes de llegar a los iconos.

@@ -1,0 +1,90 @@
+# Release automática. Se publica una release de GitHub con el zip listo para Interface\AddOns:
+#   * al llegar a main una versión nueva: si "## Version:" del TOC aún no tiene release, se crean la etiqueta
+#     vX.Y.Z (sobre ese commit) y la release; si ya la tiene, no se hace nada;
+#   * al subir a mano una etiqueta vX.Y.Z (debe coincidir con el TOC).
+# Antes pasa las comprobaciones y las pruebas. Notas: docs/releases/vX.Y.Z.md si existe; si no, las genera
+# GitHub a partir de los commits. Las versiones 0.x y las etiquetas con guion (v1.1.0-beta1) salen como prerelease.
+# Si la release ya existe (creada a mano desde la web con su etiqueta), solo se le adjunta el zip.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Decide which version to publish
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(tr -d '\r' < Healsilus.toc | sed -n 's/^## Version:[[:space:]]*\([^[:space:]]*\).*$/\1/p')
+          tag="v$version"
+          publish=true
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+          elif gh release view "$tag" > /dev/null 2>&1; then
+            echo "Release $tag already exists: nothing to publish."
+            publish=false
+          fi
+          {
+            echo "tag=$tag"
+            echo "publish=$publish"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build the development image
+        if: steps.version.outputs.publish == 'true'
+        run: docker build -t healsilus-dev tools
+
+      - name: check.lua and tests
+        if: steps.version.outputs.publish == 'true'
+        run: docker run --rm -v "$PWD:/addon" healsilus-dev
+
+      - name: Package the addon (the tag must match the TOC version)
+        if: steps.version.outputs.publish == 'true'
+        run: docker run --rm -v "$PWD:/addon" healsilus-dev sh tools/package.sh "${{ steps.version.outputs.tag }}"
+
+      - name: Publish the GitHub release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          version="${TAG#v}"
+          archive="dist/Healsilus-${version}.zip"
+          notes_file="docs/releases/${TAG}.md"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$archive" --clobber
+            exit 0
+          fi
+          prerelease_flag=""
+          title="Healsilus $TAG"
+          case "$version" in
+            0.* | *-*) prerelease_flag="--prerelease"; title="$title (beta)" ;;
+          esac
+          if [ -f "$notes_file" ]; then
+            notes_flag="--notes-file=$notes_file"
+          else
+            notes_flag="--generate-notes"
+          fi
+          # Desde main la etiqueta aún no existe: gh la crea sobre este commit (--target).
+          # shellcheck disable=SC2086 # prerelease_flag is empty or a single flag
+          gh release create "$TAG" "$archive" \
+            --target "$GITHUB_SHA" \
+            --title "$title" \
+            "$notes_flag" \
+            $prerelease_flag

@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue, assertFalse, assertNil = Harness.assertEquals, Harness.assertTrue, Harness.assertFalse, Harness.assertNil
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Data/Spells.lua", "Data/Druid.lua", "Auras/MissingBuffs.lua",
 }
 
@@ -35,12 +35,25 @@ local function LoadMissingBuffs()
   end
   environment.C_UnitAuras = {
     GetAuraDataBySpellName = function(unit, name)
-      return units[unit].auras[name] and { name = name } or nil
+      local aura = units[unit].auras[name]
+      if not aura then
+        return nil
+      end
+      return { name = name, expirationTime = type(aura) == "number" and aura or 0 }
     end,
   }
+  environment.GetTime = function()
+    return 1000
+  end
+  environment.UnitIsUnit = function(unit, other)
+    return unit == other
+  end
   local ns = Loader.Load(environment, FILES)
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
-  ns.UnitButton = { buttons = {} }
+  ns.UnitButton = { buttons = {}, ShowMissing = function(visual, shown, icon)
+    visual.missingMark:SetShown(shown)
+    visual.missingMark.icon = icon
+  end }
   ns.MissingBuffs:Resolve()
   return ns, environment, units
 end
@@ -54,21 +67,32 @@ local function FakeButton(unit)
 end
 
 describe("MissingBuffs.Compute", function()
-  it("checks everyone for ALL entries and only tanks for TANKS entries", function()
+  it("checks each buff only on the targets chosen for it", function()
     local ns = LoadMissingBuffs()
     local watched = {
       { label = "Marca", names = { "Marca", "Don" }, targets = "ALL" },
       { label = "Espinas", names = { "Espinas" }, targets = "TANKS" },
+      { label = "Espiritu", names = { "Espiritu" }, targets = "HEALERS" },
+      { label = "Armadura", names = { "Armadura" }, targets = "SELF" },
     }
     local function Nothing()
       return false
     end
-    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, true), { "Marca", "Espinas" })
-    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, false), { "Marca" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, { tank = true }), { "Marca", "Espinas" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, {}), { "Marca" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, { healer = true }), { "Marca", "Espiritu" })
+    assertEquals(ns.MissingBuffs.Compute(watched, Nothing, { self = true }), { "Marca", "Armadura" })
     local function HasGift(name)
       return name == "Don"
     end
-    assertEquals(ns.MissingBuffs.Compute(watched, HasGift, false), {})
+    assertEquals(ns.MissingBuffs.Compute(watched, HasGift, {}), {})
+  end)
+
+  it("builds the macro that casts the first missing buff on the bar under the mouse", function()
+    local ns = LoadMissingBuffs()
+    assertEquals(ns.MissingBuffs.BuffMacro({ "Marca de lo Salvaje", "Espinas" }), "/cast [@mouseover] Marca de lo Salvaje")
+    assertEquals(ns.MissingBuffs.BuffMacro({}), "")
+    assertEquals(ns.MissingBuffs.BuffMacro(nil), "")
   end)
 end)
 
@@ -76,8 +100,8 @@ describe("MissingBuffs", function()
   it("resolves watched spells to localized names, including the group version", function()
     local ns = LoadMissingBuffs()
     assertEquals(ns.MissingBuffs.resolved, {
-      { label = "Marca de lo Salvaje", names = { "Marca de lo Salvaje", "Don de lo Salvaje" }, targets = "ALL" },
-      { label = "Espinas", names = { "Espinas" }, targets = "TANKS" },
+      { label = "Marca de lo Salvaje", names = { "Marca de lo Salvaje", "Don de lo Salvaje" }, targets = "ALL", icon = 136041 },
+      { label = "Espinas", names = { "Espinas" }, targets = "TANKS", icon = 136041 },
     })
   end)
 
@@ -98,7 +122,7 @@ describe("MissingBuffs", function()
     assertFalse(damager.healsilus.missingMark.shown)
   end)
 
-  it("freezes the last result in combat and under secret restrictions", function()
+  it("freezes the last result in combat and while auras are secret", function()
     local ns, environment, units = LoadMissingBuffs()
     local tank = FakeButton("party1")
     ns.MissingBuffs:Evaluate(tank)
@@ -107,16 +131,90 @@ describe("MissingBuffs", function()
     ns.MissingBuffs:Evaluate(tank)
     assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
     environment.__state.inCombat = false
+    local aurasSecret = true
     environment.C_Secrets = {
-      HasSecretRestrictions = function()
-        return true
+      ShouldAurasBeSecret = function()
+        return aurasSecret
       end,
     }
     ns.MissingBuffs:Evaluate(tank)
     assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
-    environment.C_Secrets = nil
+    aurasSecret = false
     ns.MissingBuffs:Evaluate(tank)
     assertEquals(tank.healsilusMissing, {})
+  end)
+
+  -- WoW Forever es una versión con restricciones (HasSecretRestrictions siempre true), pero fuera de
+  -- combate las auras se leen: eso no debe apagar el aviso de buffs.
+  it("still reads auras on a client build that has secret restrictions", function()
+    local ns, environment = LoadMissingBuffs()
+    environment.C_Secrets = {
+      HasSecretRestrictions = function()
+        return true
+      end,
+      ShouldAurasBeSecret = function()
+        return false
+      end,
+    }
+    local tank = FakeButton("party1")
+    assertTrue(ns.MissingBuffs.CanRead())
+    ns.MissingBuffs:Evaluate(tank)
+    assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
+  end)
+
+  it("keeps the last result when the client returns a secret aura", function()
+    local ns, environment, units = LoadMissingBuffs()
+    local tank = FakeButton("party1")
+    ns.MissingBuffs:Evaluate(tank)
+    units.party1.auras = { ["Marca de lo Salvaje"] = true, ["Espinas"] = true }
+    environment.C_UnitAuras.GetAuraDataBySpellName = function()
+      return Stubs.MakeSecret()
+    end
+    ns.MissingBuffs:Evaluate(tank)
+    assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje", "Espinas" })
+  end)
+
+  it("never compares secret roles or unit checks", function()
+    local ns, environment = LoadMissingBuffs()
+    environment.UnitGroupRolesAssigned = function()
+      return Stubs.MakeSecret()
+    end
+    environment.UnitIsUnit = function()
+      return Stubs.MakeSecret()
+    end
+    local tank = FakeButton("party1")
+    ns.MissingBuffs:Evaluate(tank)
+    assertEquals(tank.healsilusMissing, { "Marca de lo Salvaje" })
+  end)
+
+  it("treats a buff with a secret expiration time as present", function()
+    local ns, environment = LoadMissingBuffs()
+    ns.Profiles.active.buffs.refreshBelow = 5
+    environment.C_UnitAuras.GetAuraDataBySpellName = function(_, name)
+      if name == "Marca de lo Salvaje" then
+        return { name = name, expirationTime = Stubs.MakeSecret() }
+      end
+      return nil
+    end
+    local damager = FakeButton("party2")
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, {})
+  end)
+
+  it("only shows the mark out of combat and brings it back afterwards", function()
+    local ns, environment = LoadMissingBuffs()
+    local tank = FakeButton("party1")
+    ns.UnitButton.buttons[tank] = true
+    ns.MissingBuffs:Evaluate(tank)
+    assertTrue(tank.healsilus.missingMark.shown)
+    environment.__fireEvent("PLAYER_REGEN_DISABLED")
+    assertFalse(tank.healsilus.missingMark.shown)
+    environment.__state.inCombat = true
+    ns.MissingBuffs:Render(tank)
+    assertFalse(tank.healsilus.missingMark.shown)
+    environment.__state.inCombat = false
+    environment.__fireEvent("PLAYER_REGEN_ENABLED")
+    assertTrue(tank.healsilus.missingMark.shown)
   end)
 
   it("clears the mark for dead units and when the feature is off", function()
@@ -132,6 +230,20 @@ describe("MissingBuffs", function()
     ns.MissingBuffs:Resolve()
     ns.MissingBuffs:Evaluate(tank)
     assertNil(tank.healsilusMissing)
+  end)
+
+  it("also warns when a buff has less time left than the chosen minutes", function()
+    local ns, _, units = LoadMissingBuffs()
+    units.party2.auras = { ["Marca de lo Salvaje"] = 1000 + 120 }
+    local damager = FakeButton("party2")
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, {})
+    ns.Profiles.active.buffs.refreshBelow = 5
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, { "Marca de lo Salvaje" })
+    units.party2.auras = { ["Marca de lo Salvaje"] = 1000 + 600 }
+    ns.MissingBuffs:Evaluate(damager)
+    assertEquals(damager.healsilusMissing, {})
   end)
 
   it("groups aura changes into one delayed evaluation", function()

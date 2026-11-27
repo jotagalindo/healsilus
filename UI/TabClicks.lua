@@ -30,6 +30,22 @@ local BUTTON_LABELS = {
   ["5"] = L.BUTTON_5,
 }
 
+-- Nombre legible de una clave de clic: "1" → "Izquierdo", "shift-2" → "Shift + Derecho".
+function TabClicks.KeyLabel(key)
+  local prefix, button = string.match(key, "^(.-)(%d)$")
+  if prefix == "" then
+    return BUTTON_LABELS[button]
+  end
+  return MODIFIER_LABELS[prefix] .. " + " .. BUTTON_LABELS[button]
+end
+
+TabClicks.OPTIONS = {
+  { key = "targetOnClick", label = L.CLICKS_TARGET_ON_CLICK },
+  { key = "avoidBlueCursor", label = L.CLICKS_AVOID_BLUE_CURSOR },
+  { key = "dispelOverride", label = L.CLICKS_DISPEL_OVERRIDE },
+  { key = "buffOverride", label = L.CLICKS_BUFF_OVERRIDE },
+}
+
 local function Bindings()
   return ns.Profiles.active.bindings
 end
@@ -61,6 +77,8 @@ function TabClicks.Describe(binding, key)
     return L.BINDING_MACRO, MACRO_ICON, true
   elseif binding.kind == "target" then
     return L.BINDING_TARGET, nil, true
+  elseif binding.kind == "buff" then
+    return L.BINDING_BUFF, nil, true
   end
   return L.BINDING_MENU, nil, true
 end
@@ -124,6 +142,9 @@ function TabClicks:OpenMenu(cell)
     root:CreateButton(L.BINDING_MENU, function()
       SetBinding(cell.key, { kind = "menu" })
     end)
+    root:CreateButton(L.BINDING_BUFF, function()
+      SetBinding(cell.key, { kind = "buff" })
+    end)
     root:CreateButton(L.MENU_CLEAR, function()
       SetBinding(cell.key, nil)
     end)
@@ -180,9 +201,16 @@ function TabClicks.Build(panel)
       TabClicks.cells[key] = cell
     end
   end
+  local optionsTop = GRID_TOP - #ns.BINDING_PREFIXES * CELL_HEIGHT - 12
+  local options = Widgets.Stack(panel, 0, optionsTop)
+  for _, spec in ipairs(TabClicks.OPTIONS) do
+    options:Add(Widgets.Checkbox(panel, spec.label, Widgets.SectionGetter("clicks", spec.key), Widgets.SectionSetter("clicks", spec.key)), 28)
+  end
+  TabClicks.options = options
 end
 
 function TabClicks.Refresh()
+  TabClicks.options:Refresh()
   for key, cell in pairs(TabClicks.cells) do
     local text, icon, valid = TabClicks.Describe(Bindings()[key], key)
     cell.text:SetText(text)

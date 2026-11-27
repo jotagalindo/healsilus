@@ -15,6 +15,7 @@ ns.Events:RegisterGameEvent("PLAYER_LOGIN", function()
   ns.UnitButton:Initialize()
   ns.Headers:Initialize()
   ns.Config:RegisterSettingsCategory()
+  ns.MinimapButton:Initialize()
   ns.Events:Fire("READY")
 end)
 

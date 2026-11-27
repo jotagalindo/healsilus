@@ -1,4 +1,5 @@
--- Comandos: /hs (configuración), /hs diag, /hs debug, /hs lock, /hs preview N.
+-- Comandos: /hs (configuración), /hs diag, /hs debug, /hs lock, /hs move, /hs toggle, /hs preview N,
+-- /hs minimap.
 local _, ns = ...
 local L = ns.L
 
@@ -19,6 +20,10 @@ local function HandleCommand(message)
     frames.locked = not frames.locked
     ns.Events:Fire("SETTINGS_CHANGED", "frames")
     ns.Print(frames.locked and L.LOCKED or L.UNLOCKED)
+  elseif command == "move" then
+    ns.MoveMode:Toggle()
+  elseif command == "toggle" then
+    ns.Headers:SetEnabled(not ns.Headers.IsEnabled())
   elseif command == "preview" then
     local count = tonumber(argument)
     if count and count >= 1 then
@@ -26,6 +31,8 @@ local function HandleCommand(message)
     else
       ns.Preview:Hide()
     end
+  elseif command == "minimap" then
+    ns.MinimapButton:SetHidden(not HealsilusDB.minimap.hide)
   else
     ns.Print(L.HELP)
   end

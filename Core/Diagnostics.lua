@@ -14,7 +14,7 @@ local API_CHECKS = {
   { "C_CurveUtil.CreateColorCurve", function() return C_CurveUtil and C_CurveUtil.CreateColorCurve end },
   { "issecretvalue", function() return issecretvalue end },
   { "C_UnitAuras.GetAuraDataBySpellName", function() return C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName end },
-  { "C_Secrets.HasSecretRestrictions", function() return C_Secrets and C_Secrets.HasSecretRestrictions end },
+  { "C_Secrets.ShouldAurasBeSecret", function() return C_Secrets and C_Secrets.ShouldAurasBeSecret end },
   { "C_SpellBook.GetSpellBookItemInfo", function() return C_SpellBook and C_SpellBook.GetSpellBookItemInfo end },
   { "C_SpecializationInfo.GetActiveSpecGroup", function() return C_SpecializationInfo and C_SpecializationInfo.GetActiveSpecGroup end },
   { "GetActiveTalentGroup", function() return GetActiveTalentGroup end },
@@ -66,6 +66,26 @@ function Diagnostics.UnresolvedSpells(profile)
   return missing
 end
 
+-- Por qué una barra no toma el color de "le falta un buff": ¿se pueden leer las auras ahora mismo,
+-- cuántos buffs se vigilan y a cuántas barras les falta alguno?
+function Diagnostics.AurasLine()
+  local bars = 0
+  for button in pairs(ns.UnitButton.buttons) do
+    if button.healsilusMissing and #button.healsilusMissing > 0 then
+      bars = bars + 1
+    end
+  end
+  local readable = ns.MissingBuffs.CanRead() and L.DIAG_YES or L.DIAG_NO
+  return string.format(L.DIAG_AURAS, readable, #ns.MissingBuffs.resolved, bars)
+end
+
+-- Si la amenaza llega como secreto no se puede pintar el aggro (borde y puntos rojos).
+function Diagnostics.ThreatLine()
+  local readable = not (C_Secrets and C_Secrets.ShouldUnitThreatStateBeSecret
+    and C_Secrets.ShouldUnitThreatStateBeSecret("player") == true)
+  return string.format(L.DIAG_THREAT, readable and L.DIAG_YES or L.DIAG_NO)
+end
+
 function Diagnostics:Run()
   local version, build, _, interface = GetBuildInfo()
   ns.Print(string.format(L.DIAG_HEADER, ns.version, tostring(version), tostring(build), tostring(interface)))
@@ -77,6 +97,10 @@ function Diagnostics:Run()
   end
   ns.Print(string.format(L.DIAG_AURA_CONTAINER, Status(ns.Containers:IsSupported())))
   ns.Print(string.format(L.DIAG_ALPHA_BOOLEAN, Status(ns.UnitButton.alphaFromBooleanWorks)))
+  if ns.MissingBuffs then
+    ns.Print(Diagnostics.AurasLine())
+  end
+  ns.Print(Diagnostics.ThreatLine())
   local missing = Diagnostics.UnresolvedSpells(ns.Profiles.active)
   if #missing == 0 then
     ns.Print(L.DIAG_SPELLS_OK)
@@ -87,6 +111,9 @@ function Diagnostics:Run()
     ns.Print(string.format(L.DIAG_HEADER_BUTTONS, header.healsilusKind, ns.Headers:CountButtons(header)))
   end
   ns.Print(string.format(L.DIAG_PROFILE, tostring(ns.Profiles.source), ns.CombatQueue:Count()))
+  if ns.Styles then
+    ns.Print(string.format(L.DIAG_STYLE, tostring(ns.Styles.activeName), tostring(ns.Styles.context)))
+  end
   if #ns.Database.fixes > 0 then
     ns.Print(string.format(L.DIAG_FIXES, table.concat(ns.Database.fixes, ", ")))
   end

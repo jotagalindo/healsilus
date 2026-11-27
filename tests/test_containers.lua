@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue, assertNil = Harness.assertEquals, Harness.assertTrue, Harness.assertNil
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Data/Spells.lua", "Frames/Media.lua", "Auras/Containers.lua",
 }
 
@@ -42,6 +42,7 @@ local function LoadContainers(options)
   local profile = ns.Database.DefaultProfile()
   profile.auras.hotSpellIDs = { [774] = true }
   ns.Profiles = { active = profile }
+  ns.Styles = { active = ns.StyleData.DefaultStyle() }
   ns.UnitButton = { buttons = {} }
   return ns, environment, containers
 end
@@ -101,6 +102,90 @@ describe("Containers", function()
       local shownAt = MethodPosition(container, "Show")
       assertTrue(unitAt < groupAt and groupAt < enabledAt and enabledAt < shownAt)
     end
+  end)
+
+  it("marks dispellable debuffs with a ring, a tinted bar or both, as the style says", function()
+    local ns = LoadContainers()
+    local button = FakeButton("party1")
+    ns.Containers:Attach(button)
+    assertTrue(button.healsilusAuras.highlight ~= nil)
+    assertNil(button.healsilusAuras.tint)
+    ns.Styles.active.auras.dispelMode = "BAR"
+    ns.Containers:Attach(button)
+    assertNil(button.healsilusAuras.highlight)
+    assertEquals(GroupCall(button.healsilusAuras.tint)[3], "HARMFUL|RAID")
+    ns.Styles.active.auras.dispelMode = "BOTH"
+    ns.Containers:Attach(button)
+    assertTrue(button.healsilusAuras.highlight ~= nil and button.healsilusAuras.tint ~= nil)
+  end)
+
+  it("places HoT and debuff icons in the corners chosen by the style", function()
+    local ns = LoadContainers()
+    ns.Styles.active.auras.hots = ns.StyleData.AuraGroup("TOPLEFT", 14)
+    ns.Styles.active.auras.debuffs = ns.StyleData.AuraGroup("BOTTOMRIGHT", 14)
+    local button = FakeButton("party1")
+    ns.Containers:Attach(button)
+    local function PointCall(container)
+      for _, call in ipairs(container.calls) do
+        if call[1] == "SetPoint" then
+          return { call[2], call[4], call[5], call[6] }
+        end
+      end
+    end
+    assertEquals(PointCall(button.healsilusAuras.hots), { "TOPLEFT", "TOPLEFT", 1, -1 })
+    assertEquals(PointCall(button.healsilusAuras.debuffs), { "BOTTOMRIGHT", "BOTTOMRIGHT", -1, 1 })
+  end)
+
+  it("places icons outside the bar, anchored to the whole button, when the style asks for a side", function()
+    local ns = LoadContainers()
+    ns.Styles.active.auras.hots = ns.StyleData.AuraGroup("BELOW", 14)
+    ns.Styles.active.auras.debuffs = ns.StyleData.AuraGroup("OUTSIDE_RIGHT", 14)
+    local button = FakeButton("party1")
+    ns.Containers:Attach(button)
+    local function PointCall(container)
+      for _, call in ipairs(container.calls) do
+        if call[1] == "SetPoint" then
+          return call
+        end
+      end
+    end
+    local hots = PointCall(button.healsilusAuras.hots)
+    assertTrue(hots[3] == button)
+    assertEquals({ hots[2], hots[4], hots[5], hots[6] }, { "TOPLEFT", "BOTTOMLEFT", 0, -3 })
+    local debuffs = PointCall(button.healsilusAuras.debuffs)
+    assertTrue(debuffs[3] == button)
+    assertEquals({ debuffs[2], debuffs[4], debuffs[5], debuffs[6] }, { "TOPLEFT", "TOPRIGHT", 3, 0 })
+  end)
+
+  it("grows icons away from the bar on each side and towards the center in corners", function()
+    local ns = LoadContainers()
+    local function Growth(position)
+      local anchor = ns.Containers.Anchor(ns.StyleData.AuraGroup(position, 14))
+      return { anchor.relativeTo, anchor.horizontal, anchor.vertical }
+    end
+    assertEquals(Growth("ABOVE"), { "BUTTON", "Right", "Up" })
+    assertEquals(Growth("BELOW"), { "BUTTON", "Right", "Down" })
+    assertEquals(Growth("OUTSIDE_LEFT"), { "BUTTON", "Left", "Down" })
+    assertEquals(Growth("OUTSIDE_RIGHT"), { "BUTTON", "Right", "Down" })
+    assertEquals(Growth("TOPRIGHT"), { "BAR", "Left", "Down" })
+    assertEquals(Growth("BOTTOMLEFT"), { "BAR", "Right", "Up" })
+    for position in pairs(ns.Database.ENUMS.position) do
+      assertTrue(ns.Containers.Anchor(ns.StyleData.AuraGroup(position, 14)).point ~= nil, position)
+    end
+  end)
+
+  it("moves each group by the chosen offset and grows it the chosen way", function()
+    local ns = LoadContainers()
+    local group = { position = "CENTER", x = 5, y = -2, iconSize = 14, grow = "LEFT" }
+    local anchor = ns.Containers.Anchor(group)
+    assertEquals({ anchor.relativeTo, anchor.point, anchor.x, anchor.y, anchor.horizontal }, { "BAR", "CENTER", 5, -2, "Left" })
+    group.position, group.x, group.y = "TOPLEFT", 2, 0
+    anchor = ns.Containers.Anchor(group)
+    assertEquals({ anchor.x, anchor.y, anchor.vertical }, { 3, -1, "Down" })
+    -- Encima de la barra creciendo a la izquierda: empieza en la esquina derecha.
+    group.position, group.x, group.y = "ABOVE", 0, 4
+    anchor = ns.Containers.Anchor(group)
+    assertEquals({ anchor.point, anchor.relativePoint, anchor.y, anchor.horizontal }, { "BOTTOMRIGHT", "TOPRIGHT", 7, "Left" })
   end)
 
   it("uses the plain harmful filter when every debuff should be shown", function()

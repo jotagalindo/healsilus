@@ -17,7 +17,7 @@ local function Layout(size)
 end
 
 local function DispelOptions()
-  local options = { customDispelColorMap = ns.Media.DispelColorMap() }
+  local options = { customDispelColorMap = ns.Media.DispelColorMap(ns.Styles.active.auras.dispelColors) }
   if Enum.CustomAuraButtonDispelTypeTextureStyle then
     options.style = Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset
   end
@@ -110,17 +110,51 @@ local function MakeHighlightInitializer(unitButton)
   end
 end
 
+-- Variante "barra": la textura cubre la parte llena de la barra de vida y la tiñe del color del debuff,
+-- como hace HealBot en Forever (HealBot_ForeverFrames.lua:113).
+local BAR_TINT_ALPHA = 0.75
+
+local function MakeBarTintInitializer(unitButton)
+  return function(auraButton)
+    if auraButton.healsilusReady then
+      return
+    end
+    local ok, failure = pcall(function()
+      auraButton:SetSize(1, 1)
+      DisableMouse(auraButton)
+      local tint = auraButton:CreateTexture(nil, "ARTWORK")
+      tint:SetAllPoints(unitButton.healsilus.healthBar:GetStatusBarTexture())
+      tint:SetColorTexture(1, 1, 1, 1)
+      tint:SetAlpha(BAR_TINT_ALPHA)
+      AddDispelTexture(auraButton, tint)
+      auraButton.healsilusReady = true
+    end)
+    if not ok then
+      ns.RecordError("Containers:InitializeBarTint", failure)
+    end
+  end
+end
+
+-- El anclaje de cada grupo (posición, desplazamiento, dirección) se calcula en Core/StyleData.lua, que
+-- también usan el aviso de buff que falta y la vista previa.
+Containers.Anchor = ns.StyleData.AuraAnchor
+
+-- Anillo y tinte de dispel: un único elemento de 1 × 1 en la esquina (su textura cubre la barra).
+local TOPLEFT_GROUP = { position = "TOPLEFT", x = 0, y = 0, grow = "RIGHT" }
+
 local function BuildContainer(unitButton, spec)
+  local anchor = Containers.Anchor(spec.group)
+  local relativeFrame = anchor.relativeTo == "BUTTON" and unitButton or unitButton.healsilus.healthBar
   local container = CreateFrame("AuraContainer", nil, unitButton, "CustomAuraContainerTemplate")
   container:Hide()
   container:ClearAllPoints()
-  container:SetPoint(spec.point, unitButton.healsilus.healthBar, spec.point, spec.x, spec.y)
+  container:SetPoint(anchor.point, relativeFrame, anchor.relativePoint, anchor.x, anchor.y)
   if container.SetFlowLayoutAnchorPoint then
-    container:SetFlowLayoutAnchorPoint(spec.point)
+    container:SetFlowLayoutAnchorPoint(anchor.point)
   end
   if container.SetFlowLayoutGrowthDirection and AnchorUtil and AnchorUtil.FlowDirection then
-    local horizontal = string.find(spec.point, "RIGHT") and AnchorUtil.FlowDirection.Left or AnchorUtil.FlowDirection.Right
-    local vertical = string.find(spec.point, "BOTTOM") and AnchorUtil.FlowDirection.Up or AnchorUtil.FlowDirection.Down
+    local horizontal = AnchorUtil.FlowDirection[anchor.horizontal]
+    local vertical = AnchorUtil.FlowDirection[anchor.vertical]
     if horizontal ~= nil and vertical ~= nil then
       container:SetFlowLayoutGrowthDirection(horizontal, vertical)
     end
@@ -185,7 +219,9 @@ function Containers:Attach(button)
     return
   end
   self:Detach(button)
+  -- Qué se vigila sale del perfil; tamaño, esquinas, colores y forma del aviso, del estilo activo.
   local auras = ns.Profiles.active.auras
+  local look = ns.Styles.active.auras
   local sortMethod = AuraContainerSortMethod and AuraContainerSortMethod.UnitFrameDebuff
   local built = {}
   local ok, failure = pcall(function()
@@ -193,8 +229,8 @@ function Containers:Attach(button)
       local spellIDs = ns.Spells:ExpandRanks(auras.hotSpellIDs)
       if next(spellIDs) then
         built.hots = BuildContainer(button, {
-          key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = auras.iconSize,
-          initializer = MakeIconInitializer(auras.iconSize, false), point = "BOTTOMRIGHT", x = -1, y = 1,
+          key = "healsilusHots", filter = "HELPFUL|PLAYER", maxCount = auras.hotsMax, size = look.hots.iconSize,
+          initializer = MakeIconInitializer(look.hots.iconSize, false), group = look.hots,
           levelOffset = 8, candidateFilters = { includeSpellIDs = spellIDs },
         })
       end
@@ -202,14 +238,23 @@ function Containers:Attach(button)
     if auras.debuffsEnabled and auras.debuffsMax > 0 then
       built.debuffs = BuildContainer(button, {
         key = "healsilusDebuffs", filter = auras.debuffsDispellableOnly and "HARMFUL|RAID" or "HARMFUL",
-        maxCount = auras.debuffsMax, size = auras.iconSize, initializer = MakeIconInitializer(auras.iconSize, true),
-        point = "TOPRIGHT", x = -1, y = -1, levelOffset = 8, sortMethod = sortMethod,
+        maxCount = auras.debuffsMax, size = look.debuffs.iconSize, initializer = MakeIconInitializer(look.debuffs.iconSize, true),
+        group = look.debuffs, levelOffset = 8, sortMethod = sortMethod,
       })
-      built.highlight = BuildContainer(button, {
-        key = "healsilusDispel", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
-        initializer = MakeHighlightInitializer(button), point = "TOPLEFT", x = 0, y = 0,
-        levelOffset = 1, sortMethod = sortMethod,
-      })
+      if look.dispelMode ~= "BAR" then
+        built.highlight = BuildContainer(button, {
+          key = "healsilusDispel", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
+          initializer = MakeHighlightInitializer(button), group = TOPLEFT_GROUP,
+          levelOffset = 1, sortMethod = sortMethod,
+        })
+      end
+      if look.dispelMode ~= "RING" then
+        built.tint = BuildContainer(button, {
+          key = "healsilusDispelTint", filter = "HARMFUL|RAID", maxCount = 1, size = 1,
+          initializer = MakeBarTintInitializer(button), group = TOPLEFT_GROUP,
+          levelOffset = 3, sortMethod = sortMethod,
+        })
+      end
     end
   end)
   if not ok then
@@ -228,8 +273,9 @@ function Containers:UpdateVisibility(button)
   if not built then
     return
   end
+  -- Muertos y desconectados no enseñan iconos: su texto de estado puede ir donde estaban.
   for _, container in pairs(built) do
-    if button.unit then
+    if button.unit and not button.healsilusState then
       container:Show()
       container:UpdateAllAuras()
     else
@@ -282,9 +328,10 @@ local function Rebuild()
   Containers:RebuildAll()
 end
 ns.Events:Register("PROFILE_CHANGED", Rebuild)
+ns.Events:Register("STYLE_CHANGED", Rebuild)
 ns.Events:Register("SPELLBOOK_UPDATED", Rebuild)
 ns.Events:Register("SETTINGS_CHANGED", function(section)
-  if section == "auras" then
+  if section == "auras" or section == "style" then
     Rebuild()
   end
 end)

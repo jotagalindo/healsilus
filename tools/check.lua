@@ -92,7 +92,12 @@ for _, path in ipairs(repositoryFiles) do
 end
 
 -- 3) Globales escritas por el addon (instrucción GSET del bytecode de LuaJIT)
-local ALLOWED_GLOBALS = { Healsilus = true, HealsilusDB = true, SLASH_HEALSILUS1 = true, SLASH_HEALSILUS2 = true }
+-- Las tres funciones Healsilus_OnAddonCompartment* las busca el cliente por nombre (líneas AddonCompartmentFunc del TOC).
+local ALLOWED_GLOBALS = {
+  Healsilus = true, HealsilusDB = true, SLASH_HEALSILUS1 = true, SLASH_HEALSILUS2 = true,
+  Healsilus_OnAddonCompartmentClick = true, Healsilus_OnAddonCompartmentEnter = true,
+  Healsilus_OnAddonCompartmentLeave = true,
+}
 for _, path in ipairs(addonFiles) do
   local handle = io.popen(interpreter .. ' -bl "' .. path .. '"')
   local listing = handle:read("*a")

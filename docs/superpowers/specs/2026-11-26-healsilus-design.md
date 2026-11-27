@@ -283,7 +283,8 @@ Reglas: nunca se lee nada de los botones de aura; un cambio de filtro reconstruy
 
 ### 7.2 Buffs que faltan
 
-- Solo fuera de combate (`not InCombatLockdown()` y `not C_Secrets or not C_Secrets.HasSecretRestrictions()`), en `UNIT_AURA` (agrupado cada 0,5 s) y en `GROUP_ROSTER_UPDATE`.
+- Solo fuera de combate y con auras legibles (`ns.CanReadAuras()`: `not InCombatLockdown()` y `not C_Secrets.ShouldAurasBeSecret()`), en `UNIT_AURA` (agrupado cada 0,5 s), en `GROUP_ROSTER_UPDATE` y al cambiar de zona. `C_Secrets.HasSecretRestrictions()` no sirve: en Forever siempre es true porque describe la versión del juego. Si una consulta devuelve un secreto, se conserva el resultado anterior.
+- Override de buff opcional (`clicks.buffOverride`): fuera de combate, cualquier clic sobre una barra a la que le falta un buff lo lanza; el override de dispel tiene prioridad y todo se restaura al entrar en combate.
 - Para cada unidad visible se busca con `C_UnitAuras.GetAuraDataBySpellName` / `AuraUtil.FindAuraByName` si tiene `spellID` o `groupSpellID` de cada buff vigilado, filtrando por `targets` (`ALL` o `TANKS`, con `UnitGroupRolesAssigned`).
 - Resultado: un indicador triangular naranja en la esquina y un texto opcional "falta <buff>" en el tooltip del botón.
 - Al entrar en combate el estado se congela y no se recalcula hasta salir. La función de decisión `MissingBuffs:Compute(watched, unitAuras, isTank)` es pura y testeable.

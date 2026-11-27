@@ -4,9 +4,12 @@ local addonName, ns = ...
 
 ns.name = addonName
 -- Debe coincidir con "## Version" de Healsilus.toc (lo comprueba tests/test_init.lua).
-ns.version = "0.0.1"
+ns.version = "0.0.2"
+-- Carpeta de las texturas propias (logo e iconos de la ventana), con el nombre real de la carpeta.
+ns.MEDIA_PATH = "Interface\\AddOns\\" .. tostring(addonName) .. "\\Media\\"
 
--- Único global del addon: acceso desde /run y desde los comandos de depuración.
+-- Global del addon: acceso desde /run y desde los comandos de depuración. Los otros globales son
+-- HealsilusDB, los SLASH_HEALSILUS* y las funciones del desplegable de addons (UI/MinimapButton.lua).
 Healsilus = ns
 
 -- Prefijos de modificador en orden canónico (alt, ctrl, shift) y botones del ratón admitidos.
@@ -30,6 +33,19 @@ function ns.IsSecret(value)
     return issecretvalue(value) == true
   end
   return false
+end
+
+-- ¿Se pueden leer ahora las auras? Solo fuera de combate y cuando el cliente no las devuelve secretas.
+-- Ojo: C_Secrets.HasSecretRestrictions() no vale para esto: dice si la versión del juego tiene
+-- restricciones (en Forever, siempre), no si en este momento las auras salen como secretos.
+function ns.CanReadAuras()
+  if InCombatLockdown() then
+    return false
+  end
+  if C_Secrets and C_Secrets.ShouldAurasBeSecret and C_Secrets.ShouldAurasBeSecret() == true then
+    return false
+  end
+  return C_UnitAuras ~= nil
 end
 
 function ns.DeepCopy(value)

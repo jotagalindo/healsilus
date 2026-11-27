@@ -1,4 +1,5 @@
--- Pestaña Auras: HoTs propios (lista de hechizos vigilados) y debuffs.
+-- Pestaña Auras: HoTs propios (lista de hechizos vigilados) y tamaño de los iconos.
+-- Los debuffs tienen su propia pestaña (UI/TabDebuffs.lua).
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
@@ -10,15 +11,27 @@ local LIST_X, LIST_TOP, ROW_HEIGHT = 300, -56, 26
 
 TabAuras.CHECKBOXES = {
   { key = "hotsEnabled", label = L.AURAS_HOTS },
-  { key = "debuffsEnabled", label = L.AURAS_DEBUFFS },
-  { key = "debuffsDispellableOnly", label = L.AURAS_DISPELLABLE },
 }
 
+-- style = true: el valor vive en el estilo activo (auras.*); si no, en el perfil.
+-- Posición, tamaño y dirección de los iconos están en Aspecto → Auras.
 TabAuras.SLIDERS = {
   { key = "hotsMax", label = L.AURAS_HOTS_MAX },
-  { key = "debuffsMax", label = L.AURAS_DEBUFFS_MAX },
-  { key = "iconSize", label = L.AURAS_ICON_SIZE },
 }
+
+local function Getter(spec)
+  if spec.style then
+    return Widgets.StyleGetter("auras", spec.key)
+  end
+  return Widgets.SectionGetter("auras", spec.key)
+end
+
+local function Setter(spec)
+  if spec.style then
+    return Widgets.StyleSetter("auras", spec.key)
+  end
+  return Widgets.SectionSetter("auras", spec.key)
+end
 
 local function HotSpellIDs()
   return ns.Profiles.active.auras.hotSpellIDs
@@ -51,9 +64,11 @@ function TabAuras.Build(panel)
   end
   for _, spec in ipairs(TabAuras.SLIDERS) do
     local range = ns.Database.RANGES[spec.key]
-    stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1,
-      Widgets.SectionGetter("auras", spec.key), Widgets.SectionSetter("auras", spec.key)), 48)
+    stack:Add(Widgets.Slider(panel, spec.label, range[1], range[2], 1, Getter(spec), Setter(spec)), 48)
   end
+  stack:Add(Widgets.Button(panel, L.AURAS_PLACE_ICONS, 220, function()
+    ns.TabAppearance.OpenAuras("hots")
+  end), 32)
   TabAuras.stack = stack
 
   local title = Widgets.Label(panel, L.AURAS_HOT_LIST, "GameFontNormal")

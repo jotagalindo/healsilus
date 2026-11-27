@@ -16,7 +16,7 @@ if (Test-Path $staging) {
 New-Item -ItemType Directory -Force $staging | Out-Null
 
 Copy-Item $tocPath $staging
-foreach ($folder in @("Core", "Data", "Frames", "Auras", "UI", "Locales")) {
+foreach ($folder in @("Core", "Data", "Frames", "Auras", "UI", "Locales", "Media")) {
   Copy-Item -Recurse (Join-Path $repository $folder) (Join-Path $staging $folder)
 }
 Copy-Item (Join-Path $repository "README.md") $staging

@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue = Harness.assertEquals, Harness.assertTrue
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "UI/Widgets.lua", "UI/Config.lua",
 }
 
@@ -57,6 +57,44 @@ describe("Config", function()
     assertEquals(ns.Profiles.active.frames.width, 90)
     assertEquals(ns.Widgets.SectionGetter("frames", "width")(), 90)
     assertEquals(announced, { "frames" })
+  end)
+
+  it("builds the themed window with one sidebar tab per registered tab", function()
+    local ns, environment = LoadConfig()
+    environment.CreateFrame = function()
+      return Stubs.NewMock()
+    end
+    environment.UIParent = Stubs.NewMock()
+    environment.UISpecialFrames = {}
+    local enabled = true
+    ns.Headers = {
+      IsEnabled = function()
+        return enabled
+      end,
+    }
+    local built = {}
+    ns.Config:RegisterTab("clicks", "Clicks", function()
+      built[#built + 1] = "clicks"
+    end)
+    ns.Config:RegisterTab("frames", "Frames", function()
+      built[#built + 1] = "frames"
+    end)
+    ns.Config:Build()
+    assertEquals(built, { "clicks", "frames" })
+    assertEquals(environment.UISpecialFrames, { "HealsilusConfigFrame" })
+    assertTrue(ns.Config.tabs.clicks.button.selected)
+    assertEquals(ns.Config.tabs.frames.button.selected, false)
+
+    ns.Config:SelectTab("frames")
+    assertEquals(ns.Config.tabs.clicks.button.selected, false)
+    assertTrue(ns.Config.tabs.frames.button.selected)
+    -- El interruptor va en rojo mientras Healsilus está activo y en verde cuando está apagado.
+    assertEquals(ns.Config.toggleButton.variant, "danger")
+    enabled = false
+    ns.Config:Refresh()
+    assertEquals(ns.Config.toggleButton.variant, "primary")
+    -- Área de las pestañas: cabe la columna de la barra en Aspecto (unos 455 px de alto).
+    assertEquals(ns.Config.SIZE.content, { 780, 480 })
   end)
 
   it("registers a confirmation dialog that runs the accepted action", function()

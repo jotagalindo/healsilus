@@ -6,7 +6,7 @@ local assertEquals, assertTrue = Harness.assertEquals, Harness.assertTrue
 
 local FILES = {
   "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua",
-  "Core/Database.lua", "Data/Spells.lua", "Frames/ClickCast.lua",
+  "Core/Database.lua", "Core/StyleData.lua", "Data/Spells.lua", "Frames/ClickCast.lua",
 }
 
 local SPELLS = {
@@ -65,6 +65,22 @@ describe("ClickCast.BuildAttributes", function()
   it("leaves a slot empty when its spell cannot be resolved", function()
     local ns = LoadClickCast()
     assertEquals(AsPairs(ns.ClickCast.BuildAttributes({ ["1"] = { kind = "spell", spellID = 999 } }, FakeResolver)), { "type2=togglemenu" })
+  end)
+
+  it("turns spells into a mouseover macro that also targets and/or cancels the blue cursor", function()
+    local ns = LoadClickCast()
+    local bindings = { ["shift-2"] = { kind = "spell", spellID = 774 } }
+    assertEquals(AsPairs(ns.ClickCast.BuildAttributes(bindings, FakeResolver, { targetOnClick = true, avoidBlueCursor = true })), {
+      "type1=target", "type2=togglemenu",
+      "shift-type2=macro", "shift-macrotext2=/target [@mouseover]\n/cast [@mouseover] Spell774\n/stopspelltarget",
+    })
+    assertEquals(AsPairs(ns.ClickCast.BuildAttributes(bindings, FakeResolver, { targetOnClick = false, avoidBlueCursor = true })), {
+      "type1=target", "type2=togglemenu",
+      "shift-type2=macro", "shift-macrotext2=/cast [@mouseover] Spell774\n/stopspelltarget",
+    })
+    assertEquals(AsPairs(ns.ClickCast.BuildAttributes(bindings, FakeResolver, { targetOnClick = false, avoidBlueCursor = false })), {
+      "type1=target", "type2=togglemenu", "shift-type2=spell", "shift-spell2=Spell774",
+    })
   end)
 end)
 
@@ -147,5 +163,21 @@ describe("ClickCast application", function()
     environment.__state.inCombat = false
     environment.__fireEvent("PLAYER_REGEN_ENABLED")
     assertTrue(button.attributes.type1 == "target")
+  end)
+
+  it("turns the 'missing buff' click into a per-bar macro filled only out of combat", function()
+    local ns, environment = LoadClickCast()
+    local button = FakeSecureFrame()
+    ns.UnitButton.buttons[button] = true
+    local profile = ns.Database.DefaultProfile()
+    profile.bindings["shift-3"] = { kind = "buff" }
+    ns.ClickCast:Apply(profile)
+    assertEquals(button.attributes["shift-type3"], "macro")
+    assertEquals(button.attributes["shift-macrotext3"], "")
+    assertTrue(ns.ClickCast:SetBuffMacro(button, "/cast [@mouseover] Espinas"))
+    assertEquals(button.attributes["shift-macrotext3"], "/cast [@mouseover] Espinas")
+    environment.__state.inCombat = true
+    assertEquals(ns.ClickCast:SetBuffMacro(button, ""), false)
+    assertEquals(button.attributes["shift-macrotext3"], "/cast [@mouseover] Espinas")
   end)
 end)

@@ -5,7 +5,10 @@ local _, ns = ...
 local Serializer = {}
 ns.Serializer = Serializer
 
-local PREFIX = "HS1:"
+-- HS2: perfiles desde que lo visual vive en estilos (datos versión 2). HS1: perfiles de la v0.0.1.
+local PROFILE_PREFIX = "HS2:"
+local LEGACY_PROFILE_PREFIX = "HS1:"
+local STYLE_PREFIX = "HSS1:"
 local MAX_DEPTH = 20
 local MAX_INPUT_LENGTH = 200000
 local ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -176,14 +179,14 @@ local function ParseValue(text, position, depth)
   return nil, "unexpected character at " .. position
 end
 
-function Serializer.Export(profile)
+local function Encode(prefix, value)
   local parts = {}
-  SerializeValue(profile, parts, 0)
-  return PREFIX .. Serializer.EncodeBase64(table.concat(parts))
+  SerializeValue(value, parts, 0)
+  return prefix .. Serializer.EncodeBase64(table.concat(parts))
 end
 
--- Devuelve el perfil normalizado, o nil y un motivo legible.
-function Serializer.Import(text)
+-- Devuelve la tabla leída, o nil y un motivo legible ("empty", "wrong kind", "corrupted text"...).
+local function Decode(text, prefix)
   if type(text) ~= "string" then
     return nil, "empty"
   end
@@ -194,23 +197,64 @@ function Serializer.Import(text)
   if #compact > MAX_INPUT_LENGTH then
     return nil, "too long"
   end
-  if string.sub(compact, 1, #PREFIX) ~= PREFIX then
-    return nil, "not a Healsilus profile"
+  if string.sub(compact, 1, #prefix) ~= prefix then
+    return nil, "wrong kind"
   end
-  local data = Serializer.DecodeBase64(string.sub(compact, #PREFIX + 1))
+  local data = Serializer.DecodeBase64(string.sub(compact, #prefix + 1))
   if not data then
     return nil, "corrupted text"
   end
-  local profile, position = ParseValue(data, 1, 0)
-  if profile == nil then
+  local value, position = ParseValue(data, 1, 0)
+  if value == nil then
     return nil, "corrupted data (" .. tostring(position) .. ")"
   end
   if position ~= #data + 1 then
     return nil, "trailing data"
+  end
+  return value
+end
+
+function Serializer.Export(profile)
+  return Encode(PROFILE_PREFIX, profile)
+end
+
+-- Devuelve el perfil normalizado, o nil y un motivo legible.
+function Serializer.Import(text)
+  if type(text) == "string" and string.sub(string.gsub(text, "%s", ""), 1, #LEGACY_PROFILE_PREFIX) == LEGACY_PROFILE_PREFIX then
+    return nil, "profile from an older version"
+  end
+  local profile, failure = Decode(text, PROFILE_PREFIX)
+  if failure == "wrong kind" then
+    return nil, "not a Healsilus profile"
+  end
+  if profile == nil then
+    return nil, failure
   end
   local valid, field = ns.Database.ValidateProfile(profile)
   if not valid then
     return nil, "invalid field: " .. field
   end
   return ns.Database.NormalizeProfile(profile, {})
+end
+
+function Serializer.ExportStyle(style)
+  return Encode(STYLE_PREFIX, style)
+end
+
+-- Devuelve el estilo normalizado, o nil y un motivo legible.
+function Serializer.ImportStyle(text)
+  local style, failure = Decode(text, STYLE_PREFIX)
+  if failure == "wrong kind" then
+    return nil, "not a Healsilus style"
+  end
+  if style == nil then
+    return nil, failure
+  end
+  -- Estilos exportados por versiones anteriores: se pasan al formato actual antes de validar.
+  ns.StyleData.UpgradeAuras(style)
+  local valid, field = ns.StyleData.ValidateStyle(style)
+  if not valid then
+    return nil, "invalid field: " .. field
+  end
+  return ns.StyleData.NormalizeStyle(style, {})
 end

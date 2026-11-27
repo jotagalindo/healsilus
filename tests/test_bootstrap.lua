@@ -19,6 +19,7 @@ local function LoadBootstrap()
   ns.UnitButton = { Initialize = Spy("UnitButton:Initialize") }
   ns.Headers = { Initialize = Spy("Headers:Initialize") }
   ns.Config = { RegisterSettingsCategory = Spy("Config:RegisterSettingsCategory") }
+  ns.MinimapButton = { Initialize = Spy("MinimapButton:Initialize") }
   ns.Events:Register("READY", Spy("READY"))
   ns.Events:Register("SPELLBOOK_UPDATED", Spy("SPELLBOOK_UPDATED"))
   return ns, environment, calls
@@ -32,7 +33,7 @@ describe("Bootstrap", function()
     environment.__fireEvent("PLAYER_LOGIN")
     assertEquals(calls, {
       "Database:Initialize", "Spells:Scan", "Profiles:Initialize", "UnitButton:Initialize",
-      "Headers:Initialize", "Config:RegisterSettingsCategory", "READY",
+      "Headers:Initialize", "Config:RegisterSettingsCategory", "MinimapButton:Initialize", "READY",
     })
   end)
 

@@ -6,7 +6,7 @@ local assertEquals, assertTrue = Harness.assertEquals, Harness.assertTrue
 
 local function LoadDruid()
   local environment = Stubs.NewEnvironment()
-  return Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Data/Druid.lua" })
+  return Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Core/StyleData.lua", "Data/Druid.lua" })
 end
 
 describe("Druid defaults", function()

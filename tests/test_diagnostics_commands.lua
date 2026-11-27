@@ -5,7 +5,7 @@ local describe, it = Harness.describe, Harness.it
 local assertEquals, assertTrue = Harness.assertEquals, Harness.assertTrue
 
 local FILES = {
-  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua",
+  "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "Core/CombatQueue.lua", "Core/Database.lua", "Core/StyleData.lua",
   "Data/Spells.lua", "Data/Druid.lua", "Core/Diagnostics.lua", "Core/Commands.lua",
 }
 
@@ -18,7 +18,7 @@ local KNOWN = {
 local function LoadTools()
   local environment = Stubs.NewEnvironment({ spells = KNOWN })
   environment.SlashCmdList = {}
-  environment.HealsilusDB = { debug = false }
+  environment.HealsilusDB = { debug = false, minimap = { angle = 225, hide = false } }
   local ns = Loader.Load(environment, FILES)
   local calls = {}
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}), source = "class" }
@@ -42,6 +42,32 @@ describe("Diagnostics", function()
   it("lists spell IDs used by the profile that the client cannot resolve", function()
     local ns = LoadTools()
     assertEquals(ns.Diagnostics.UnresolvedSpells(ns.Profiles.active), { "467" })
+  end)
+
+  it("says whether auras can be read now and how many bars miss a buff", function()
+    local ns = LoadTools()
+    local readable = true
+    ns.MissingBuffs = {
+      resolved = { { label = "Marca de lo Salvaje" } },
+      CanRead = function()
+        return readable
+      end,
+    }
+    ns.UnitButton = { buttons = { [{ healsilusMissing = { "Marca de lo Salvaje" } }] = true, [{ healsilusMissing = {} }] = true } }
+    assertEquals(ns.Diagnostics.AurasLine(), "Auras readable now: yes · watched buffs: 1 · bars missing a buff: 1")
+    readable = false
+    assertEquals(ns.Diagnostics.AurasLine(), "Auras readable now: no · watched buffs: 1 · bars missing a buff: 1")
+  end)
+
+  it("says whether threat can be read now", function()
+    local ns, environment = LoadTools()
+    assertEquals(ns.Diagnostics.ThreatLine(), "Threat readable now: yes")
+    environment.C_Secrets = {
+      ShouldUnitThreatStateBeSecret = function(unit)
+        return unit == "player"
+      end,
+    }
+    assertEquals(ns.Diagnostics.ThreatLine(), "Threat readable now: no")
   end)
 
   it("prints the client header first and the error summary last", function()
@@ -103,6 +129,20 @@ describe("Commands", function()
     environment.SlashCmdList.HEALSILUS("preview 99")
     environment.SlashCmdList.HEALSILUS("preview")
     assertEquals(calls, { "preview:10", "preview:40", "preview:hide" })
+  end)
+
+  it("toggles the minimap button", function()
+    local ns, environment = LoadTools()
+    local requested = {}
+    ns.MinimapButton = {
+      SetHidden = function(_, hidden)
+        requested[#requested + 1] = hidden
+        environment.HealsilusDB.minimap.hide = hidden
+      end,
+    }
+    environment.SlashCmdList.HEALSILUS("minimap")
+    environment.SlashCmdList.HEALSILUS("minimap")
+    assertEquals(requested, { true, false })
   end)
 
   it("prints the help for unknown commands", function()

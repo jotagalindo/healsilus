@@ -7,7 +7,7 @@ local assertEquals, assertTrue, assertNil = Harness.assertEquals, Harness.assert
 local function LoadSerializer()
   local environment = Stubs.NewEnvironment()
   return Loader.Load(environment, {
-    "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Data/Druid.lua", "Core/Serializer.lua",
+    "Core/Init.lua", "Locales/enUS.lua", "Core/Database.lua", "Core/StyleData.lua", "Data/Druid.lua", "Core/Serializer.lua",
   })
 end
 
@@ -45,16 +45,46 @@ describe("Serializer profiles", function()
     local ns = LoadSerializer()
     local profile = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {})
     local text = ns.Serializer.Export(profile)
-    assertEquals(string.sub(text, 1, 4), "HS1:")
+    assertEquals(string.sub(text, 1, 4), "HS2:")
     local imported = ns.Serializer.Import(text)
     assertEquals(imported, profile)
   end)
 
-  it("exports deterministically and keeps decimals", function()
+  it("exports deterministically", function()
     local ns = LoadSerializer()
-    local profile = ns.Database.NormalizeProfile({ frames = { outOfRangeAlpha = 0.35 } }, {})
+    local profile = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {})
     assertEquals(ns.Serializer.Export(profile), ns.Serializer.Export(ns.DeepCopy(profile)))
-    assertEquals(ns.Serializer.Import(ns.Serializer.Export(profile)).frames.outOfRangeAlpha, 0.35)
+  end)
+
+  it("round-trips a style, decimals included, and keeps styles and profiles apart", function()
+    local ns = LoadSerializer()
+    local style = ns.StyleData.DefaultStyle()
+    style.bar.outOfRangeAlpha = 0.35
+    local text = ns.Serializer.ExportStyle(style)
+    assertEquals(string.sub(text, 1, 5), "HSS1:")
+    assertEquals(ns.Serializer.ImportStyle(text), style)
+    local imported, failure = ns.Serializer.Import(text)
+    assertNil(imported)
+    assertEquals(failure, "not a Healsilus profile")
+    imported, failure = ns.Serializer.ImportStyle(ns.Serializer.Export(ns.Database.DefaultProfile()))
+    assertNil(imported)
+    assertEquals(failure, "not a Healsilus style")
+  end)
+
+  it("names the offending field of an invalid style", function()
+    local ns = LoadSerializer()
+    local style = ns.StyleData.DefaultStyle()
+    style.text.name.outline = "GLOW"
+    local imported, failure = ns.Serializer.ImportStyle(ns.Serializer.ExportStyle(style))
+    assertNil(imported)
+    assertEquals(failure, "invalid field: style.text.name.outline")
+  end)
+
+  it("explains that a profile from the first beta cannot be imported", function()
+    local ns = LoadSerializer()
+    local imported, failure = ns.Serializer.Import("HS1:" .. ns.Serializer.EncodeBase64("{}"))
+    assertNil(imported)
+    assertEquals(failure, "profile from an older version")
   end)
 
   it("ignores whitespace and line breaks pasted with the text", function()
@@ -69,9 +99,9 @@ describe("Serializer profiles", function()
     local cases = {
       { "", "empty" },
       { "hello", "not a Healsilus profile" },
-      { "HS1:****", "corrupted text" },
-      { "HS1:" .. ns.Serializer.EncodeBase64("s5:ab"), "corrupted data" },
-      { "HS1:" .. ns.Serializer.EncodeBase64("{}t"), "trailing data" },
+      { "HS2:****", "corrupted text" },
+      { "HS2:" .. ns.Serializer.EncodeBase64("s5:ab"), "corrupted data" },
+      { "HS2:" .. ns.Serializer.EncodeBase64("{}t"), "trailing data" },
     }
     for _, case in ipairs(cases) do
       local profile, failure = ns.Serializer.Import(case[1])
@@ -102,7 +132,7 @@ describe("Serializer profiles", function()
   it("limits nesting depth on import", function()
     local ns = LoadSerializer()
     local deep = string.rep("{s1:a", 30) .. string.rep("}", 30)
-    local profile, failure = ns.Serializer.Import("HS1:" .. ns.Serializer.EncodeBase64(deep))
+    local profile, failure = ns.Serializer.Import("HS2:" .. ns.Serializer.EncodeBase64(deep))
     assertNil(profile)
     assertTrue(string.find(failure, "too deep", 1, true) ~= nil)
   end)
