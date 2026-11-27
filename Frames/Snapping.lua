@@ -17,6 +17,19 @@ local function Closest(best, delta, threshold)
   return best
 end
 
+-- Rejilla del modo mover: líneas cada size píxeles a partir de origin (el centro de la pantalla).
+-- Devuelve dx, dy para que la esquina superior izquierda del rectángulo caiga en la línea más cercana.
+local function NearestLine(value, origin, size)
+  return origin + math.floor((value - origin) / size + 0.5) * size
+end
+
+function Snapping.ToGrid(rect, originX, originY, size)
+  if size <= 0 then
+    return 0, 0
+  end
+  return NearestLine(rect.left, originX, size) - rect.left, NearestLine(rect.top, originY, size) - rect.top
+end
+
 -- moving y others: { left, right, top, bottom } en las mismas coordenadas (y crece hacia arriba).
 -- Devuelve el desplazamiento dx, dy que pega o alinea el bloque; 0, 0 si nada está a menos de threshold.
 function Snapping.Snap(moving, others, threshold, gap)

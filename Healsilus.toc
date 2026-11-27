@@ -45,6 +45,7 @@ UI\TabDebuffs.lua
 UI\TabBuffs.lua
 UI\TabStyles.lua
 UI\TabProfiles.lua
+UI\MoveMode.lua
 UI\MinimapButton.lua
 Core\Diagnostics.lua
 Core\Commands.lua

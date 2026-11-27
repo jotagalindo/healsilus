@@ -12,15 +12,23 @@ local function LoadMinimapButton()
       return 140
     end,
   }
-  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "UI/MinimapButton.lua" })
+  local ns = Loader.Load(environment, { "Core/Init.lua", "Locales/enUS.lua", "Core/Events.lua", "UI/MinimapButton.lua" })
   local calls = {}
   ns.Config = {
     Toggle = function()
       calls[#calls + 1] = "toggle"
     end,
   }
-  ns.HandleCommand = function(message)
-    calls[#calls + 1] = "command:" .. message
+  local enabled = true
+  ns.Headers = {
+    IsEnabled = function()
+      return enabled
+    end,
+  }
+  function ns.Headers:SetEnabled(value)
+    enabled = value
+    calls[#calls + 1] = value and "enable" or "disable"
+    ns.Events:Fire("ADDON_TOGGLED", value)
   end
   return ns, environment, calls
 end
@@ -41,6 +49,14 @@ local function FakeButton()
     self.point = { ... }
   end
   return button
+end
+
+local function FakeIcon()
+  local icon = { desaturated = false }
+  function icon:SetDesaturated(desaturated)
+    self.desaturated = desaturated
+  end
+  return icon
 end
 
 describe("MinimapButton position", function()
@@ -68,17 +84,21 @@ describe("MinimapButton position", function()
 end)
 
 describe("MinimapButton behaviour", function()
-  it("opens the settings on left click and toggles the frame lock on right click", function()
+  it("opens the settings on left click and turns Healsilus off and on with right click", function()
     local ns, _, calls = LoadMinimapButton()
+    ns.MinimapButton.button, ns.MinimapButton.icon = FakeButton(), FakeIcon()
     ns.MinimapButton.OnClick("LeftButton")
     ns.MinimapButton.OnClick("RightButton")
-    assertEquals(calls, { "toggle", "command:lock" })
+    assertTrue(ns.MinimapButton.icon.desaturated)
+    ns.MinimapButton.OnClick("RightButton")
+    assertFalse(ns.MinimapButton.icon.desaturated)
+    assertEquals(calls, { "toggle", "disable", "enable" })
   end)
 
   it("hides and shows the button and remembers the choice", function()
     local ns, environment = LoadMinimapButton()
     local button = FakeButton()
-    ns.MinimapButton.button = button
+    ns.MinimapButton.button, ns.MinimapButton.icon = button, FakeIcon()
     ns.MinimapButton:SetHidden(true)
     assertTrue(environment.HealsilusDB.minimap.hide)
     assertFalse(button.shown)

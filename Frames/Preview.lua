@@ -1,9 +1,10 @@
 -- Vista previa: marcos NO seguros con miembros falsos para ver el diseño sin estar en grupo.
--- Mientras está abierta, la cabecera de grupo se oculta; al entrar en combate se cierra sola.
+-- Rellena cada bloque activo (grupo/banda, tanques, mascotas, objetivo y foco) para alinearlos como
+-- quedarán de verdad. Mientras está abierta, los bloques reales se ocultan; en combate se cierra sola.
 local _, ns = ...
 local L = ns.L
 
-local Preview = { frames = {}, count = 0 }
+local Preview = { frames = {}, count = 0, byKind = {} }
 ns.Preview = Preview
 
 -- threat: nivel de amenaza falso (3 = tanquea, 1 = mucha amenaza) para ver el borde y los puntos.
@@ -19,7 +20,52 @@ local FAKE_MEMBERS = {
   { name = "Brannoc", class = "PALADIN", role = "TANK", health = 0.77 },
 }
 
+local FAKE_PETS = {
+  { name = "Lobo", pet = true, health = 0.8 },
+  { name = "Diablillo", pet = true, health = 0.55 },
+  { name = "Tigre", pet = true, health = 1 },
+}
+
 local FAKE_MAX_HEALTH = 8000
+
+-- Miembros de ejemplo de los bloques secundarios: tanques, mascotas y un objetivo y un foco amistosos.
+local SAMPLE_TANKS = { FAKE_MEMBERS[1], FAKE_MEMBERS[9] }
+local SAMPLE_TARGET = { FAKE_MEMBERS[3] }
+local SAMPLE_FOCUS = { FAKE_MEMBERS[7] }
+
+-- Bloques que se rellenan según el perfil, con sus miembros de ejemplo. count = miembros del principal.
+function Preview.Blocks(frames, count)
+  local blocks = {}
+  local function Add(kind, wanted, members)
+    if wanted then
+      blocks[#blocks + 1] = { kind = kind, members = members }
+    end
+  end
+  local party = {}
+  for position = 1, count do
+    party[position] = FAKE_MEMBERS[(position - 1) % #FAKE_MEMBERS + 1]
+  end
+  Add("party", frames.showMain, party)
+  Add("tanks", frames.showTanks, SAMPLE_TANKS)
+  Add("pets", frames.showPets, FAKE_PETS)
+  Add("target", frames.showTarget, SAMPLE_TARGET)
+  Add("focus", frames.showFocus, SAMPLE_FOCUS)
+  return blocks
+end
+
+-- Disposición de cada bloque como la cabecera real: tanques en una sola columna (o fila), objetivo
+-- y foco un único botón; grupo y mascotas usan las columnas del estilo.
+function Preview.BlockLayout(kind, layout)
+  if kind == "tanks" or kind == "target" or kind == "focus" then
+    local single = {}
+    for key, value in pairs(layout) do
+      single[key] = value
+    end
+    single.unitsPerColumn = 40
+    return single
+  end
+  return layout
+end
 
 function Preview.Offset(position, layout)
   local column = math.floor((position - 1) / layout.unitsPerColumn)
@@ -70,7 +116,10 @@ function Preview:Paint(frame, member, style)
   visual.healthText:SetText(member.dead and "" or Preview.HealthText(style.text.health.mode, member.health))
   visual.statusText:SetText(member.dead and L.STATUS_DEAD or "")
   local texture = visual.healthBar:GetStatusBarTexture()
-  if style.bar.colorMode == "HEALTH" then
+  if member.pet then
+    local color = ns.Media.PET_COLOR
+    texture:SetVertexColor(color.r, color.g, color.b)
+  elseif style.bar.colorMode == "HEALTH" then
     texture:SetVertexColor(Preview.HealthColor(member.health))
   else
     texture:SetVertexColor(ns.Media.ClassColor(member.class))
@@ -90,21 +139,52 @@ function Preview:Show(count)
   ns.Headers.previewActive = true
   ns.Headers:ApplyProfile(ns.Profiles.active)
   local style = ns.Styles.active
-  local anchor = ns.Headers.anchors.party
-  for position = 1, count do
-    local frame = self.frames[position]
-    if not frame then
-      frame = CreateFrame("Frame", nil, UIParent)
-      ns.UnitButton:BuildVisuals(frame)
-      self.frames[position] = frame
+  local used = 0
+  self.byKind = {}
+  for _, block in ipairs(Preview.Blocks(ns.Profiles.active.frames, count)) do
+    local anchor = ns.Headers.anchors[block.kind]
+    local layout = Preview.BlockLayout(block.kind, style.layout)
+    local shown = {}
+    for position, member in ipairs(block.members) do
+      used = used + 1
+      local frame = self.frames[used]
+      if not frame then
+        frame = CreateFrame("Frame", nil, UIParent)
+        ns.UnitButton:BuildVisuals(frame)
+        self.frames[used] = frame
+      end
+      local x, y = Preview.Offset(position, layout)
+      frame:ClearAllPoints()
+      frame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", x, y - 2)
+      self:Paint(frame, member, style)
+      frame:Show()
+      shown[#shown + 1] = frame
     end
-    local x, y = Preview.Offset(position, style.layout)
-    frame:ClearAllPoints()
-    frame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", x, y - 2)
-    self:Paint(frame, FAKE_MEMBERS[(position - 1) % #FAKE_MEMBERS + 1], style)
-    frame:Show()
+    self.byKind[block.kind] = shown
   end
   self.count = count
+end
+
+-- Rectángulo que ocupan los miembros de ejemplo de un bloque (para el imán), o nil si no tiene.
+function Preview:BlockRect(kind)
+  local frames = self.byKind and self.byKind[kind]
+  if not frames or #frames == 0 then
+    return nil
+  end
+  local rect
+  for _, frame in ipairs(frames) do
+    local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
+    if not left or not right or not top or not bottom then
+      return nil
+    end
+    if not rect then
+      rect = { left = left, right = right, top = top, bottom = bottom }
+    else
+      rect.left, rect.right = math.min(rect.left, left), math.max(rect.right, right)
+      rect.top, rect.bottom = math.max(rect.top, top), math.min(rect.bottom, bottom)
+    end
+  end
+  return rect
 end
 
 function Preview:HideFrames()
@@ -116,6 +196,7 @@ end
 function Preview:Hide()
   self:HideFrames()
   self.count = 0
+  self.byKind = {}
   if ns.Headers.previewActive then
     ns.Headers.previewActive = false
     ns.Headers:ApplyProfile(ns.Profiles.active)

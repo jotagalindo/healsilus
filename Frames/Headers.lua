@@ -69,7 +69,11 @@ local function SavePosition(kind, anchor)
 end
 
 -- Rectángulo del bloque en pantalla (cabecera o botón suelto), o nil si no se ve o no tiene tamaño.
+-- Con la vista previa abierta, el bloque son sus miembros de ejemplo.
 function Headers:BlockRect(kind)
+  if self.previewActive and ns.Preview then
+    return ns.Preview:BlockRect(kind)
+  end
   local frame = self.byKind[kind] or self.singles[kind]
   if not frame or not frame:IsVisible() then
     return nil
@@ -117,6 +121,7 @@ function Headers:EndDrag(kind)
   PlaceAnchor(anchor, anchor:GetLeft(), anchor:GetBottom())
   -- Imán: al soltar un bloque suelto cerca de otro visible, se pega o se alinea con él.
   local moving = self:BlockRect(kind)
+  local deltaX, deltaY = 0, 0
   if moving and not frames.moveTogether and frames.snapDistance > 0 then
     local others = {}
     for _, other in ipairs(BLOCK_KINDS) do
@@ -125,13 +130,31 @@ function Headers:EndDrag(kind)
         others[#others + 1] = rect
       end
     end
-    local deltaX, deltaY = ns.Snapping.Snap(moving, others, frames.snapDistance, SNAP_GAP)
-    PlaceAnchor(anchor, anchor:GetLeft() + deltaX, anchor:GetBottom() + deltaY)
+    deltaX, deltaY = ns.Snapping.Snap(moving, others, frames.snapDistance, SNAP_GAP)
   end
+  -- Rejilla del modo mover: en el eje que el imán no haya movido, la esquina superior izquierda del
+  -- bloque se pega a la línea más cercana.
+  if moving and ns.MoveMode and ns.MoveMode:SnapsToGrid() then
+    local shifted = {
+      left = moving.left + deltaX, right = moving.right + deltaX,
+      top = moving.top + deltaY, bottom = moving.bottom + deltaY,
+    }
+    local originX, originY = ns.MoveMode:GridOrigin()
+    local gridX, gridY = ns.Snapping.ToGrid(shifted, originX, originY, ns.MoveMode:GridSize())
+    if deltaX == 0 then
+      deltaX = gridX
+    end
+    if deltaY == 0 then
+      deltaY = gridY
+    end
+  end
+  PlaceAnchor(anchor, anchor:GetLeft() + deltaX, anchor:GetBottom() + deltaY)
   SavePosition(kind, anchor)
   if drag then
     for other in pairs(drag.others) do
-      SavePosition(other, self.anchors[other])
+      local otherAnchor = self.anchors[other]
+      PlaceAnchor(otherAnchor, otherAnchor:GetLeft() + deltaX, otherAnchor:GetBottom() + deltaY)
+      SavePosition(other, otherAnchor)
     end
   end
 end
@@ -313,6 +336,34 @@ function Headers:Initialize()
   end)
 end
 
+-- Healsilus apagado en este personaje (clic derecho en el botón del minimapa o /hs toggle): no se ve
+-- ningún bloque y vuelven los marcos de Blizzard. Se guarda por personaje en disabledCharacters.
+function Headers.IsEnabled()
+  local db = ns.Database.db
+  return not (db and db.disabledCharacters and db.disabledCharacters[ns.CharacterKey()])
+end
+
+function Headers:SetEnabled(enabled)
+  ns.Database.db.disabledCharacters[ns.CharacterKey()] = (not enabled) or nil
+  if not enabled then
+    if ns.MoveMode then
+      ns.MoveMode:Stop()
+    end
+    if ns.Preview then
+      ns.Preview:Hide()
+    end
+  end
+  self:ApplyProfile(ns.Profiles.active)
+  if enabled and ns.UnitButton then
+    ns.UnitButton:UpdateAllButtons()
+  end
+  ns.Print(enabled and L.ADDON_ENABLED or L.ADDON_DISABLED)
+  if InCombatLockdown() then
+    ns.Print(L.ADDON_TOGGLE_AFTER_COMBAT)
+  end
+  ns.Events:Fire("ADDON_TOGGLED", enabled)
+end
+
 function Headers:ApplyProfile(profile)
   if not self.initialized then
     return
@@ -320,19 +371,22 @@ function Headers:ApplyProfile(profile)
   ns.CombatQueue:Run("headers:apply", function()
     local frames = profile.frames
     local layout = ns.Styles.active.layout
+    local enabled = Headers.IsEnabled()
+    -- Con la vista previa abierta, sus miembros de ejemplo ocupan el sitio de los bloques reales.
+    local showBlocks = enabled and not Headers.previewActive
     for _, header in ipairs(Headers.list) do
       Headers:ApplyHeaderLayout(header, layout, frames)
     end
-    Headers:SetHeaderShown("party", frames.showMain and not Headers.previewActive)
-    Headers:SetHeaderShown("tanks", frames.showTanks and not Headers.previewActive)
-    Headers:SetHeaderShown("pets", frames.showPets and not Headers.previewActive)
+    Headers:SetHeaderShown("party", frames.showMain and showBlocks)
+    Headers:SetHeaderShown("tanks", frames.showTanks and showBlocks)
+    Headers:SetHeaderShown("pets", frames.showPets and showBlocks)
     for kind, button in pairs(Headers.singles) do
       button:SetSize(layout.width, layout.height)
-      local enabled = (kind == "target" and frames.showTarget) or (kind == "focus" and frames.showFocus)
-      RegisterStateDriver(button, "visibility", enabled and button.healsilusVisibility or "hide")
+      local wanted = (kind == "target" and frames.showTarget) or (kind == "focus" and frames.showFocus)
+      RegisterStateDriver(button, "visibility", (wanted and showBlocks) and button.healsilusVisibility or "hide")
     end
-    Headers:ApplyBlizzardVisibility(frames.hideBlizzard)
-    Headers:SetLocked(frames.locked)
+    Headers:ApplyBlizzardVisibility(enabled and frames.hideBlizzard)
+    Headers:SetLocked(frames.locked or not enabled)
     ns.ClickCast:Apply(profile)
   end)
 end

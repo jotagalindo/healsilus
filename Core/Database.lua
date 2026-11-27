@@ -90,6 +90,23 @@ local MAX_MACRO_LENGTH = 1023
 
 Database.DEFAULT_MINIMAP_ANGLE = 225
 
+-- Modo mover (UI/MoveMode.lua): rejilla, su tamaño en píxeles, pegar a ella y miembros de ejemplo.
+Database.GRID_SIZES = { 16, 32, 64 }
+Database.FILL_COUNTS = { 5, 10, 20, 40 }
+
+function Database.DefaultMoveMode()
+  return { grid = true, gridSize = 32, snapToGrid = true, fill = 5 }
+end
+
+local function IsListed(list, value)
+  for _, entry in ipairs(list) do
+    if entry == value then
+      return true
+    end
+  end
+  return false
+end
+
 -- Qué estilo usa el perfil en cada situación (los nombres son los de los estilos de serie).
 function Database.DefaultStyleRules()
   local L = ns.L
@@ -468,6 +485,30 @@ function Database:Initialize()
   end
   if type(db.minimap.hide) ~= "boolean" then
     db.minimap.hide = false
+  end
+  -- Personajes con Healsilus desactivado (clic derecho en el botón del minimapa): clave → true.
+  if type(db.disabledCharacters) ~= "table" then
+    db.disabledCharacters = {}
+  end
+  for characterKey, disabled in pairs(db.disabledCharacters) do
+    if disabled ~= true then
+      db.disabledCharacters[characterKey] = nil
+    end
+  end
+  local moveDefaults = Database.DefaultMoveMode()
+  if type(db.moveMode) ~= "table" then
+    db.moveMode = moveDefaults
+  end
+  for _, key in ipairs({ "grid", "snapToGrid" }) do
+    if type(db.moveMode[key]) ~= "boolean" then
+      db.moveMode[key] = moveDefaults[key]
+    end
+  end
+  if not IsListed(Database.GRID_SIZES, db.moveMode.gridSize) then
+    db.moveMode.gridSize = moveDefaults.gridSize
+  end
+  if not IsListed(Database.FILL_COUNTS, db.moveMode.fill) then
+    db.moveMode.fill = moveDefaults.fill
   end
   -- Estilos: comunes a toda la cuenta. Los de serie se instalan una sola vez (si luego borras uno, no vuelve).
   if type(db.styles) ~= "table" then

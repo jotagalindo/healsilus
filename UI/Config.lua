@@ -65,6 +65,18 @@ function Config:Build()
   local pendingText = Widgets.Label(frame, L.CONFIG_PENDING, "GameFontRed")
   pendingText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, -22)
   pendingText:Hide()
+  -- Atajos siempre a mano: modo mover (rejilla y relleno de ejemplo) y activar/desactivar Healsilus.
+  local toggleButton = Widgets.Button(frame, "", 150, function()
+    ns.Headers:SetEnabled(not ns.Headers.IsEnabled())
+  end)
+  toggleButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -36)
+  local moveButton = Widgets.Button(frame, L.CONFIG_MOVE_FRAMES, 130, function()
+    ns.MoveMode:Start()
+  end)
+  moveButton:SetPoint("RIGHT", toggleButton, "LEFT", -6, 0)
+  sourceText:SetPoint("RIGHT", moveButton, "LEFT", -10, 0)
+  sourceText:SetWordWrap(false)
+  self.toggleButton = toggleButton
 
   local content = CreateFrame("Frame", nil, frame)
   content:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -96)
@@ -124,6 +136,7 @@ function Config:Refresh()
     header = header .. " · " .. string.format(L.CONFIG_STYLE, ns.Styles.activeName)
   end
   self.sourceText:SetText(header)
+  self.toggleButton:SetText(ns.Headers.IsEnabled() and L.CONFIG_DISABLE or L.CONFIG_ENABLE)
   self:UpdatePending()
   local tab = self.tabs[self.selected]
   if tab and tab.refresh then
@@ -167,4 +180,8 @@ end)
 
 ns.Events:Register("COMBAT_QUEUE_CHANGED", function()
   Config:UpdatePending()
+end)
+
+ns.Events:Register("ADDON_TOGGLED", function()
+  Config:Refresh()
 end)

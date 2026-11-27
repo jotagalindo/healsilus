@@ -77,3 +77,11 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Aggro: contra un muñeco o un mob, quien tiene el aggro lleva borde rojo y 3 puntos rojos; con mucha amenaza sin tanquear, 1 punto. Desmarca "Borde rojo" o "Puntos rojos" y comprueba que cada uno se quita por separado.
 - [ ] `/hs diag` en combate: `Amenaza legible ahora: sí`. Si sale `no`, el juego oculta la amenaza en esa zona y no se puede mostrar (HealBot tampoco).
 - [ ] Auras y Debuffs → "Posición de los iconos": Encima, Debajo, A la izquierda y A la derecha de la barra colocan los iconos fuera de la barra; las esquinas, dentro.
+
+## 13. Modo mover y activar/desactivar
+- [ ] En la ventana de opciones, "Mover marcos": se cierra la ventana, sale la barra "Healsilus: mover marcos" arriba, la rejilla (líneas rojas en el centro) y todos los bloques activos rellenos con miembros de ejemplo (grupo, tanques, objetivo, foco y mascotas si están activadas).
+- [ ] Arrastra un cuadrado azul: al soltarlo, la esquina superior izquierda del bloque cae en una línea de la rejilla. Sin "Pegar a la rejilla" se queda donde lo sueltas (salvo el imán entre bloques).
+- [ ] "Rejilla: 32 px" cambia a 64 y 16; "Ejemplo: 5" cambia a 10, 20 y 40 miembros.
+- [ ] "Terminar" quita la rejilla y los ejemplos y bloquea los marcos. Al entrar en combate el modo mover se cierra solo. `/hs move` hace lo mismo que el botón.
+- [ ] Clic derecho en el botón del minimapa: "Healsilus desactivado", desaparecen los bloques, vuelven los marcos de Blizzard y el icono sale en gris. Tras `/reload` sigue desactivado en ese personaje (los demás no cambian).
+- [ ] Otro clic derecho (o "Activar Healsilus" en la ventana, o `/hs toggle`): vuelven los bloques y se ocultan otra vez los de Blizzard.
