@@ -30,7 +30,9 @@ local function LoadOverride()
   local debuffs = { party1 = {} }
   local buffs = { party1 = {} }
   environment.C_UnitAuras = {
-    GetAuraDataByIndex = function(unit, position)
+    -- Se piden todos los debuffs ("HARMFUL"): el addon decide cuáles puedes quitar.
+    GetAuraDataByIndex = function(unit, position, filter)
+      assert(filter == "HARMFUL", "unexpected filter " .. tostring(filter))
       local dispelName = debuffs[unit] and debuffs[unit][position]
       return dispelName and { dispelName = dispelName } or nil
     end,
@@ -56,8 +58,9 @@ local function LoadOverride()
   local ns = Loader.Load(environment, FILES)
   ns.Spells:Scan()
   ns.Profiles = { active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}) }
-  -- El clic de buff viene activado de serie; cada prueba lo enciende cuando lo necesita.
+  -- Los clics de buff y de dispel vienen activados de serie; cada prueba enciende el que necesita.
   ns.Profiles.active.clicks.buffOverride = false
+  ns.Profiles.active.clicks.dispelOverride = false
   ns.UnitButton = { buttons = {} }
   ns.Headers = { list = {} }
   -- Solo vigila Marca de lo Salvaje (con Don de lo Salvaje como versión de grupo) para todos.
@@ -205,6 +208,20 @@ describe("Buff override", function()
     local ns = LoadOverride()
     assertTrue(ns.Database.DefaultProfile().clicks.buffOverride)
     assertTrue(ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}).clicks.buffOverride)
+    assertTrue(ns.Database.DefaultProfile().clicks.dispelOverride)
+    assertTrue(ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {}).clicks.dispelOverride)
+  end)
+
+  it("cures poison with a plain click while the druid profile is fresh", function()
+    local ns, _, debuffs = LoadOverride()
+    ns.Profiles.active = ns.Database.NormalizeProfile(ns.ClassDefaults.DRUID(), {})
+    local button = FakeSecureButton("party1")
+    ns.UnitButton.buttons[button] = true
+    ns.ClickCast:Apply(ns.Profiles.active)
+    debuffs.party1 = { "Magic", "Poison" }
+    ns.DispelOverride:Evaluate(button)
+    assertEquals(button.attributes.spell1, "Curar envenenamiento")
+    assertEquals(button.attributes["shift-spell3"], "Curar envenenamiento")
   end)
 
   it("does nothing while the option is off", function()

@@ -67,7 +67,8 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Desmarca "Bloque principal": desaparece el bloque de grupo/banda.
 
 ## 11. Override de dispel
-- [ ] Marca "Fuera de combate, cualquier clic quita el debuff que puedas quitar" (pestaña Clics o Debuffs).
+- [ ] "Fuera de combate, cualquier clic quita el debuff que puedas quitar" viene marcada (pestaña Clics o Debuffs).
+- [ ] Fuera de combate, a alguien con veneno: un clic izquierdo normal lanza Curar envenenamiento (o Suprimir veneno si lo tienes).
 - [ ] Fuera de combate, a un compañero con una maldición: clic izquierdo (o cualquier otro) lanza Quitar maldición. Sin debuff, cada clic vuelve a hacer lo suyo.
 - [ ] En combate los clics hacen lo normal (Toque de sanación con el izquierdo), aunque tenga una maldición.
 

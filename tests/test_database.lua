@@ -80,7 +80,7 @@ describe("Database.NormalizeProfile", function()
 
   it("defaults click options to plain casting", function()
     local ns = LoadDatabase()
-    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false, buffOverride = true })
+    assertEquals(ns.Database.DefaultProfile().clicks, { targetOnClick = false, avoidBlueCursor = false, dispelOverride = true, buffOverride = true })
     local valid, field = ns.Database.ValidateProfile({ clicks = { targetOnClick = "yes" } })
     assertFalse(valid)
     assertEquals(field, "clicks.targetOnClick")
@@ -168,7 +168,7 @@ describe("Database:Initialize", function()
     local ns, environment = LoadDatabase()
     local db = ns.Database:Initialize()
     assertTrue(environment.HealsilusDB == db)
-    assertEquals(db.version, 3)
+    assertEquals(db.version, ns.Database.CURRENT_VERSION)
     assertEquals(db.classProfiles, {})
     assertEquals(db.characters, {})
     assertEquals(db.framePositions, {})
@@ -213,17 +213,29 @@ describe("Database:Initialize", function()
     local ns, environment = LoadDatabase()
     environment.HealsilusDB = {
       version = 2,
-      classProfiles = { DRUID = { clicks = { buffOverride = false, dispelOverride = true } } },
+      classProfiles = { DRUID = { clicks = { buffOverride = false, dispelOverride = false } } },
       characters = {
         ["Arsilus-Bah"] = { class = "DRUID", own = { clicks = { buffOverride = false } }, specs = { [1] = { clicks = {} } } },
       },
     }
     local db = ns.Database:Initialize()
-    assertEquals(db.version, 3)
+    assertEquals(db.version, 4)
     assertTrue(db.classProfiles.DRUID.clicks.buffOverride)
     assertTrue(db.classProfiles.DRUID.clicks.dispelOverride)
     assertTrue(db.characters["Arsilus-Bah"].own.clicks.buffOverride)
     assertTrue(db.characters["Arsilus-Bah"].specs[1].clicks.buffOverride)
+  end)
+
+  it("turns the dispel click on in profiles saved by version 3", function()
+    local ns, environment = LoadDatabase()
+    environment.HealsilusDB = {
+      version = 3,
+      classProfiles = { DRUID = { clicks = { dispelOverride = false, buffOverride = false } } },
+    }
+    local db = ns.Database:Initialize()
+    assertEquals(db.version, 4)
+    assertTrue(db.classProfiles.DRUID.clicks.dispelOverride)
+    assertFalse(db.classProfiles.DRUID.clicks.buffOverride)
   end)
 
   it("runs migrations in order and refuses missing ones", function()

@@ -15,12 +15,14 @@ function DispelOverride.CanRead()
   return ns.CanReadAuras() and C_UnitAuras.GetAuraDataByIndex ~= nil
 end
 
--- Tipos de los debuffs que tú puedes quitar (filtro "RAID"), como conjunto { Curse = true, ... }.
+-- Tipos de todos los debuffs de la unidad, como conjunto { Curse = true, ... }. Se leen todos ("HARMFUL")
+-- en vez de fiarse del filtro "RAID", que en el cliente de Forever no siempre deja solo los que puedes
+-- quitar: CureFor ya descarta los tipos para los que no conoces ningún hechizo.
 -- nil si el cliente devuelve las auras como secretos: entonces no se sabe nada.
 function DispelOverride.DebuffTypes(unit)
   local types = {}
   for position = 1, MAX_DEBUFFS do
-    local aura = C_UnitAuras.GetAuraDataByIndex(unit, position, "HARMFUL|RAID")
+    local aura = C_UnitAuras.GetAuraDataByIndex(unit, position, "HARMFUL")
     if ns.IsSecret(aura) then
       return nil
     end

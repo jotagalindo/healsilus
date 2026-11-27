@@ -2,7 +2,7 @@
 -- Sin APIs de WoW: todo se prueba fuera del juego.
 local _, ns = ...
 
-local Database = { CURRENT_VERSION = 3, MIGRATIONS = {}, fixes = {} }
+local Database = { CURRENT_VERSION = 4, MIGRATIONS = {}, fixes = {} }
 ns.Database = Database
 
 -- Colecciones cuyo contenido decide el usuario: nunca se mezclan con los valores por defecto.
@@ -124,10 +124,11 @@ function Database.DefaultProfile()
     bindings = {},
     -- targetOnClick: además de lanzar, selecciona la unidad. avoidBlueCursor: cancela el cursor azul
     -- si el hechizo no se puede lanzar sobre ella. Ambas convierten el hechizo en una macro [@mouseover].
-    -- dispelOverride: fuera de combate, cualquier clic sobre una barra con un debuff que puedes quitar lo quita.
+    -- dispelOverride (activado de serie): fuera de combate, cualquier clic sobre una barra con un debuff
+    -- que puedes quitar lo quita.
     -- buffOverride (activado de serie): fuera de combate, cualquier clic sobre una barra a la que le falta
     -- un buff vigilado se lo pone. En combate los clics hacen lo de siempre.
-    clicks = { targetOnClick = false, avoidBlueCursor = false, dispelOverride = false, buffOverride = true },
+    clicks = { targetOnClick = false, avoidBlueCursor = false, dispelOverride = true, buffOverride = true },
     -- Lo visual (tamaño, textura, textos, iconos, colores) vive en los estilos (Core/StyleData.lua);
     -- el perfil decide cuándo se ven los marcos y qué estilo usar en cada situación.
     frames = {
@@ -435,6 +436,15 @@ Database.MIGRATIONS[2] = function(db)
   EachStoredProfile(db, function(profile)
     if type(profile) == "table" and type(profile.clicks) == "table" then
       profile.clicks.buffOverride = true
+    end
+  end)
+end
+
+-- Versión 3 → 4: lo mismo con el clic que quita el debuff (override de dispel), ahora activado de serie.
+Database.MIGRATIONS[3] = function(db)
+  EachStoredProfile(db, function(profile)
+    if type(profile) == "table" and type(profile.clicks) == "table" then
+      profile.clicks.dispelOverride = true
     end
   end)
 end
