@@ -76,13 +76,13 @@ describe("TabAppearance positions", function()
     assertEquals({ ns.Styles.active.role.x, ns.Styles.active.role.y }, { 4, -3 })
   end)
 
-  it("splits the tab into bar, text, icon and aura pages", function()
+  it("splits the tab into bar, text, icon, aura and template pages", function()
     local ns = LoadTabs()
     local pages = {}
     for _, page in ipairs(ns.TabAppearance.PAGES) do
       pages[#pages + 1] = page.value
     end
-    assertEquals(pages, { "bar", "text", "icons", "auras" })
+    assertEquals(pages, { "bar", "text", "icons", "auras", "layouts" })
   end)
 
   it("offers every aura position and edits the chosen group only", function()

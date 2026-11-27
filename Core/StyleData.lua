@@ -17,6 +17,14 @@ local function TextElement(size, point, x, y)
   return { size = size, outline = "NONE", point = point, x = x, y = y }
 end
 
+-- El nombre además tiene un ancho máximo (fracción del ancho útil de la barra): si es más largo se
+-- corta con "…" en vez de pisar los iconos que haya en su misma fila.
+function StyleData.NameElement(size, point, x, y)
+  local element = TextElement(size, point, x, y)
+  element.widthPct = 1
+  return element
+end
+
 -- Dirección de crecimiento por defecto: hacia el centro de la barra (desde la derecha, a la izquierda).
 function StyleData.DefaultGrow(position)
   if string.find(position, "RIGHT") then
@@ -69,7 +77,7 @@ function StyleData.DefaultStyle()
     },
     text = {
       font = "FRIZQT",
-      name = TextElement(11, "TOPLEFT", 4, -3),
+      name = StyleData.NameElement(11, "TOPLEFT", 4, -3),
       health = health,
       status = TextElement(10, "BOTTOMRIGHT", -4, 3),
     },
@@ -100,7 +108,7 @@ local function CompactRaid()
   local style = StyleData.DefaultStyle()
   style.layout.width, style.layout.height, style.layout.spacing = 72, 28, 1
   style.bar.texture = "RAID"
-  style.text.name = TextElement(9, "TOP", 0, -3)
+  style.text.name = StyleData.NameElement(9, "TOP", 0, -3)
   style.text.health.mode = "NONE"
   style.text.status = TextElement(9, "BOTTOM", 0, 3)
   style.auras.hots.iconSize, style.auras.debuffs.iconSize, style.auras.buffs.iconSize = 10, 10, 8
@@ -111,7 +119,7 @@ local function LargeParty()
   local style = StyleData.DefaultStyle()
   style.layout.width, style.layout.height, style.layout.spacing = 170, 46, 4
   style.layout.columns, style.layout.unitsPerColumn = 1, 40
-  style.text.name = TextElement(13, "TOPLEFT", 6, -4)
+  style.text.name = StyleData.NameElement(13, "TOPLEFT", 6, -4)
   style.text.health.size, style.text.health.x, style.text.health.y = 12, 6, 4
   style.text.status = TextElement(12, "BOTTOMRIGHT", -6, 4)
   style.auras.hots.iconSize, style.auras.debuffs.iconSize, style.auras.buffs.iconSize = 18, 18, 12
@@ -122,7 +130,7 @@ local function Classic()
   local style = StyleData.DefaultStyle()
   style.layout.width, style.layout.height = 120, 24
   style.bar.colorMode = "HEALTH"
-  style.text.name = TextElement(10, "LEFT", 4, 0)
+  style.text.name = StyleData.NameElement(10, "LEFT", 4, 0)
   style.text.health.point, style.text.health.x, style.text.health.y = "RIGHT", -4, 0
   style.text.status = TextElement(10, "CENTER", 0, 0)
   style.auras.hots.iconSize, style.auras.debuffs.iconSize = 12, 12
@@ -136,6 +144,11 @@ StyleData.PRESETS = {
   { name = L.STYLE_LARGE_NAME, build = LargeParty },
   { name = L.STYLE_CLASSIC_NAME, build = Classic },
 }
+
+-- Ancho de la caja del nombre: el ancho útil de la barra (sin márgenes) por la fracción elegida.
+function StyleData.NameWidth(style)
+  return math.max(10, (style.layout.width - 12) * style.text.name.widthPct)
+end
 
 -- Margen hacia dentro de la barra para cada posición: 4 px desde un lado, 3 px desde arriba o abajo,
 -- y 0 en el eje en que el texto va centrado. Se aplica al elegir una posición nueva.

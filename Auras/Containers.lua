@@ -273,8 +273,9 @@ function Containers:UpdateVisibility(button)
   if not built then
     return
   end
+  -- Muertos y desconectados no enseñan iconos: su texto de estado puede ir donde estaban.
   for _, container in pairs(built) do
-    if button.unit then
+    if button.unit and not button.healsilusState then
       container:Show()
       container:UpdateAllAuras()
     else

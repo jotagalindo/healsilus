@@ -140,3 +140,11 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Aspecto → Barra → "Mostrar la barra de:": desmarca Ira y los guerreros se quedan sin franja (la vida ocupa todo el alto); el resto la mantiene.
 - [ ] Desmarca Energía y pasa a felino con un druida: la franja desaparece; al volver a forma normal (maná) vuelve.
 - [ ] Foco es el de las mascotas de cazador; "Otros" cubre cualquier recurso sin casilla propia.
+
+## 24. Plantillas de disposición
+- [ ] Aspecto → Plantillas → "Sanador" → Aplicar (confirma): las barras pasan a 140 × 52; arriba nombre y debuffs, en medio los puntos de aggro, abajo rol, vida, buff que falta y hasta 3 HoTs. Nada se pisa, ni con un tanque con 3 HoTs, 2 debuffs y aggro.
+- [ ] "Banda compacta": barras de 90 × 36, rol pequeño y nombre arriba, debuffs, buff y HoTs abajo, sin número de vida.
+- [ ] Los colores, la textura y la fuente del estilo no cambian al aplicar una plantilla.
+- [ ] Coloca algo a tu gusto, "Guardar la disposición actual…", ponle nombre: sale en "Tus plantillas" (en todos tus personajes). Aplicar y Borrar funcionan.
+- [ ] Muerto o desconectado: el texto de estado sale donde iba la vida y sin iconos de auras encima.
+- [ ] Aspecto → Textos → "Ancho máximo del nombre": un nombre largo se corta con "…" antes de llegar a los iconos.

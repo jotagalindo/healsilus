@@ -49,6 +49,8 @@ Database.RANGES = {
   refreshBelow = { 0, 60 },
   -- Distancia (px) a la que un bloque soltado se pega a otro (0 = sin imán).
   snapDistance = { 0, 40 },
+  -- Ancho máximo del nombre (fracción del ancho útil de la barra).
+  widthPct = { 0.3, 1 },
   -- Opacidad de la barra con la vida llena (1 = igual que el resto).
   fullHealthAlpha = { 0.05, 1 },
   -- Canales de color (dispel, fondo y curva de vida de los estilos).
@@ -555,6 +557,13 @@ function Database:Initialize()
   if not db.presetsInstalled then
     ns.StyleData.InstallPresets(db.styles)
     db.presetsInstalled = true
+  end
+  -- Plantillas de disposición guardadas (Core/BarLayouts.lua), también de toda la cuenta.
+  if type(db.barLayouts) ~= "table" then
+    db.barLayouts = {}
+  end
+  if ns.BarLayouts then
+    ns.BarLayouts.Normalize(db.barLayouts, self.fixes)
   end
   for name, style in pairs(db.styles) do
     if type(style) == "table" and ns.StyleData.IsValidName(name) then

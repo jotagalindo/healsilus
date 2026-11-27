@@ -195,7 +195,7 @@ function UnitButton:ApplyStyle(frame)
   visual.background:SetColorTexture(background.r, background.g, background.b, background.a)
   local fontPath = ns.Media.Font(style.text.font)
   PlaceText(visual.nameText, visual.healthBar, fontPath, style.text.name)
-  visual.nameText:SetWidth(math.max(10, style.layout.width - 12))
+  visual.nameText:SetWidth(ns.StyleData.NameWidth(style))
   PlaceText(visual.healthText, visual.healthBar, fontPath, style.text.health)
   PlaceText(visual.statusText, visual.healthBar, fontPath, style.text.status)
   UnitButton.PlaceMissingMark(visual, style.auras.buffs)
@@ -498,6 +498,11 @@ end
 -- en combate: solo se abrevian y se unen en texto, nunca se comparan ni se opera con ellos.
 function UnitButton:UpdateHealthText(button)
   local text = button.healsilus.healthText
+  -- Muerto o desconectado: el texto de estado ocupa su sitio (pueden ir en el mismo punto sin pisarse).
+  if button.healsilusState then
+    text:SetText("")
+    return
+  end
   local mode = button.healsilusTextMode or Style().text.health.mode
   local curvesSupported = ns.Curves.IsSupported()
   if mode == "DEFICIT" and not UnitHealthMissing then
@@ -580,6 +585,14 @@ function UnitButton.HealthNumberText(mode, unit, percentText)
 end
 
 function UnitButton:UpdateStatus(button)
+  local previous = button.healsilusState
+  self:ReadStatus(button)
+  if previous ~= button.healsilusState and ns.Containers then
+    ns.Containers:UpdateVisibility(button)
+  end
+end
+
+function UnitButton:ReadStatus(button)
   local unit = button.unit
   local statusText = button.healsilus.statusText
   local connected = UnitIsConnected(unit)
@@ -753,6 +766,7 @@ end
 local function UpdateStatusEvent(button)
   UnitButton:UpdateStatus(button)
   UnitButton:UpdateFade(button)
+  UnitButton:UpdateHealthText(button)
   UnitButton:UpdateColor(button)
 end
 

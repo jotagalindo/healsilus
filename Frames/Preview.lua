@@ -171,8 +171,10 @@ function Preview:PaintAuras(frame, member, style)
   end
   Preview.PaintAuraIcons(frame, "hots", style.auras.hots, hots)
   local debuffs = {}
-  if auras.debuffsEnabled and auras.debuffsMax > 0 and member.debuff then
-    debuffs[1] = FAKE_DEBUFF_ICON
+  if auras.debuffsEnabled and member.debuff and not member.dead then
+    for position = 1, math.min(member.debuffCount or 1, auras.debuffsMax) do
+      debuffs[position] = FAKE_DEBUFF_ICON
+    end
   end
   Preview.PaintAuraIcons(frame, "debuffs", style.auras.debuffs, debuffs,
     member.debuff and style.auras.dispelColors[member.debuff] or nil)

@@ -72,6 +72,7 @@ TabAppearance.PAGES = {
   { value = "text", label = L.APPEARANCE_PAGE_TEXT },
   { value = "icons", label = L.APPEARANCE_PAGE_ICONS },
   { value = "auras", label = L.APPEARANCE_PAGE_AURAS },
+  { value = "layouts", label = L.APPEARANCE_PAGE_LAYOUTS },
 }
 
 -- Grupos de iconos que se colocan en la página Auras (style.auras.<key>).
@@ -311,6 +312,9 @@ local function BuildTextPage(page)
     TabAppearance.TextGetter("point"), TabAppearance.PointSetter()), PICKER_HEIGHT)
   Slider(position, L.APPEARANCE_OFFSET_X, "x", TabAppearance.TextGetter("x"), TabAppearance.TextSetter("x"), 1)
   Slider(position, L.APPEARANCE_OFFSET_Y, "y", TabAppearance.TextGetter("y"), TabAppearance.TextSetter("y"), 1)
+  -- Siempre el del nombre: hasta dónde llega antes de cortarse con "…".
+  Slider(position, L.APPEARANCE_NAME_WIDTH, "widthPct", Widgets.StyleGetter("text", "name", "widthPct"),
+    Widgets.StyleSetter("text", "name", "widthPct"), 0.05, "%.2f")
   return { left, right }
 end
 
@@ -358,6 +362,90 @@ local function BuildAurasPage(page)
   note:SetWordWrap(true)
   adjust:Add(note, 44)
   return { left, right }
+end
+
+-- Página "Plantillas": las propuestas de serie y las disposiciones que guardes tú.
+local LAYOUT_ROW_HEIGHT = 26
+
+local function ApplyLayout(name, data)
+  local styleName = ns.Styles.activeName or ""
+  Widgets.Confirm(string.format(L.BAR_LAYOUT_CONFIRM, styleName), function()
+    ns.BarLayouts.Apply(data, Style(), ns.Profiles.active)
+    ns.Config:Changed("auras")
+    ns.Config:Changed("style")
+    ns.Print(string.format(L.BAR_LAYOUT_APPLIED, name, styleName))
+  end)
+end
+
+local SAVE_ERRORS = { ["name taken"] = L.BAR_LAYOUT_NAME_TAKEN, ["bad name"] = L.BAR_LAYOUT_BAD_NAME, full = L.BAR_LAYOUT_FULL }
+
+local function SaveLayout()
+  Widgets.TextDialog(L.BAR_LAYOUT_SAVE_TITLE, "", L.ACCEPT, function(text)
+    local saved, failure = ns.BarLayouts.Save(text, Style(), ns.Profiles.active)
+    if not saved then
+      ns.Print(SAVE_ERRORS[failure] or failure)
+    end
+    ns.Config:Refresh()
+  end)
+end
+
+local function BuildLayoutsPage(page)
+  local left, right = Widgets.Column(page, COLUMN_X[1], 0), Widgets.Column(page, COLUMN_X[2], 0)
+  local presets = left:Next(Widgets.Section(page, L.BAR_LAYOUT_PRESETS, SECTION_WIDTH))
+  for _, preset in ipairs(ns.BarLayouts.PRESETS) do
+    local title = Widgets.Label(presets.frame, preset.name, "GameFontHighlight")
+    presets:Add(title, 18)
+    local description = Widgets.Label(presets.frame, preset.description, "GameFontDisableSmall")
+    description:SetWidth(220)
+    description:SetWordWrap(true)
+    presets:Add(description, 66)
+    local apply = Widgets.Button(presets.frame, L.BAR_LAYOUT_APPLY, 110, function()
+      ApplyLayout(preset.name, ns.BarLayouts.Preset(preset.key))
+    end)
+    apply:SetVariant("primary")
+    presets:Add(apply, 36)
+  end
+
+  local saved = right:Next(Widgets.Section(page, L.BAR_LAYOUT_SAVED, SECTION_WIDTH))
+  saved:Add(Widgets.Button(saved.frame, L.BAR_LAYOUT_SAVE, 220, SaveLayout), 30)
+  local empty = Widgets.Label(saved.frame, L.BAR_LAYOUT_EMPTY, "GameFontDisableSmall")
+  empty:SetWidth(220)
+  empty:SetWordWrap(true)
+  saved:Add(empty, 6)
+  local list = CreateFrame("Frame", nil, saved.frame)
+  list:SetSize(220, 12 * LAYOUT_ROW_HEIGHT)
+  saved:Add(list, 12 * LAYOUT_ROW_HEIGHT)
+  local pool = Widgets.RowPool(list, function(parent)
+    local row = CreateFrame("Frame", nil, parent)
+    row:SetSize(220, 24)
+    row.text = Widgets.Label(row, "", "GameFontHighlight")
+    row.text:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.text:SetPoint("RIGHT", row, "RIGHT", -112, 0)
+    row.text:SetWordWrap(false)
+    row.delete = Widgets.Button(row, L.BAR_LAYOUT_DELETE, 52, function()
+      ns.BarLayouts.Delete(row.name)
+      ns.Config:Refresh()
+    end)
+    row.delete:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    row.apply = Widgets.Button(row, L.BAR_LAYOUT_APPLY, 54, function()
+      ApplyLayout(row.name, ns.Database.db.barLayouts[row.name])
+    end)
+    row.apply:SetPoint("RIGHT", row.delete, "LEFT", -4, 0)
+    return row
+  end)
+  -- Columna con Refresh propio: repinta la lista de guardadas.
+  local listColumn = { Refresh = function()
+    local names = ns.BarLayouts.SavedNames()
+    empty:SetShown(#names == 0)
+    list:ClearAllPoints()
+    list:SetPoint("TOPLEFT", saved.frame, "TOPLEFT", Widgets.SECTION_PADDING, #names == 0 and -96 or -64)
+    saved.frame:SetHeight(#names == 0 and 112 or (72 + #names * LAYOUT_ROW_HEIGHT))
+    pool:Render(names, function(row, name)
+      row.name = name
+      row.text:SetText(name)
+    end, 0, 0, LAYOUT_ROW_HEIGHT)
+  end }
+  return { left, listColumn }
 end
 
 -- Vista de ejemplo a la derecha: unas barras falsas pintadas con el estilo activo, que cambian al momento.
@@ -428,7 +516,9 @@ function TabAppearance.Build(panel)
     return TabAppearance.page
   end, TabAppearance.SelectPage)
   TabAppearance.pageSelector:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
-  local builders = { bar = BuildBarPage, text = BuildTextPage, icons = BuildIconsPage, auras = BuildAurasPage }
+  local builders = {
+    bar = BuildBarPage, text = BuildTextPage, icons = BuildIconsPage, auras = BuildAurasPage, layouts = BuildLayoutsPage,
+  }
   TabAppearance.pages, TabAppearance.stacks = {}, {}
   for _, entry in ipairs(TabAppearance.PAGES) do
     local page = CreateFrame("Frame", nil, panel)

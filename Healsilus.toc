@@ -23,6 +23,7 @@ Data\Druid.lua
 Data\Dispels.lua
 Core\Profiles.lua
 Core\Styles.lua
+Core\BarLayouts.lua
 Core\Serializer.lua
 Frames\Media.lua
 Frames\Curves.lua
