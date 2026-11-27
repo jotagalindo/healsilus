@@ -271,4 +271,40 @@ describe("Dropping a block in move mode", function()
     ns.Headers:EndDrag("party")
     assertEquals({ anchor.left, anchor.bottom }, { 975, 600 })
   end)
+
+  it("sticks the block to its neighbour while it is still being dragged", function()
+    local ns, environment = LoadMoveMode()
+    ns.Database.db.moveMode.snapToGrid = false
+    local tanks, party = FakeAnchor(330, 640), FakeAnchor(560, 640)
+    function tanks:SetScript(kind, handler)
+      self[kind] = handler
+    end
+    ns.Headers.anchors.tanks, ns.Headers.anchors.party = tanks, party
+    ns.Headers.previewActive = true
+    ns.Preview.byKind = { tanks = { FakeSample(tanks) }, party = { FakeSample(party) } }
+    local cursor = { 340, 650 }
+    environment.GetCursorPosition = function()
+      return cursor[1], cursor[2]
+    end
+    environment.UIParent.GetEffectiveScale = function()
+      return 1
+    end
+    ns.Headers:BeginDrag("tanks")
+    -- 112 px a la derecha y 3 arriba: el borde derecho (552) queda a 6 px del hueco junto al grupo.
+    cursor = { 452, 653 }
+    tanks.OnUpdate(tanks)
+    assertEquals({ tanks.left, tanks.bottom }, { 448, 640 })
+    -- Con Mayús pulsada el bloque va donde esté el cursor.
+    environment.IsShiftKeyDown = function()
+      return true
+    end
+    tanks.OnUpdate(tanks)
+    assertEquals({ tanks.left, tanks.bottom }, { 442, 643 })
+    environment.IsShiftKeyDown = function()
+      return false
+    end
+    ns.Headers:EndDrag("tanks")
+    assertEquals(ns.Database.db.framePositions.tanks, { "BOTTOMLEFT", 448, 640 })
+  end)
 end)
+

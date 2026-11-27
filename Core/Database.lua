@@ -2,7 +2,7 @@
 -- Sin APIs de WoW: todo se prueba fuera del juego.
 local _, ns = ...
 
-local Database = { CURRENT_VERSION = 4, MIGRATIONS = {}, fixes = {} }
+local Database = { CURRENT_VERSION = 5, MIGRATIONS = {}, fixes = {} }
 ns.Database = Database
 
 -- Colecciones cuyo contenido decide el usuario: nunca se mezclan con los valores por defecto.
@@ -47,6 +47,8 @@ Database.RANGES = {
   refreshBelow = { 0, 60 },
   -- Distancia (px) a la que un bloque soltado se pega a otro (0 = sin imán).
   snapDistance = { 0, 40 },
+  -- Opacidad de la barra con la vida llena (1 = igual que el resto).
+  fullHealthAlpha = { 0.05, 1 },
   -- Canales de color (dispel, fondo y curva de vida de los estilos).
   r = { 0, 1 },
   g = { 0, 1 },
@@ -449,6 +451,18 @@ Database.MIGRATIONS[3] = function(db)
       profile.clicks.dispelOverride = true
     end
   end)
+end
+
+-- Versión 4 → 5: al cambiar la posición de un texto a "Centro" (o Arriba/Abajo, Izquierda/Derecha) se
+-- quedaba el margen de la esquina anterior (4, -3) y el texto salía descentrado. Se quita ese sobrante.
+Database.MIGRATIONS[4] = function(db)
+  for _, style in pairs(type(db.styles) == "table" and db.styles or {}) do
+    if type(style) == "table" and type(style.text) == "table" then
+      for _, key in ipairs({ "name", "health", "status" }) do
+        ns.StyleData.RecenterLeftovers(style.text[key])
+      end
+    end
+  end
 end
 
 -- Cada migración convierte los datos de la versión N a la N+1. Una versión sin migración es un error.

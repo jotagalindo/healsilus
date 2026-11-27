@@ -102,3 +102,20 @@ Haz cada paso en un druida con Healsilus enlazado (`tools/link-addon.ps1`) y Hea
 - [ ] Druida: al pasar a felino la franja se vuelve amarilla (energía), en oso roja (ira) y al volver a forma normal, azul.
 - [ ] Aspecto → "Barra de maná / energía": desmarca "Mostrar maná, ira o energía" y la franja desaparece y la vida vuelve a ocupar todo el alto. "Solo en los sanadores" la deja solo en quien tiene rol de sanador. "Alto de la barra" la hace más gruesa o fina.
 - [ ] La vista previa y el modo mover también muestran la franja en los miembros de ejemplo.
+
+## 16. Opciones ordenadas en recuadros
+- [ ] Marcos: tres columnas de recuadros (Tamaño, Disposición · Bloques visibles, Cuándo mostrar · Mover y colocar, Otros). Nada se pisa ni se sale.
+- [ ] Aspecto: arriba los botones Barra / Textos / Rol y aggro cambian de página; a la derecha, "Vista de ejemplo" con cuatro barras que cambian al tocar cualquier opción.
+
+## 17. Nombres centrados
+- [ ] Aspecto → Textos → Nombre: pulsa el punto del centro del selector. El nombre queda en el centro exacto de la barra de vida y los dos desplazamientos pasan a 0.
+- [ ] Un estilo que ya tenías con el nombre en "Centro" (o Arriba/Abajo) aparece centrado tras actualizar, sin tocar nada.
+
+## 18. Opacidad
+- [ ] Aspecto → Barra → Opacidad: "Con la vida llena" a 0.3. Las barras a tope se atenúan (relleno, fondo, maná y textos); al recibir daño vuelven a ser opacas al momento, también en combate. El aggro, el rol y las auras no se atenúan.
+- [ ] "Fuera de alcance" sigue funcionando y se combina con la anterior. Si sale un error de "FullHealthFade" en `/hs diag`, pásamelo.
+
+## 19. Mover con imán
+- [ ] "Mover marcos": cada bloque tiene un recuadro verde con su nombre; se arrastra el bloque entero (ya no hay cuadrados azules).
+- [ ] Arrastra un bloque junto a otro: se pega mientras lo arrastras y una línea verde marca el borde o centro con el que se alinea. Con Mayús pulsada se mueve libre.
+- [ ] La barra de arriba: "Imán: 12 px" cambia la distancia (o lo apaga) y "Mover juntos" arrastra todos los bloques a la vez.

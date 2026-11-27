@@ -174,3 +174,38 @@ describe("Database version 2", function()
     assertEquals(field, "styleRules.arena")
   end)
 end)
+
+describe("Text positions", function()
+  it("keeps texts off the edges and exactly on the centered axis", function()
+    local ns = LoadStyleData()
+    assertEquals({ ns.StyleData.DefaultOffset("TOPLEFT") }, { 4, -3 })
+    assertEquals({ ns.StyleData.DefaultOffset("CENTER") }, { 0, 0 })
+    assertEquals({ ns.StyleData.DefaultOffset("TOP") }, { 0, -3 })
+    assertEquals({ ns.StyleData.DefaultOffset("RIGHT") }, { -4, 0 })
+    assertEquals({ ns.StyleData.DefaultOffset("BOTTOMRIGHT") }, { -4, 3 })
+  end)
+
+  it("re-centers texts left off-center by version 4 when moved to the center", function()
+    local ns, environment = LoadStyleData()
+    local style = ns.StyleData.DefaultStyle()
+    style.text.name.point = "CENTER"
+    style.text.status = { size = 10, outline = "NONE", point = "TOP", x = 15, y = -3 }
+    environment.HealsilusDB = { version = 4, styles = { Mine = style } }
+    local db = ns.Database:Initialize()
+    assertEquals(db.version, ns.Database.CURRENT_VERSION)
+    local name, status = db.styles.Mine.text.name, db.styles.Mine.text.status
+    assertEquals({ name.x, name.y }, { 0, 0 })
+    -- Un desplazamiento grande es una elección del usuario y se respeta; el eje de arriba no se toca.
+    assertEquals({ status.x, status.y }, { 15, -3 })
+    assertEquals({ db.styles.Mine.text.health.x, db.styles.Mine.text.health.y }, { 4, 3 })
+  end)
+
+  it("starts every style fully opaque at full health", function()
+    local ns = LoadStyleData()
+    assertEquals(ns.StyleData.DefaultStyle().bar.fullHealthAlpha, 1)
+    local style = ns.StyleData.DefaultStyle()
+    style.bar.fullHealthAlpha = 0
+    ns.StyleData.NormalizeStyle(style, {})
+    assertEquals(style.bar.fullHealthAlpha, 0.05)
+  end)
+end)

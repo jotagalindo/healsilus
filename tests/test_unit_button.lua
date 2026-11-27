@@ -485,6 +485,9 @@ describe("UnitButton power bar", function()
     function visual.powerBackground:SetColorTexture(red, green, blue, alpha)
       self.color = { red, green, blue, alpha }
     end
+    function visual.powerBackground:SetVertexColor(red, green, blue, alpha)
+      self.vertex = { red, green, blue, alpha }
+    end
     return button
   end
 
@@ -578,5 +581,118 @@ describe("UnitButton power bar", function()
     ns.UnitButton:UpdatePower(party)
     assertEquals(party.healsilus.powerBar.height, 8)
     assertEquals(party.healsilus.healthBar.points.BOTTOMRIGHT, { -2, 11 })
+  end)
+end)
+
+describe("UnitButton opacity at full health", function()
+  local function Colored()
+    local region = {}
+    function region:SetVertexColor(red, green, blue, alpha)
+      self.vertex = { red, green, blue, alpha }
+    end
+    function region:SetTextColor(red, green, blue, alpha)
+      self.text = { red, green, blue, alpha }
+    end
+    function region:SetColorTexture(red, green, blue, alpha)
+      self.color = { red, green, blue, alpha }
+    end
+    return region
+  end
+
+  local function Bar()
+    local fill = Colored()
+    return { fill = fill, GetStatusBarTexture = function()
+      return fill
+    end }
+  end
+
+  local function FadeButton(unit)
+    local button = { unit = unit, healsilus = {
+      background = Colored(), nameText = Colored(), healthText = Colored(), healthBar = Bar(), powerBar = Bar(),
+      powerBackground = Colored(),
+    } }
+    return button
+  end
+
+  local function LoadFade(health, maximum)
+    local ns, environment = LoadUnitButton()
+    environment.UnitHealth = function()
+      return health()
+    end
+    environment.UnitHealthMax = function()
+      return maximum()
+    end
+    return ns, environment
+  end
+
+  it("fades the bar, background, power and texts of a unit at full health only", function()
+    local current = 100
+    local ns = LoadFade(function()
+      return current
+    end, function()
+      return 100
+    end)
+    ns.Styles.active.bar.fullHealthAlpha = 0.3
+    local button = FadeButton("party1")
+    ns.UnitButton.PaintFill(button.healsilus, 1, 0.5, 0)
+    ns.UnitButton.PaintPower(button.healsilus, "MANA")
+    ns.UnitButton:UpdateFade(button)
+    local visual = button.healsilus
+    assertEquals(visual.healthBar.fill.vertex, { 1, 0.5, 0, 0.3 })
+    assertEquals(visual.background.vertex, { 1, 1, 1, 0.3 })
+    assertEquals(visual.nameText.text, { 1, 1, 1, 0.3 })
+    assertEquals(visual.powerBar.fill.vertex[4], 0.3)
+    current = 99
+    ns.UnitButton:UpdateFade(button)
+    assertEquals(visual.healthBar.fill.vertex, { 1, 0.5, 0, 1 })
+    assertEquals(visual.background.vertex, { 1, 1, 1, 1 })
+  end)
+
+  it("keeps dead and offline units and the default style fully opaque", function()
+    local ns = LoadFade(function()
+      return 100
+    end, function()
+      return 100
+    end)
+    local button = FadeButton("party1")
+    ns.UnitButton:UpdateFade(button)
+    assertEquals(button.healsilus.background.vertex, { 1, 1, 1, 1 })
+    ns.Styles.active.bar.fullHealthAlpha = 0.3
+    button.healsilusState = "DEAD"
+    ns.UnitButton:UpdateFade(button)
+    assertEquals(button.healsilus.background.vertex, { 1, 1, 1, 1 })
+  end)
+
+  it("lets the client decide with a curve when health is secret, and gives up cleanly if it refuses", function()
+    local ns, environment = LoadFade(Stubs.MakeSecret, Stubs.MakeSecret)
+    ns.Styles.active.bar.fullHealthAlpha = 0.3
+    local secretAlpha = Stubs.MakeSecret()
+    environment.C_CurveUtil = { CreateColorCurve = function()
+      return { SetType = function() end, AddPoint = function() end }
+    end, CreateCurve = function() end }
+    environment.Enum = { LuaCurveType = { Linear = 0 } }
+    environment.CreateColor = function()
+      return {}
+    end
+    environment.UnitHealthPercent = function(_, predicted, curve)
+      assertFalse(predicted)
+      assertTrue(curve ~= nil)
+      return { GetRGBA = function()
+        return 1, 1, 1, secretAlpha
+      end }
+    end
+    local button = FadeButton("party1")
+    ns.UnitButton:UpdateFade(button)
+    assertTrue(button.healsilus.background.vertex[4] == secretAlpha)
+    -- Un cliente que no acepta el alfa secreto: se anota y las barras quedan opacas.
+    button.healsilus.background.SetVertexColor = function(self, red, green, blue, alpha)
+      if Stubs.IsSecret(alpha) then
+        error("secret alpha refused")
+      end
+      self.vertex = { red, green, blue, alpha }
+    end
+    ns.UnitButton:UpdateFade(button)
+    assertTrue(ns.UnitButton.fadeFailed)
+    assertEquals(button.healsilus.background.vertex, { 1, 1, 1, 1 })
   end)
 end)

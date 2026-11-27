@@ -57,6 +57,25 @@ function Curves:DeficitVisibility()
   return self.deficitVisibility
 end
 
+-- Opacidad con la vida llena: blanco opaco por debajo del 100 % y alpha = fullAlpha al 100 %. La barra
+-- toma el alfa de este color, así el cliente decide si la unidad está a tope aunque la vida sea secreta.
+Curves.fullHealthFades = {}
+
+function Curves:FullHealthFade(fullAlpha)
+  local key = string.format("%.3f", fullAlpha)
+  local cached = self.fullHealthFades[key]
+  if cached then
+    return cached
+  end
+  local curve = C_CurveUtil.CreateColorCurve()
+  curve:SetType(Enum.LuaCurveType.Linear)
+  curve:AddPoint(0, CreateColor(1, 1, 1, 1))
+  curve:AddPoint(FULL_HEALTH_START, CreateColor(1, 1, 1, 1))
+  curve:AddPoint(1, CreateColor(1, 1, 1, fullAlpha))
+  self.fullHealthFades[key] = curve
+  return curve
+end
+
 function Curves:Percent()
   if not self.percent then
     local curve = C_CurveUtil.CreateCurve()

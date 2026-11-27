@@ -237,8 +237,55 @@ end
 
 function UnitButton.PaintPower(visual, token)
   local color = UnitButton.PowerColor(token)
-  visual.powerBar:GetStatusBarTexture():SetVertexColor(color.r, color.g, color.b)
+  visual.powerColor = color
+  local alpha = visual.fadeAlpha or 1
+  visual.powerBar:GetStatusBarTexture():SetVertexColor(color.r, color.g, color.b, alpha)
   visual.powerBackground:SetColorTexture(color.r, color.g, color.b, POWER_BACKGROUND_ALPHA)
+  visual.powerBackground:SetVertexColor(1, 1, 1, alpha)
+end
+
+-- Color del relleno de la barra de vida, con la opacidad de "vida llena" que toque. r, g, b pueden ser
+-- secretos (color según la vida): solo se guardan y se pasan al widget.
+function UnitButton.PaintFill(visual, red, green, blue)
+  visual.fillColor = { red, green, blue }
+  visual.healthBar:GetStatusBarTexture():SetVertexColor(red, green, blue, visual.fadeAlpha or 1)
+end
+
+-- Opacidad de la barra (relleno, fondo, maná/energía, nombre y vida). alpha puede ser secreto: solo se
+-- pasa a los widgets como canal alfa de su color. El aggro, el rol y las auras no se atenúan.
+function UnitButton.PaintFade(visual, alpha)
+  visual.fadeAlpha = alpha
+  visual.background:SetVertexColor(1, 1, 1, alpha)
+  visual.nameText:SetTextColor(1, 1, 1, alpha)
+  visual.healthText:SetTextColor(1, 1, 1, alpha)
+  local fill = visual.fillColor
+  if fill then
+    visual.healthBar:GetStatusBarTexture():SetVertexColor(fill[1], fill[2], fill[3], alpha)
+  end
+  local power = visual.powerColor
+  if power then
+    visual.powerBar:GetStatusBarTexture():SetVertexColor(power.r, power.g, power.b, alpha)
+    visual.powerBackground:SetVertexColor(1, 1, 1, alpha)
+  end
+end
+
+-- Alfa de "vida llena" de una unidad: fullHealthAlpha si está a tope y 1 si no. Con la vida legible se
+-- compara; si es secreta, lo decide el cliente con una curva (ver Curves:FullHealthFade).
+function UnitButton.FullHealthFade(unit, style)
+  local fullAlpha = style.bar.fullHealthAlpha
+  if fullAlpha >= 1 then
+    return 1
+  end
+  local health, maximum = UnitHealth(unit), UnitHealthMax(unit)
+  if not ns.IsSecret(health) and not ns.IsSecret(maximum) then
+    return (maximum > 0 and health >= maximum) and fullAlpha or 1
+  end
+  if not ns.Curves.IsSupported() then
+    return 1
+  end
+  local color = UnitHealthPercent(unit, false, ns.Curves:FullHealthFade(fullAlpha))
+  local _, _, _, alpha = color:GetRGBA()
+  return alpha
 end
 
 -- role: "TANK", "HEALER", "DAMAGER" o nil. Lo usan las barras reales y la vista previa.
@@ -325,6 +372,7 @@ function UnitButton:UpdateAll(button)
   end
   self:UpdateName(button)
   self:UpdateStatus(button)
+  self:UpdateFade(button)
   self:UpdateHealth(button)
   self:UpdateColor(button)
   self:UpdateRange(button)
@@ -346,6 +394,24 @@ function UnitButton:UpdateHealth(button)
   healthBar:SetMinMaxValues(0, UnitHealthMax(unit))
   healthBar:SetValue(UnitHealth(unit))
   self:UpdateHealthText(button)
+end
+
+-- Muertos y desconectados no están "llenos": siempre opacos. Si el cliente rechaza el alfa secreto, se
+-- anota una vez en /hs diag y la opción deja de aplicarse (barras opacas).
+function UnitButton:UpdateFade(button)
+  local visual = button.healsilus
+  if self.fadeFailed or button.healsilusState then
+    UnitButton.PaintFade(visual, 1)
+    return
+  end
+  local ok, failure = pcall(function()
+    UnitButton.PaintFade(visual, UnitButton.FullHealthFade(button.unit, Style()))
+  end)
+  if not ok then
+    self.fadeFailed = true
+    ns.RecordError("UnitButton:FullHealthFade", failure)
+    UnitButton.PaintFade(visual, 1)
+  end
 end
 
 -- Si el cliente no deja escribir un número de vida (secreto que AbbreviateLargeNumbers rechaza), esa
@@ -376,8 +442,8 @@ function UnitButton:UpdateHealthText(button)
     text:SetText("")
     return
   end
-  -- Solo el déficit secreto se vuelve transparente a vida llena; el resto de textos, siempre opacos.
-  text:SetTextColor(1, 1, 1, 1)
+  -- El déficit secreto se vuelve transparente a vida llena; el resto de textos siguen la opacidad de la barra.
+  text:SetTextColor(1, 1, 1, button.healsilus.fadeAlpha or 1)
   local unit = button.unit
   local percentText
   if mode == "PERCENT" or mode == "CURRENT_PERCENT" then
@@ -465,10 +531,10 @@ function UnitButton:UpdateStatus(button)
 end
 
 function UnitButton:UpdateColor(button)
-  local texture = button.healsilus.healthBar:GetStatusBarTexture()
+  local visual = button.healsilus
   if button.healsilusState then
     local color = ns.Media.OFFLINE_COLOR
-    texture:SetVertexColor(color.r, color.g, color.b)
+    UnitButton.PaintFill(visual, color.r, color.g, color.b)
     return
   end
   -- Le falta un buff tuyo: solo fuera de combate, como HealBot (en combate manda la vida).
@@ -476,21 +542,21 @@ function UnitButton:UpdateColor(button)
   local missing = button.healsilusMissing
   if buffs.colorBar and missing and #missing > 0 and not UnitButton.inCombat and not InCombatLockdown() then
     local color = buffs.barColor
-    texture:SetVertexColor(color.r, color.g, color.b)
+    UnitButton.PaintFill(visual, color.r, color.g, color.b)
     return
   end
   if Style().bar.colorMode == "HEALTH" and ns.Curves.IsSupported() then
     local color = UnitHealthPercent(button.unit, true, ns.Curves:HealthColor(Style().bar))
-    texture:SetVertexColor(color:GetRGB())
+    UnitButton.PaintFill(visual, color:GetRGB())
     return
   end
   if button.healsilusKind == "pets" then
     local color = ns.Media.PET_COLOR
-    texture:SetVertexColor(color.r, color.g, color.b)
+    UnitButton.PaintFill(visual, color.r, color.g, color.b)
     return
   end
   local _, classToken = UnitClass(button.unit)
-  texture:SetVertexColor(ns.Media.ClassColor(classToken))
+  UnitButton.PaintFill(visual, ns.Media.ClassColor(classToken))
 end
 
 function UnitButton:UpdateRange(button)
@@ -602,6 +668,7 @@ end
 
 local function UpdateHealthEvent(button)
   UnitButton:UpdateStatus(button)
+  UnitButton:UpdateFade(button)
   UnitButton:UpdateHealth(button)
   UnitButton:UpdateColor(button)
   ns.Prediction:Update(button)
@@ -609,6 +676,7 @@ end
 
 local function UpdateStatusEvent(button)
   UnitButton:UpdateStatus(button)
+  UnitButton:UpdateFade(button)
   UnitButton:UpdateColor(button)
 end
 

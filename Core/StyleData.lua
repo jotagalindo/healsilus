@@ -32,6 +32,8 @@ function StyleData.DefaultStyle()
       critical = { r = 1, g = 0, b = 0 },
       injuredAt = 0.65,
       criticalAt = 0.3,
+      -- Con la vida llena la barra (relleno, fondo, maná y textos) se ve con esta opacidad.
+      fullHealthAlpha = 1,
     },
     text = {
       font = "FRIZQT",
@@ -96,6 +98,41 @@ StyleData.PRESETS = {
   { name = L.STYLE_LARGE_NAME, build = LargeParty },
   { name = L.STYLE_CLASSIC_NAME, build = Classic },
 }
+
+-- Margen hacia dentro de la barra para cada posición: 4 px desde un lado, 3 px desde arriba o abajo,
+-- y 0 en el eje en que el texto va centrado. Se aplica al elegir una posición nueva.
+StyleData.EDGE_PADDING_X, StyleData.EDGE_PADDING_Y = 4, 3
+
+function StyleData.DefaultOffset(point)
+  local x, y = 0, 0
+  if string.find(point, "LEFT") then
+    x = StyleData.EDGE_PADDING_X
+  elseif string.find(point, "RIGHT") then
+    x = -StyleData.EDGE_PADDING_X
+  end
+  if string.find(point, "TOP") then
+    y = -StyleData.EDGE_PADDING_Y
+  elseif string.find(point, "BOTTOM") then
+    y = StyleData.EDGE_PADDING_Y
+  end
+  return x, y
+end
+
+-- Quita el margen de esquina que quedó en el eje centrado (|x| ≤ 6, |y| ≤ 4: los márgenes de serie).
+function StyleData.RecenterLeftovers(element)
+  if type(element) ~= "table" or type(element.point) ~= "string" then
+    return
+  end
+  local point = element.point
+  local centeredX = not string.find(point, "LEFT") and not string.find(point, "RIGHT")
+  local centeredY = not string.find(point, "TOP") and not string.find(point, "BOTTOM")
+  if centeredX and type(element.x) == "number" and math.abs(element.x) <= 6 then
+    element.x = 0
+  end
+  if centeredY and type(element.y) == "number" and math.abs(element.y) <= 4 then
+    element.y = 0
+  end
+end
 
 function StyleData.IsValidName(name)
   if type(name) ~= "string" then

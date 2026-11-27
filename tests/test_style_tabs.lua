@@ -62,6 +62,30 @@ describe("TabAppearance controls", function()
   end)
 end)
 
+describe("TabAppearance positions", function()
+  it("puts a text exactly in the middle of the bar when Center is picked", function()
+    local ns = LoadTabs()
+    ns.TabAppearance.selected = "name"
+    ns.TabAppearance.PointSetter()("CENTER")
+    local name = ns.Styles.active.text.name
+    assertEquals({ name.point, name.x, name.y }, { "CENTER", 0, 0 })
+    ns.TabAppearance.PointSetter("health")("RIGHT")
+    local health = ns.Styles.active.text.health
+    assertEquals({ health.point, health.x, health.y }, { "RIGHT", -4, 0 })
+    ns.TabAppearance.PointSetter("role")("TOPLEFT")
+    assertEquals({ ns.Styles.active.role.x, ns.Styles.active.role.y }, { 4, -3 })
+  end)
+
+  it("splits the tab into bar, text and icon pages", function()
+    local ns = LoadTabs()
+    local pages = {}
+    for _, page in ipairs(ns.TabAppearance.PAGES) do
+      pages[#pages + 1] = page.value
+    end
+    assertEquals(pages, { "bar", "text", "icons" })
+  end)
+end)
+
 describe("TabStyles", function()
   it("names every situation and every failure in the user's language", function()
     local ns = LoadTabs()

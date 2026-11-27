@@ -7,27 +7,23 @@ local Widgets = ns.Widgets
 local TabFrames = { stacks = {} }
 ns.TabFrames = TabFrames
 
--- section: parte del estilo que edita cada control.
+-- section: parte del estilo que edita cada control; group: recuadro de la pestaña donde va.
 TabFrames.SLIDERS = {
-  { section = "layout", key = "width", label = L.FRAMES_WIDTH, step = 1 },
-  { section = "layout", key = "height", label = L.FRAMES_HEIGHT, step = 1 },
-  { section = "layout", key = "spacing", label = L.FRAMES_SPACING, step = 1 },
-  { section = "layout", key = "columns", label = L.FRAMES_COLUMNS, step = 1 },
-  { section = "layout", key = "unitsPerColumn", label = L.FRAMES_UNITS_PER_COLUMN, step = 1 },
-  { section = "bar", key = "outOfRangeAlpha", label = L.FRAMES_RANGE_ALPHA, step = 0.05, format = "%.2f" },
+  { section = "layout", key = "width", label = L.FRAMES_WIDTH, step = 1, group = "size" },
+  { section = "layout", key = "height", label = L.FRAMES_HEIGHT, step = 1, group = "size" },
+  { section = "layout", key = "spacing", label = L.FRAMES_SPACING, step = 1, group = "size" },
+  { section = "layout", key = "columns", label = L.FRAMES_COLUMNS, step = 1, group = "layout" },
+  { section = "layout", key = "unitsPerColumn", label = L.FRAMES_UNITS_PER_COLUMN, step = 1, group = "layout" },
 }
 
+-- Textura, color y opacidades de la barra están en la pestaña Aspecto.
 TabFrames.DROPDOWNS = {
-  { section = "layout", key = "sortBy", label = L.FRAMES_SORT, options = {
-    { value = "GROUP", label = L.SORT_GROUP }, { value = "CLASS", label = L.SORT_CLASS }, { value = "ROLE", label = L.SORT_ROLE },
-  } },
-  { section = "layout", key = "growth", label = L.FRAMES_GROWTH, options = {
+  { section = "layout", key = "growth", label = L.FRAMES_GROWTH, group = "layout", options = {
     { value = "DOWN", label = L.GROWTH_DOWN }, { value = "RIGHT", label = L.GROWTH_RIGHT },
   } },
-  { section = "bar", key = "colorMode", label = L.FRAMES_COLOR, options = {
-    { value = "CLASS", label = L.COLOR_CLASS }, { value = "HEALTH", label = L.COLOR_HEALTH },
+  { section = "layout", key = "sortBy", label = L.FRAMES_SORT, group = "layout", options = {
+    { value = "GROUP", label = L.SORT_GROUP }, { value = "CLASS", label = L.SORT_CLASS }, { value = "ROLE", label = L.SORT_ROLE },
   } },
-  { section = "bar", key = "texture", label = L.FRAMES_TEXTURE, options = ns.Media.TextureOptions },
 }
 
 local function OptionsOf(spec)
@@ -46,56 +42,82 @@ end
 
 -- Ajustes del perfil (no del estilo) que se editan con deslizador.
 TabFrames.PROFILE_SLIDERS = {
-  { key = "snapDistance", label = L.FRAMES_SNAP_DISTANCE, step = 1 },
+  { key = "snapDistance", label = L.FRAMES_SNAP_DISTANCE, step = 1, group = "move" },
 }
 
 TabFrames.CHECKBOXES = {
-  { key = "showMain", label = L.FRAMES_SHOW_MAIN },
-  { key = "showSolo", label = L.FRAMES_SHOW_SOLO },
-  { key = "showInParty", label = L.FRAMES_SHOW_IN_PARTY },
-  { key = "showInRaid", label = L.FRAMES_SHOW_IN_RAID },
-  { key = "showTanks", label = L.FRAMES_SHOW_TANKS },
-  { key = "showPets", label = L.FRAMES_SHOW_PETS },
-  { key = "showTarget", label = L.FRAMES_SHOW_TARGET },
-  { key = "showFocus", label = L.FRAMES_SHOW_FOCUS },
-  { key = "hideBlizzard", label = L.FRAMES_HIDE_BLIZZARD, afterChange = WarnBlizzardRestore },
-  { key = "locked", label = L.FRAMES_LOCKED },
-  { key = "moveTogether", label = L.FRAMES_MOVE_TOGETHER },
-  { key = "castOnDown", label = L.FRAMES_CAST_ON_DOWN },
+  { key = "showMain", label = L.FRAMES_SHOW_MAIN, group = "blocks" },
+  { key = "showTanks", label = L.FRAMES_SHOW_TANKS, group = "blocks" },
+  { key = "showPets", label = L.FRAMES_SHOW_PETS, group = "blocks" },
+  { key = "showTarget", label = L.FRAMES_SHOW_TARGET, group = "blocks" },
+  { key = "showFocus", label = L.FRAMES_SHOW_FOCUS, group = "blocks" },
+  { key = "showSolo", label = L.FRAMES_SHOW_SOLO, group = "when" },
+  { key = "showInParty", label = L.FRAMES_SHOW_IN_PARTY, group = "when" },
+  { key = "showInRaid", label = L.FRAMES_SHOW_IN_RAID, group = "when" },
+  { key = "locked", label = L.FRAMES_LOCKED, group = "move" },
+  { key = "moveTogether", label = L.FRAMES_MOVE_TOGETHER, group = "move" },
+  { key = "castOnDown", label = L.FRAMES_CAST_ON_DOWN, group = "other" },
+  { key = "hideBlizzard", label = L.FRAMES_HIDE_BLIZZARD, afterChange = WarnBlizzardRestore, group = "other" },
+}
+
+-- Recuadros de la pestaña en tres columnas, en orden de arriba abajo.
+TabFrames.GROUPS = {
+  { key = "size", title = L.FRAMES_GROUP_SIZE, column = 1 },
+  { key = "layout", title = L.FRAMES_GROUP_LAYOUT, column = 1 },
+  { key = "blocks", title = L.FRAMES_GROUP_BLOCKS, column = 2 },
+  { key = "when", title = L.FRAMES_GROUP_WHEN, column = 2 },
+  { key = "move", title = L.FRAMES_GROUP_MOVE, column = 3 },
+  { key = "other", title = L.FRAMES_GROUP_OTHER, column = 3 },
 }
 
 local PREVIEW_COUNTS = { 5, 10, 20, 40 }
+local COLUMN_X = { 0, 263, 526 }
+local SLIDER_HEIGHT, DROPDOWN_HEIGHT, CHECKBOX_HEIGHT = 46, 48, 26
 
 function TabFrames.Build(panel)
-  local sliders = Widgets.Stack(panel, 0, 0)
+  local columns, sections = {}, {}
+  for position, x in ipairs(COLUMN_X) do
+    columns[position] = Widgets.Column(panel, x, 0, 12)
+  end
+  for _, group in ipairs(TabFrames.GROUPS) do
+    sections[group.key] = columns[group.column]:Next(Widgets.Section(panel, group.title))
+  end
   for _, spec in ipairs(TabFrames.SLIDERS) do
     local range = ns.Database.RANGES[spec.key]
-    sliders:Add(Widgets.Slider(panel, spec.label, range[1], range[2], spec.step,
-      Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key), spec.format), 48)
+    local section = sections[spec.group]
+    section:Add(Widgets.Slider(section.frame, spec.label, range[1], range[2], spec.step,
+      Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key), spec.format), SLIDER_HEIGHT)
+  end
+  for _, spec in ipairs(TabFrames.DROPDOWNS) do
+    local section = sections[spec.group]
+    section:Add(Widgets.Dropdown(section.frame, spec.label, 220, function()
+      return OptionsOf(spec)
+    end, Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key)), DROPDOWN_HEIGHT)
+  end
+  for _, spec in ipairs(TabFrames.CHECKBOXES) do
+    local section = sections[spec.group]
+    section:Add(Widgets.Checkbox(section.frame, spec.label, Widgets.SectionGetter("frames", spec.key),
+      Widgets.SectionSetter("frames", spec.key, spec.afterChange)), CHECKBOX_HEIGHT)
   end
   for _, spec in ipairs(TabFrames.PROFILE_SLIDERS) do
     local range = ns.Database.RANGES[spec.key]
-    sliders:Add(Widgets.Slider(panel, spec.label, range[1], range[2], spec.step,
-      Widgets.SectionGetter("frames", spec.key), Widgets.SectionSetter("frames", spec.key)), 48)
+    local section = sections[spec.group]
+    section:Add(Widgets.Slider(section.frame, spec.label, range[1], range[2], spec.step,
+      Widgets.SectionGetter("frames", spec.key), Widgets.SectionSetter("frames", spec.key)), SLIDER_HEIGHT)
   end
-  local dropdowns = Widgets.Stack(panel, 250, 0)
-  for _, spec in ipairs(TabFrames.DROPDOWNS) do
-    dropdowns:Add(Widgets.Dropdown(panel, spec.label, 200, function()
-      return OptionsOf(spec)
-    end, Widgets.StyleGetter(spec.section, spec.key), Widgets.StyleSetter(spec.section, spec.key)), 50)
-  end
-  local checkboxes = Widgets.Stack(panel, 470, 0)
-  for _, spec in ipairs(TabFrames.CHECKBOXES) do
-    checkboxes:Add(Widgets.Checkbox(panel, spec.label, Widgets.SectionGetter("frames", spec.key),
-      Widgets.SectionSetter("frames", spec.key, spec.afterChange)), 26)
-  end
+  local moveButton = Widgets.Button(sections.move.frame, L.CONFIG_MOVE_FRAMES, 220, function()
+    ns.MoveMode:Start()
+  end)
+  moveButton:SetHeight(24)
+  moveButton:SetVariant("primary")
+  sections.move:Add(moveButton, 30)
   -- El botón del minimapa es de toda la cuenta, no del perfil.
-  checkboxes:Add(Widgets.Checkbox(panel, L.MINIMAP_SHOW, function()
+  sections.other:Add(Widgets.Checkbox(sections.other.frame, L.MINIMAP_SHOW, function()
     return not HealsilusDB.minimap.hide
   end, function(shown)
     ns.MinimapButton:SetHidden(not shown)
-  end), 26)
-  TabFrames.stacks = { sliders, dropdowns, checkboxes }
+  end), CHECKBOX_HEIGHT)
+  TabFrames.stacks = columns
 
   local previewLabel = Widgets.Label(panel, L.PREVIEW_LABEL, "GameFontNormal")
   previewLabel:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 6)

@@ -31,6 +31,8 @@ local FAKE_MAX_HEALTH = 8000
 
 -- Miembros de ejemplo de los bloques secundarios: tanques, mascotas y un objetivo y un foco amistosos.
 local SAMPLE_TANKS = { FAKE_MEMBERS[1], FAKE_MEMBERS[9] }
+-- Barras de la vista de ejemplo de la pestaña Aspecto: tanque con aggro, vida llena, herida y muerto.
+Preview.SAMPLE_MEMBERS = { FAKE_MEMBERS[1], FAKE_MEMBERS[2], FAKE_MEMBERS[3], FAKE_MEMBERS[6] }
 local SAMPLE_TARGET = { FAKE_MEMBERS[3] }
 local SAMPLE_FOCUS = { FAKE_MEMBERS[7] }
 
@@ -116,14 +118,15 @@ function Preview:Paint(frame, member, style)
   visual.nameText:SetText(member.name)
   visual.healthText:SetText(member.dead and "" or Preview.HealthText(style.text.health.mode, member.health))
   visual.statusText:SetText(member.dead and L.STATUS_DEAD or "")
-  local texture = visual.healthBar:GetStatusBarTexture()
+  local full = member.health >= 1 and not member.dead
+  ns.UnitButton.PaintFade(visual, full and style.bar.fullHealthAlpha or 1)
   if member.pet then
     local color = ns.Media.PET_COLOR
-    texture:SetVertexColor(color.r, color.g, color.b)
+    ns.UnitButton.PaintFill(visual, color.r, color.g, color.b)
   elseif style.bar.colorMode == "HEALTH" then
-    texture:SetVertexColor(Preview.HealthColor(member.health))
+    ns.UnitButton.PaintFill(visual, Preview.HealthColor(member.health))
   else
-    texture:SetVertexColor(ns.Media.ClassColor(member.class))
+    ns.UnitButton.PaintFill(visual, ns.Media.ClassColor(member.class))
   end
   local showPower = ns.UnitButton.WantsPower(style, member.role)
   ns.UnitButton.ShowPowerBar(visual, showPower, style.power.thickness)
@@ -171,6 +174,9 @@ function Preview:Show(count)
     self.byKind[block.kind] = shown
   end
   self.count = count
+  if ns.MoveMode and ns.MoveMode.active then
+    ns.MoveMode:LayoutMovers()
+  end
 end
 
 -- Rectángulo que ocupan los miembros de ejemplo de un bloque (para el imán), o nil si no tiene.

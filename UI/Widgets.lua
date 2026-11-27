@@ -24,6 +24,8 @@ local THEME = {
   heading = { 0.45, 0.9, 0.66, 1 },
   muted = { 0.62, 0.66, 0.72, 1 },
   dim = { 0.45, 0.48, 0.53, 1 },
+  section = { 1, 1, 1, 0.025 },
+  sectionBorder = { 0.2, 0.22, 0.27, 0.7 },
 }
 Widgets.THEME = THEME
 
@@ -435,6 +437,154 @@ function Widgets.Stack(parent, x, y)
     end
   end
   return stack
+end
+
+-- Grupo de opciones con título: un recuadro suave que crece con lo que se le añade. Los controles se
+-- crean con section.frame como padre y se colocan uno debajo de otro con section:Add(control, alto).
+Widgets.SECTION_WIDTH = 240
+Widgets.SECTION_PADDING = 10
+local SECTION_TITLE_HEIGHT = 30
+
+function Widgets.Section(parent, title, width)
+  local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+  frame:SetSize(width or Widgets.SECTION_WIDTH, SECTION_TITLE_HEIGHT)
+  Widgets.Surface(frame, THEME.section, THEME.sectionBorder)
+  local heading = Widgets.Label(frame, title, "GameFontNormal")
+  heading:SetPoint("TOPLEFT", frame, "TOPLEFT", Widgets.SECTION_PADDING, -10)
+  local section = { frame = frame, heading = heading, y = -SECTION_TITLE_HEIGHT, controls = {} }
+  function section:Add(control, height, indent)
+    control:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Widgets.SECTION_PADDING + (indent or 0), self.y)
+    self.y = self.y - height
+    self.frame:SetHeight(-self.y + 4)
+    self.controls[#self.controls + 1] = control
+    return control
+  end
+  function section:Refresh()
+    for _, control in ipairs(self.controls) do
+      if control.Refresh then
+        control:Refresh()
+      end
+    end
+  end
+  return section
+end
+
+-- Columna de secciones: cada Add coloca la sección debajo de la anterior con gap de separación.
+function Widgets.Column(parent, x, y, gap)
+  local column = { parent = parent, x = x, y = y, gap = gap or 12, sections = {} }
+  function column:Add(section)
+    section.frame:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x, self.y)
+    self.sections[#self.sections + 1] = section
+    self.last = section
+    return section
+  end
+  -- Coloca la sección siguiente debajo de la última (las alturas crecen al añadir controles).
+  function column:Next(section)
+    if self.last then
+      section.frame:SetPoint("TOPLEFT", self.last.frame, "BOTTOMLEFT", 0, -self.gap)
+      self.sections[#self.sections + 1] = section
+      self.last = section
+      return section
+    end
+    return self:Add(section)
+  end
+  function column:Refresh()
+    for _, section in ipairs(self.sections) do
+      section:Refresh()
+    end
+  end
+  return column
+end
+
+-- Botones unidos para elegir una opción (subpáginas o el texto a editar). options: { { value, label } }.
+function Widgets.Segmented(parent, options, width, getValue, setValue)
+  local container = CreateFrame("Frame", nil, parent)
+  local count = #options
+  local buttonWidth = math.floor((width - (count - 1) * 4) / count)
+  container:SetSize(width, 24)
+  container.buttons = {}
+  for position, option in ipairs(options) do
+    local button = Widgets.Button(container, option.label, buttonWidth, function()
+      setValue(option.value)
+      container:Refresh()
+    end)
+    button:SetHeight(24)
+    button:SetPoint("TOPLEFT", container, "TOPLEFT", (position - 1) * (buttonWidth + 4), 0)
+    button.value = option.value
+    container.buttons[position] = button
+  end
+  container.Refresh = function(self)
+    local current = getValue()
+    for _, button in ipairs(self.buttons) do
+      button:SetVariant(button.value == current and "primary" or "normal")
+    end
+  end
+  return container
+end
+
+-- Selector de posición: una barra en miniatura con nueve puntos (esquinas, lados y centro). Pulsar uno
+-- lo elige; a la derecha se lee su nombre. options: { { value = "TOPLEFT", label = ... }, ... } en orden
+-- de lectura (fila de arriba, centro y abajo).
+local PICKER_COLUMNS = { LEFT = 0, CENTER = 1, RIGHT = 2 }
+local PICKER_ROWS = { TOP = 0, CENTER = 1, BOTTOM = 2 }
+local PICKER_WIDTH, PICKER_HEIGHT, PICKER_CELL = 96, 42, 10
+
+local function PickerCell(point)
+  local column = string.find(point, "LEFT") and "LEFT" or string.find(point, "RIGHT") and "RIGHT" or "CENTER"
+  local row = string.find(point, "TOP") and "TOP" or string.find(point, "BOTTOM") and "BOTTOM" or "CENTER"
+  return PICKER_COLUMNS[column], PICKER_ROWS[row]
+end
+
+local function PaintPickerCell(cell)
+  local color = THEME.control
+  if cell.selected then
+    color = THEME.accent
+  elseif cell.hovered then
+    color = THEME.muted
+  end
+  cell:SetBackdropColor(ColorValues(color))
+  cell:SetBackdropBorderColor(ColorValues(cell.selected and THEME.accent or THEME.border))
+end
+
+function Widgets.PointPicker(parent, text, options, getValue, setValue)
+  local container = CreateFrame("Frame", nil, parent)
+  container:SetSize(220, PICKER_HEIGHT + 18)
+  local label = Widgets.Label(container, text, "GameFontNormalSmall")
+  label:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+  local board = CreateFrame("Frame", nil, container, "BackdropTemplate")
+  board:SetSize(PICKER_WIDTH, PICKER_HEIGHT)
+  board:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+  Widgets.Surface(board, { 0.2, 0.42, 0.3, 0.55 }, THEME.border)
+  local chosen = Widgets.Label(container, "", "GameFontHighlight")
+  chosen:SetPoint("LEFT", board, "RIGHT", 12, 0)
+  container.cells = {}
+  local stepX = (PICKER_WIDTH - PICKER_CELL - 8) / 2
+  local stepY = (PICKER_HEIGHT - PICKER_CELL - 8) / 2
+  for _, option in ipairs(options) do
+    local cell = CreateFrame("Button", nil, board, "BackdropTemplate")
+    cell:SetSize(PICKER_CELL, PICKER_CELL)
+    cell:SetBackdrop(FLAT_BACKDROP)
+    local column, row = PickerCell(option.value)
+    cell:SetPoint("TOPLEFT", board, "TOPLEFT", 4 + column * stepX, -(4 + row * stepY))
+    cell.value, cell.label = option.value, option.label
+    TrackHover(cell, PaintPickerCell)
+    cell:SetScript("OnClick", function()
+      setValue(option.value)
+      container:Refresh()
+    end)
+    container.cells[#container.cells + 1] = cell
+  end
+  container.Refresh = function(self)
+    local current = getValue()
+    for _, cell in ipairs(self.cells) do
+      cell.selected = cell.value == current
+      PaintPickerCell(cell)
+      if cell.selected then
+        chosen:SetText(cell.label)
+      end
+    end
+  end
+  return container
 end
 
 function Widgets.SpellRow(parent, width)

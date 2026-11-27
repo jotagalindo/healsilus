@@ -24,6 +24,9 @@ local ANCHOR_LABELS = {
   focus = L.ANCHOR_FOCUS,
 }
 
+Headers.ANCHOR_LABELS = ANCHOR_LABELS
+Headers.BLOCK_KINDS = { "party", "tanks", "pets", "target", "focus" }
+
 local SORT_ATTRIBUTES = {
   GROUP = { groupBy = "GROUP", groupingOrder = "1,2,3,4,5,6,7,8" },
   CLASS = { groupBy = "CLASS", groupingOrder = "WARRIOR,PALADIN,DRUID,PRIEST,SHAMAN,ROGUE,HUNTER,MAGE,WARLOCK" },
@@ -57,7 +60,7 @@ end
 
 -- Las anclas se guardan por su esquina inferior izquierda respecto a UIParent (vale para el imán).
 local SNAP_GAP = 2
-local BLOCK_KINDS = { "party", "tanks", "pets", "target", "focus" }
+local BLOCK_KINDS = Headers.BLOCK_KINDS
 
 local function PlaceAnchor(anchor, left, bottom)
   anchor:ClearAllPoints()
@@ -85,13 +88,32 @@ function Headers:BlockRect(kind)
   return { left = left, right = right, top = top, bottom = bottom }
 end
 
+-- Posición del cursor en coordenadas de UIParent.
+local function CursorPosition()
+  local x, y = GetCursorPosition()
+  local scale = UIParent:GetEffectiveScale()
+  return x / scale, y / scale
+end
+
+local function Shifted(rect, deltaX, deltaY)
+  return { left = rect.left + deltaX, right = rect.right + deltaX, top = rect.top + deltaY, bottom = rect.bottom + deltaY }
+end
+
+-- Arrastre manual (sin StartMoving): en cada fotograma el bloque sigue al cursor y, si un borde o su
+-- centro pasa cerca del de otro bloque, del centro de la pantalla o de la rejilla, se pega ahí ya
+-- mientras arrastras (el "imán"), con una guía que marca la alineación. Mayús suelta el imán.
 function Headers:BeginDrag(kind)
   if InCombatLockdown() then
     return
   end
   local anchor = self.anchors[kind]
   local frames = ns.Profiles.active.frames
-  local drag = { kind = kind, left = anchor:GetLeft(), bottom = anchor:GetBottom(), others = {} }
+  local cursorX, cursorY = CursorPosition()
+  local left, bottom = anchor:GetLeft(), anchor:GetBottom()
+  local drag = {
+    kind = kind, left = left, bottom = bottom, cursorX = cursorX, cursorY = cursorY, others = {},
+    rect = self:BlockRect(kind), targets = {},
+  }
   if frames.moveTogether then
     for _, other in ipairs(BLOCK_KINDS) do
       if other ~= kind then
@@ -99,63 +121,85 @@ function Headers:BeginDrag(kind)
         drag.others[other] = { left = otherAnchor:GetLeft(), bottom = otherAnchor:GetBottom() }
       end
     end
-    -- Mientras se arrastra, los demás bloques siguen al que se mueve.
-    anchor:SetScript("OnUpdate", function(self)
-      local deltaX, deltaY = self:GetLeft() - drag.left, self:GetBottom() - drag.bottom
-      for other, start in pairs(drag.others) do
-        PlaceAnchor(Headers.anchors[other], start.left + deltaX, start.bottom + deltaY)
+  else
+    -- Los demás bloques no se mueven durante el arrastre: sus rectángulos se leen una vez.
+    for _, other in ipairs(BLOCK_KINDS) do
+      local rect = other ~= kind and self:BlockRect(other)
+      if rect then
+        drag.targets[#drag.targets + 1] = rect
       end
-    end)
+    end
   end
   self.drag = drag
-  anchor:StartMoving()
+  anchor:SetScript("OnUpdate", function()
+    Headers:UpdateDrag()
+  end)
+end
+
+-- Dónde quedaría el ancla con el desplazamiento crudo (deltaX, deltaY) tras el imán y la rejilla.
+function Headers:SnapDrag(drag, deltaX, deltaY)
+  local frames = ns.Profiles.active.frames
+  if not drag.rect or (IsShiftKeyDown and IsShiftKeyDown()) then
+    return deltaX, deltaY, {}
+  end
+  local moving = Shifted(drag.rect, deltaX, deltaY)
+  local options = { threshold = frames.snapDistance, gap = SNAP_GAP }
+  if ns.MoveMode and ns.MoveMode.active then
+    options.screen = { width = UIParent:GetWidth(), height = UIParent:GetHeight() }
+    if ns.MoveMode:SnapsToGrid() then
+      local originX, originY = ns.MoveMode:GridOrigin()
+      options.grid = { originX = originX, originY = originY, size = ns.MoveMode:GridSize() }
+    end
+  end
+  local snapX, snapY, guides = ns.Snapping.Solve(moving, drag.targets, options)
+  return deltaX + snapX, deltaY + snapY, guides
+end
+
+function Headers:UpdateDrag()
+  local drag = self.drag
+  if not drag then
+    return
+  end
+  local cursorX, cursorY = CursorPosition()
+  local deltaX, deltaY, guides = self:SnapDrag(drag, cursorX - drag.cursorX, cursorY - drag.cursorY)
+  PlaceAnchor(self.anchors[drag.kind], drag.left + deltaX, drag.bottom + deltaY)
+  for other, start in pairs(drag.others) do
+    PlaceAnchor(self.anchors[other], start.left + deltaX, start.bottom + deltaY)
+  end
+  drag.deltaX, drag.deltaY = deltaX, deltaY
+  if ns.MoveMode then
+    ns.MoveMode:ShowGuides(guides)
+  end
 end
 
 function Headers:EndDrag(kind)
   local anchor = self.anchors[kind]
-  anchor:StopMovingOrSizing()
   anchor:SetScript("OnUpdate", nil)
   local drag = self.drag
-  self.drag = nil
-  local frames = ns.Profiles.active.frames
-  PlaceAnchor(anchor, anchor:GetLeft(), anchor:GetBottom())
-  -- Imán: al soltar un bloque suelto cerca de otro visible, se pega o se alinea con él.
-  local moving = self:BlockRect(kind)
-  local deltaX, deltaY = 0, 0
-  if moving and not frames.moveTogether and frames.snapDistance > 0 then
-    local others = {}
+  if not drag then
+    -- Soltar sin arrastre registrado (o un arrastre con StartMoving): solo se aplica el imán.
+    drag = { kind = kind, left = anchor:GetLeft(), bottom = anchor:GetBottom(), others = {}, rect = self:BlockRect(kind), targets = {} }
     for _, other in ipairs(BLOCK_KINDS) do
       local rect = other ~= kind and self:BlockRect(other)
       if rect then
-        others[#others + 1] = rect
+        drag.targets[#drag.targets + 1] = rect
       end
     end
-    deltaX, deltaY = ns.Snapping.Snap(moving, others, frames.snapDistance, SNAP_GAP)
+    local deltaX, deltaY = self:SnapDrag(drag, 0, 0)
+    drag.deltaX, drag.deltaY = deltaX, deltaY
+  else
+    self:UpdateDrag()
   end
-  -- Rejilla del modo mover: en el eje que el imán no haya movido, la esquina superior izquierda del
-  -- bloque se pega a la línea más cercana.
-  if moving and ns.MoveMode and ns.MoveMode:SnapsToGrid() then
-    local shifted = {
-      left = moving.left + deltaX, right = moving.right + deltaX,
-      top = moving.top + deltaY, bottom = moving.bottom + deltaY,
-    }
-    local originX, originY = ns.MoveMode:GridOrigin()
-    local gridX, gridY = ns.Snapping.ToGrid(shifted, originX, originY, ns.MoveMode:GridSize())
-    if deltaX == 0 then
-      deltaX = gridX
-    end
-    if deltaY == 0 then
-      deltaY = gridY
-    end
-  end
-  PlaceAnchor(anchor, anchor:GetLeft() + deltaX, anchor:GetBottom() + deltaY)
+  self.drag = nil
+  PlaceAnchor(anchor, drag.left + (drag.deltaX or 0), drag.bottom + (drag.deltaY or 0))
   SavePosition(kind, anchor)
-  if drag then
-    for other in pairs(drag.others) do
-      local otherAnchor = self.anchors[other]
-      PlaceAnchor(otherAnchor, otherAnchor:GetLeft() + deltaX, otherAnchor:GetBottom() + deltaY)
-      SavePosition(other, otherAnchor)
-    end
+  for other, start in pairs(drag.others) do
+    local otherAnchor = self.anchors[other]
+    PlaceAnchor(otherAnchor, start.left + (drag.deltaX or 0), start.bottom + (drag.deltaY or 0))
+    SavePosition(other, otherAnchor)
+  end
+  if ns.MoveMode then
+    ns.MoveMode:ShowGuides(nil)
   end
 end
 
@@ -291,11 +335,14 @@ function Headers:ApplyBlizzardVisibility(hide)
   end
 end
 
+-- En el modo mover se arrastra el bloque entero (UI/MoveMode.lua): los cuadrados azules solo salen al
+-- desbloquear sin él (/hs lock).
 function Headers:SetLocked(locked)
+  local handles = not locked and not (ns.MoveMode and ns.MoveMode.active)
   for _, anchor in pairs(self.anchors) do
-    anchor.handle:SetShown(not locked)
-    anchor.label:SetShown(not locked)
-    anchor:EnableMouse(not locked)
+    anchor.handle:SetShown(handles)
+    anchor.label:SetShown(handles)
+    anchor:EnableMouse(handles)
   end
 end
 

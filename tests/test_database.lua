@@ -219,7 +219,7 @@ describe("Database:Initialize", function()
       },
     }
     local db = ns.Database:Initialize()
-    assertEquals(db.version, 4)
+    assertEquals(db.version, ns.Database.CURRENT_VERSION)
     assertTrue(db.classProfiles.DRUID.clicks.buffOverride)
     assertTrue(db.classProfiles.DRUID.clicks.dispelOverride)
     assertTrue(db.characters["Arsilus-Bah"].own.clicks.buffOverride)
@@ -233,7 +233,7 @@ describe("Database:Initialize", function()
       classProfiles = { DRUID = { clicks = { dispelOverride = false, buffOverride = false } } },
     }
     local db = ns.Database:Initialize()
-    assertEquals(db.version, 4)
+    assertEquals(db.version, ns.Database.CURRENT_VERSION)
     assertTrue(db.classProfiles.DRUID.clicks.dispelOverride)
     assertFalse(db.classProfiles.DRUID.clicks.buffOverride)
   end)

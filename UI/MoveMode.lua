@@ -1,17 +1,21 @@
--- Modo mover: desbloquea los bloques, rellena cada uno con miembros de ejemplo (Frames/Preview.lua),
--- dibuja una rejilla en pantalla para alinearlos y, si se quiere, pega cada bloque soltado a ella.
--- Una barra arriba de la pantalla deja cambiar la rejilla y el relleno, y "Terminar" lo bloquea todo.
+-- Modo mover: desbloquea los bloques, rellena cada uno con miembros de ejemplo (Frames/Preview.lua) y
+-- pone encima de cada uno un recuadro que se arrastra entero. Mientras arrastras, el imán lo pega a los
+-- bordes y centros de los demás bloques y al centro de la pantalla, con una guía que lo marca; la
+-- rejilla es opcional. Una barra arriba deja cambiar rejilla, imán y relleno; "Terminar" lo bloquea todo.
 -- Solo fuera de combate: al entrar en combate se cierra solo.
 local _, ns = ...
 local L = ns.L
 local Widgets = ns.Widgets
 
-local MoveMode = { active = false, built = false, lineTextures = {} }
+local MoveMode = { active = false, built = false, lineTextures = {}, movers = {} }
 ns.MoveMode = MoveMode
 
 local GRID_COLOR = { 1, 1, 1, 0.12 }
 local CENTER_COLOR = { 1, 0.35, 0.35, 0.55 }
-local TOOLBAR_WIDTH, TOOLBAR_HEIGHT = 650, 72
+local TOOLBAR_WIDTH, TOOLBAR_HEIGHT = 860, 72
+local GUIDE_COLOR = { 0.27, 0.84, 0.56, 0.95 }
+-- Distancias del imán que ofrece la barra (0 = sin imán).
+MoveMode.SNAP_DISTANCES = { 0, 6, 12, 20, 30 }
 
 local function Settings()
   return ns.Database.db.moveMode
@@ -108,6 +112,95 @@ local function FillText()
   return string.format(L.MOVE_FILL, Settings().fill)
 end
 
+local function SnapText()
+  local distance = ns.Profiles.active.frames.snapDistance
+  if distance <= 0 then
+    return L.MOVE_MAGNET_OFF
+  end
+  return string.format(L.MOVE_MAGNET, distance)
+end
+
+local function PaintMover(mover)
+  local lit = mover.hovered or mover.dragging
+  mover:SetBackdropColor(GUIDE_COLOR[1], GUIDE_COLOR[2], GUIDE_COLOR[3], lit and 0.22 or 0.1)
+  mover:SetBackdropBorderColor(GUIDE_COLOR[1], GUIDE_COLOR[2], GUIDE_COLOR[3], lit and 1 or 0.8)
+end
+
+-- Recuadro que cubre un bloque y lo arrastra entero (sustituye al cuadrado azul del ancla).
+local function CreateMover(kind)
+  local mover = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  mover:SetFrameStrata("HIGH")
+  mover:SetBackdrop(Widgets.FLAT_BACKDROP)
+  mover:EnableMouse(true)
+  mover:RegisterForDrag("LeftButton")
+  local label = Widgets.Label(mover, ns.Headers.ANCHOR_LABELS[kind], "GameFontHighlightSmall")
+  label:SetPoint("BOTTOMLEFT", mover, "TOPLEFT", 1, 3)
+  label:SetTextColor(GUIDE_COLOR[1], GUIDE_COLOR[2], GUIDE_COLOR[3], 1)
+  mover.label = label
+  mover:SetScript("OnEnter", function(self)
+    self.hovered = true
+    PaintMover(self)
+  end)
+  mover:SetScript("OnLeave", function(self)
+    self.hovered = false
+    PaintMover(self)
+  end)
+  mover:SetScript("OnDragStart", function(self)
+    self.dragging = true
+    PaintMover(self)
+    ns.Headers:BeginDrag(kind)
+  end)
+  mover:SetScript("OnDragStop", function(self)
+    self.dragging = false
+    PaintMover(self)
+    ns.Headers:EndDrag(kind)
+  end)
+  PaintMover(mover)
+  MoveMode.movers[kind] = mover
+  return mover
+end
+
+-- Un recuadro por bloque con miembros de ejemplo, pegado a su ancla para seguirlo al arrastrar.
+function MoveMode:LayoutMovers()
+  for _, mover in pairs(self.movers) do
+    mover:Hide()
+  end
+  if not self.active then
+    return
+  end
+  for _, kind in ipairs(ns.Headers.BLOCK_KINDS) do
+    local rect = ns.Preview:BlockRect(kind)
+    local anchor = ns.Headers.anchors[kind]
+    if rect and anchor and anchor:GetLeft() then
+      local mover = self.movers[kind] or CreateMover(kind)
+      mover:ClearAllPoints()
+      mover:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", rect.left - anchor:GetLeft(), rect.top - anchor:GetBottom())
+      mover:SetSize(rect.right - rect.left, rect.top - rect.bottom)
+      mover:Show()
+    end
+  end
+end
+
+-- Guías de alineación mientras se arrastra: guides = { x = línea vertical, y = línea horizontal } o nil.
+function MoveMode:ShowGuides(guides)
+  if not self.built then
+    return
+  end
+  local x, y = guides and guides.x, guides and guides.y
+  self.guideX:SetShown(x ~= nil)
+  self.guideY:SetShown(y ~= nil)
+  if x then
+    self.guideX:ClearAllPoints()
+    self.guideX:SetPoint("TOP", UIParent, "TOPLEFT", x, 0)
+    self.guideX:SetPoint("BOTTOM", UIParent, "BOTTOMLEFT", x, 0)
+  end
+  if y then
+    self.guideY:ClearAllPoints()
+    self.guideY:SetPoint("LEFT", UIParent, "BOTTOMLEFT", 0, y)
+    self.guideY:SetPoint("RIGHT", UIParent, "BOTTOMRIGHT", 0, y)
+  end
+end
+
 function MoveMode:Build()
   local grid = CreateFrame("Frame", nil, UIParent)
   grid:SetAllPoints(UIParent)
@@ -115,6 +208,19 @@ function MoveMode:Build()
   grid:EnableMouse(false)
   grid:Hide()
   self.grid = grid
+
+  -- Guías del imán por encima de los bloques.
+  local guides = CreateFrame("Frame", nil, UIParent)
+  guides:SetAllPoints(UIParent)
+  guides:SetFrameStrata("HIGH")
+  guides:SetFrameLevel(50)
+  guides:EnableMouse(false)
+  self.guideX = Widgets.Line(guides, GUIDE_COLOR, "OVERLAY")
+  self.guideX:SetWidth(1)
+  self.guideX:Hide()
+  self.guideY = Widgets.Line(guides, GUIDE_COLOR, "OVERLAY")
+  self.guideY:SetHeight(1)
+  self.guideY:Hide()
 
   local toolbar = CreateFrame("Frame", "HealsilusMoveToolbar", UIParent, "BackdropTemplate")
   toolbar:SetSize(TOOLBAR_WIDTH, TOOLBAR_HEIGHT)
@@ -136,38 +242,55 @@ function MoveMode:Build()
   local help = Widgets.Label(toolbar, L.MOVE_HELP, "GameFontHighlightSmall")
   help:SetPoint("LEFT", title, "RIGHT", 10, 0)
 
+  -- Fila de controles: imán y "mover juntos" | rejilla | relleno | terminar.
+  local snapButton = Widgets.Button(toolbar, SnapText(), 104, function()
+    local frames = ns.Profiles.active.frames
+    frames.snapDistance = MoveMode.NextValue(MoveMode.SNAP_DISTANCES, frames.snapDistance)
+    MoveMode:Refresh()
+  end)
+  snapButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 14, -38)
+  local togetherCheckbox = Widgets.Checkbox(toolbar, L.MOVE_TOGETHER, function()
+    return ns.Profiles.active.frames.moveTogether
+  end, function(value)
+    ns.Profiles.active.frames.moveTogether = value
+    MoveMode:Refresh()
+  end)
+  togetherCheckbox:SetPoint("LEFT", snapButton, "RIGHT", 12, 0)
   local gridCheckbox = Widgets.Checkbox(toolbar, L.MOVE_GRID, function()
     return Settings().grid
   end, function(value)
     Settings().grid = value
     MoveMode:Refresh()
   end)
-  gridCheckbox:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 14, -36)
+  gridCheckbox:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 270, -40)
   local snapCheckbox = Widgets.Checkbox(toolbar, L.MOVE_SNAP, function()
     return Settings().snapToGrid
   end, function(value)
     Settings().snapToGrid = value
     MoveMode:Refresh()
   end)
-  snapCheckbox:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 110, -36)
-  local sizeButton = Widgets.Button(toolbar, SizeText(), 120, function()
+  snapCheckbox:SetPoint("LEFT", gridCheckbox, "RIGHT", 76, 0)
+  local sizeButton = Widgets.Button(toolbar, SizeText(), 100, function()
     Settings().gridSize = MoveMode.NextValue(ns.Database.GRID_SIZES, Settings().gridSize)
     MoveMode:Refresh()
   end)
-  sizeButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 270, -36)
-  local fillButton = Widgets.Button(toolbar, FillText(), 120, function()
+  sizeButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 506, -38)
+  local fillButton = Widgets.Button(toolbar, FillText(), 96, function()
     Settings().fill = MoveMode.NextValue(ns.Database.FILL_COUNTS, Settings().fill)
     ns.Preview:Show(Settings().fill)
     MoveMode:Refresh()
   end)
-  fillButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 396, -36)
+  fillButton:SetPoint("LEFT", sizeButton, "RIGHT", 8, 0)
   local doneButton = Widgets.Button(toolbar, L.MOVE_DONE, 110, function()
     MoveMode:Stop()
   end)
-  doneButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 522, -36)
+  doneButton:SetPoint("TOPRIGHT", toolbar, "TOPRIGHT", -14, -38)
   doneButton:SetVariant("primary")
 
-  self.controls = { gridCheckbox = gridCheckbox, snapCheckbox = snapCheckbox, sizeButton = sizeButton, fillButton = fillButton }
+  self.controls = {
+    gridCheckbox = gridCheckbox, snapCheckbox = snapCheckbox, sizeButton = sizeButton, fillButton = fillButton,
+    snapButton = snapButton, togetherCheckbox = togetherCheckbox,
+  }
   self.built = true
 end
 
@@ -180,6 +303,8 @@ function MoveMode:Refresh()
   controls.snapCheckbox:Refresh()
   controls.sizeButton:SetText(SizeText())
   controls.fillButton:SetText(FillText())
+  controls.snapButton:SetText(SnapText())
+  controls.togetherCheckbox:Refresh()
   if self.active then
     self:DrawGrid()
   end
@@ -205,6 +330,7 @@ function MoveMode:Start()
   self.active = true
   SetLocked(false)
   ns.Preview:Show(Settings().fill)
+  self:LayoutMovers()
   self.toolbar:Show()
   self:Refresh()
   if ns.Config.built and ns.Config.frame:IsShown() then
@@ -221,6 +347,8 @@ function MoveMode:Stop()
   self.active = false
   self.toolbar:Hide()
   self.grid:Hide()
+  self:ShowGuides(nil)
+  self:LayoutMovers()
   ns.Preview:Hide()
   SetLocked(true)
   ns.Print(L.LOCKED)
